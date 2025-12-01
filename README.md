@@ -27,7 +27,13 @@ cd AdviserEvaluationSystem/backend
 Run the backend:  
 ```bash
 ./mvnw spring-boot:run
-``` 
+```
+
+Create the backend: Use MySQL Workbench
+```bash
+CREATE DATABASE adviser_evaluation_db CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci;
+```
+Change password at application.properties to match your own.
 
 Backend will run at: **http://localhost:8080/**
 
