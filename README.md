@@ -29,7 +29,7 @@ Run the backend:
 ./mvnw spring-boot:run
 ```
 
-Create the backend: Use MySQL Workbench
+Create the database: Use MySQL Workbench
 ```bash
 CREATE DATABASE adviser_evaluation_db CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci;
 ```
