@@ -26,18 +26,24 @@ const getHeaders = (includeAuth = true) => {
 // Authentication API
 export const authAPI = {
   login: async (email, password) => {
+    console.log('API: Sending login request to:', `${API_BASE_URL}/auth/login`);
     const response = await fetch(`${API_BASE_URL}/auth/login`, {
       method: 'POST',
       headers: getHeaders(false),
       body: JSON.stringify({ email, password }),
     });
     
+    console.log('API: Response status:', response.status);
+    
     if (!response.ok) {
       const error = await response.json();
+      console.error('API: Login error response:', error);
       throw new Error(error.message || 'Login failed');
     }
     
-    return await response.json();
+    const data = await response.json();
+    console.log('API: Login success, data:', data);
+    return data;
   },
   
   register: async (userData) => {
@@ -65,7 +71,8 @@ export const authAPI = {
   },
   
   isAuthenticated: () => {
-    return !!getAuthToken();
+    const user = localStorage.getItem('user');
+    return !!user; // Check if user data exists instead of token
   }
 };
 

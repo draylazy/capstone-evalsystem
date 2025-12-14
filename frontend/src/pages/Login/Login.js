@@ -16,22 +16,28 @@ function Login() {
     setLoading(true);
 
     try {
+      console.log('Attempting login with:', email);
       const data = await authAPI.login(email, password);
+      console.log('Login response:', data);
       
       // Store user data in localStorage
       localStorage.setItem('user', JSON.stringify(data));
+      console.log('User data stored, role:', data.role);
       
       // Redirect based on role
       if (data.role === 'TEACHER') {
+        console.log('Redirecting to teacher dashboard');
         navigate('/teacher/dashboard');
       } else if (data.role === 'ADVISER') {
+        console.log('Redirecting to adviser dashboard');
         navigate('/adviser/dashboard');
       } else {
+        console.log('Unknown role, redirecting to home');
         navigate('/');
       }
     } catch (err) {
-      setError(err.message || 'Unable to connect to server. Please try again.');
       console.error('Login error:', err);
+      setError(err.message || 'Unable to connect to server. Please try again.');
     } finally {
       setLoading(false);
     }
