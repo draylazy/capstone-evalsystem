@@ -1,0 +1,21 @@
+.summary-card {
+    background: #ffffff;
+    padding: 20px;
+    border-radius: 4px;
+    border: 1px solid #e8e8e8;
+    width: 200px;
+    text-align: left;
+  }
+  
+  .summary-card h3 {
+    font-size: 14px;
+    color: #666;
+    margin-bottom: 8px;
+  }
+  
+  .summary-card p {
+    font-size: 28px;
+    font-weight: 600;
+    color: #1a1a1a;
+  }
+  

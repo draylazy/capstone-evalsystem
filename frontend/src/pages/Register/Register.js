@@ -1,5 +1,6 @@
 import React, { useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
+import { authAPI } from '../../services/api';
 import './Register.css';
 
 function Register() {
@@ -39,24 +40,12 @@ function Register() {
     try {
       const { confirmPassword, ...registerData } = formData;
       
-      const response = await fetch('http://localhost:8080/api/auth/register', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify(registerData),
-      });
-
-      const data = await response.json();
-
-      if (response.ok) {
-        alert('Registration successful! Please login.');
-        navigate('/login');
-      } else {
-        setError(data.message || 'Registration failed');
-      }
+      await authAPI.register(registerData);
+      
+      alert('Registration successful! Please login.');
+      navigate('/login');
     } catch (err) {
-      setError('Unable to connect to server. Please try again.');
+      setError(err.message || 'Registration failed');
       console.error('Registration error:', err);
     } finally {
       setLoading(false);

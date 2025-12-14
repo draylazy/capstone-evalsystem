@@ -1,8 +1,10 @@
 import React, { useState } from 'react';
-import { Link } from 'react-router-dom';
+import { Link, useNavigate } from 'react-router-dom';
+import { authAPI } from '../../services/api';
 import './Login.css';
 
 function Login() {
+  const navigate = useNavigate();
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [error, setError] = useState('');
@@ -14,27 +16,21 @@ function Login() {
     setLoading(true);
 
     try {
-      const response = await fetch('http://localhost:8080/api/auth/login', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({ email, password }),
-      });
-
-      const data = await response.json();
-
-      if (response.ok) {
-        // Store user data in localStorage
-        localStorage.setItem('user', JSON.stringify(data));
-        console.log('Login successful:', data);
-        // TODO: Redirect to dashboard based on role
-        alert(`Welcome ${data.firstName}! Role: ${data.role}`);
+      const data = await authAPI.login(email, password);
+      
+      // Store user data in localStorage
+      localStorage.setItem('user', JSON.stringify(data));
+      
+      // Redirect based on role
+      if (data.role === 'TEACHER') {
+        navigate('/teacher/dashboard');
+      } else if (data.role === 'ADVISER') {
+        navigate('/adviser/dashboard');
       } else {
-        setError(data.message || 'Login failed');
+        navigate('/');
       }
     } catch (err) {
-      setError('Unable to connect to server. Please try again.');
+      setError(err.message || 'Unable to connect to server. Please try again.');
       console.error('Login error:', err);
     } finally {
       setLoading(false);
