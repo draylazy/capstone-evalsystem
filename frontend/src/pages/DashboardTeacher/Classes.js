@@ -25,14 +25,8 @@ const Classes = () => {
     isActive: true
   });
   
-  const [newStudent, setNewStudent] = useState({
-    studentId: "",
-    firstName: "",
-    lastName: "",
-    email: "",
-    phoneNumber: "",
-    classId: null
-  });
+  const [selectedStudentId, setSelectedStudentId] = useState("");
+  const [availableStudents, setAvailableStudents] = useState([]);
 
   // Load classes on component mount
   useEffect(() => {
@@ -54,7 +48,7 @@ const Classes = () => {
       // Fetch only this teacher's classes
       const data = await classAPI.getAllClasses();
       // Filter classes for this teacher only
-      const teacherClasses = data.filter(c => c.teacher?.id === user.id);
+      const teacherClasses = data.filter(c => c.teacherId === user.id);
       setClasses(teacherClasses);
       setError(null);
     } catch (err) {
@@ -83,7 +77,7 @@ const Classes = () => {
       const user = JSON.parse(localStorage.getItem('user'));
       const classData = {
         ...newClass,
-        teacher: user?.id ? { id: user.id } : null
+        teacherId: user?.id
       };
       
       const result = await classAPI.createClass(classData);
@@ -126,21 +120,28 @@ const Classes = () => {
 
   const handleAddStudent = async (e) => {
     e.preventDefault();
+    if (!selectedStudentId) {
+      alert("Please select a student");
+      return;
+    }
     try {
-      const studentData = {
-        ...newStudent,
+      // Get the selected student
+      const student = students.find(s => s.id === parseInt(selectedStudentId));
+      if (!student) {
+        alert("Student not found");
+        return;
+      }
+      
+      // Update the student to assign them to this class
+      const updatedStudent = {
+        ...student,
         schoolClass: { id: selectedClass.id }
       };
-      await studentAPI.createStudent(studentData);
+      await studentAPI.updateStudent(student.id, updatedStudent);
+      
       setShowAddStudentModal(false);
-      setNewStudent({
-        studentId: "",
-        firstName: "",
-        lastName: "",
-        email: "",
-        phoneNumber: "",
-        classId: null
-      });
+      setSelectedStudentId("");
+      
       // Reload students and update class students
       await loadStudents();
       const updatedStudents = await studentAPI.getAllStudents();
@@ -168,10 +169,10 @@ const Classes = () => {
   };
 
   const openAddStudentModal = () => {
-    setNewStudent({
-      ...newStudent,
-      classId: selectedClass.id
-    });
+    // Filter students that don't have a class assigned
+    const unassignedStudents = students.filter(s => !s.schoolClass || s.schoolClass.id === null);
+    setAvailableStudents(unassignedStudents);
+    setSelectedStudentId("");
     setShowAddStudentModal(true);
   };
 
@@ -389,58 +390,30 @@ const Classes = () => {
             <h2>Add New Student</h2>
             <form onSubmit={handleAddStudent}>
               <div className="form-group">
-                <label>Student ID *</label>
-                <input
-                  type="text"
-                  value={newStudent.studentId}
-                  onChange={(e) => setNewStudent({ ...newStudent, studentId: e.target.value })}
-                  placeholder="e.g., 2021-12345"
+                <label>Select Student *</label>
+                <select
+                  value={selectedStudentId}
+                  onChange={(e) => setSelectedStudentId(e.target.value)}
                   required
-                />
+                >
+                  <option value="">-- Select a student --</option>
+                  {availableStudents.map((student) => (
+                    <option key={student.id} value={student.id}>
+                      {student.studentId} - {student.firstName} {student.lastName}
+                    </option>
+                  ))}
+                </select>
               </div>
-              <div className="form-group">
-                <label>First Name *</label>
-                <input
-                  type="text"
-                  value={newStudent.firstName}
-                  onChange={(e) => setNewStudent({ ...newStudent, firstName: e.target.value })}
-                  placeholder="First name"
-                  required
-                />
-              </div>
-              <div className="form-group">
-                <label>Last Name *</label>
-                <input
-                  type="text"
-                  value={newStudent.lastName}
-                  onChange={(e) => setNewStudent({ ...newStudent, lastName: e.target.value })}
-                  placeholder="Last name"
-                  required
-                />
-              </div>
-              <div className="form-group">
-                <label>Email</label>
-                <input
-                  type="email"
-                  value={newStudent.email}
-                  onChange={(e) => setNewStudent({ ...newStudent, email: e.target.value })}
-                  placeholder="student@example.com"
-                />
-              </div>
-              <div className="form-group">
-                <label>Phone Number</label>
-                <input
-                  type="tel"
-                  value={newStudent.phoneNumber}
-                  onChange={(e) => setNewStudent({ ...newStudent, phoneNumber: e.target.value })}
-                  placeholder="Contact number"
-                />
-              </div>
+              {availableStudents.length === 0 && (
+                <p style={{ color: '#666', fontSize: '13px' }}>
+                  No unassigned students available. All students are already assigned to classes.
+                </p>
+              )}
               <div className="modal-actions">
                 <button type="button" className="btn btn-secondary" onClick={() => setShowAddStudentModal(false)}>
                   Cancel
                 </button>
-                <button type="submit" className="btn btn-primary">
+                <button type="submit" className="btn btn-primary" disabled={!selectedStudentId}>
                   Add Student
                 </button>
               </div>

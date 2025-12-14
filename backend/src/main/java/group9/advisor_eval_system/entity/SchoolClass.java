@@ -2,6 +2,7 @@ package group9.advisor_eval_system.entity;
 
 import com.fasterxml.jackson.annotation.JsonIgnore;
 import com.fasterxml.jackson.annotation.JsonIgnoreProperties;
+import com.fasterxml.jackson.annotation.JsonProperty;
 import jakarta.persistence.*;
 import jakarta.validation.constraints.NotBlank;
 import lombok.AllArgsConstructor;
@@ -48,6 +49,22 @@ public class SchoolClass {
     
     @UpdateTimestamp
     private LocalDateTime updatedAt;
+    
+    // Expose teacher ID for filtering without exposing full teacher object
+    @JsonProperty("teacherId")
+    public Long getTeacherId() {
+        return teacher != null ? teacher.getId() : null;
+    }
+    
+    // Allow setting teacher by ID during deserialization
+    @JsonProperty("teacherId")
+    public void setTeacherId(Long teacherId) {
+        if (teacherId != null) {
+            User tempTeacher = new User();
+            tempTeacher.setId(teacherId);
+            this.teacher = tempTeacher;
+        }
+    }
     
     // Relationships
     @ManyToOne(fetch = FetchType.EAGER)
