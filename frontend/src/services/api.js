@@ -429,6 +429,78 @@ export const reportAPI = {
   }
 };
 
+// Students API
+export const studentAPI = {
+  getAllStudents: async () => {
+    const response = await fetch(`${API_BASE_URL}/students`, {
+      method: 'GET',
+      headers: getHeaders(),
+    });
+    
+    if (!response.ok) {
+      throw new Error('Failed to fetch students');
+    }
+    
+    return await response.json();
+  },
+  
+  getStudentById: async (id) => {
+    const response = await fetch(`${API_BASE_URL}/students/${id}`, {
+      method: 'GET',
+      headers: getHeaders(),
+    });
+    
+    if (!response.ok) {
+      throw new Error('Failed to fetch student');
+    }
+    
+    return await response.json();
+  },
+  
+  createStudent: async (studentData) => {
+    const response = await fetch(`${API_BASE_URL}/students`, {
+      method: 'POST',
+      headers: getHeaders(),
+      body: JSON.stringify(studentData),
+    });
+    
+    if (!response.ok) {
+      const error = await response.json();
+      throw new Error(error.message || 'Failed to create student');
+    }
+    
+    return await response.json();
+  },
+  
+  updateStudent: async (id, studentData) => {
+    const response = await fetch(`${API_BASE_URL}/students/${id}`, {
+      method: 'PUT',
+      headers: getHeaders(),
+      body: JSON.stringify(studentData),
+    });
+    
+    if (!response.ok) {
+      const error = await response.json();
+      throw new Error(error.message || 'Failed to update student');
+    }
+    
+    return await response.json();
+  },
+  
+  deleteStudent: async (id) => {
+    const response = await fetch(`${API_BASE_URL}/students/${id}`, {
+      method: 'DELETE',
+      headers: getHeaders(),
+    });
+    
+    if (!response.ok) {
+      throw new Error('Failed to delete student');
+    }
+    
+    return await response.json();
+  }
+};
+
 export default {
   authAPI,
   userAPI,
@@ -436,5 +508,6 @@ export default {
   teamAPI,
   evaluationAPI,
   questionnaireAPI,
-  reportAPI
+  reportAPI,
+  studentAPI
 };

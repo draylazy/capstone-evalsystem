@@ -11,6 +11,7 @@ import Teams from './pages/DashboardTeacher/Teams';
 import Advisers from './pages/DashboardTeacher/Advisers';
 import Questionnaires from './pages/DashboardTeacher/Questionnaires';
 import Reports from './pages/DashboardTeacher/Reports';
+import Student from './pages/DashboardTeacher/Student';
 
 // Adviser Dashboard Pages
 import Adviser from './pages/DashboardAdviser/Adviser';
@@ -74,6 +75,14 @@ function App() {
             element={
               <ProtectedRoute allowedRoles={['TEACHER']}>
                 <Reports />
+              </ProtectedRoute>
+            } 
+          />
+          <Route 
+            path="/teacher/students" 
+            element={
+              <ProtectedRoute allowedRoles={['TEACHER']}>
+                <Student />
               </ProtectedRoute>
             } 
           />
