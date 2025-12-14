@@ -5,6 +5,7 @@ import group9.advisor_eval_system.dto.LoginRequest;
 import group9.advisor_eval_system.dto.RegisterRequest;
 import group9.advisor_eval_system.entity.User;
 import group9.advisor_eval_system.repository.UserRepository;
+import group9.advisor_eval_system.util.JwtUtil;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
@@ -17,6 +18,9 @@ public class AuthService {
     
     @Autowired
     private PasswordEncoder passwordEncoder;
+    
+    @Autowired
+    private JwtUtil jwtUtil;
     
     public AuthResponse register(RegisterRequest request) {
         // Check if email already exists
@@ -36,7 +40,11 @@ public class AuthService {
         user.setIsActive(true);
         
         User savedUser = userRepository.save(user);
-        return new AuthResponse(savedUser, "Registration successful");
+        
+        // Generate JWT token
+        String token = jwtUtil.generateToken(savedUser.getId(), savedUser.getEmail(), savedUser.getRole().toString());
+        
+        return new AuthResponse(savedUser, token, "Registration successful");
     }
     
     public AuthResponse login(LoginRequest request) {
@@ -54,6 +62,9 @@ public class AuthService {
             throw new RuntimeException("Invalid email or password");
         }
         
-        return new AuthResponse(user, "Login successful");
+        // Generate JWT token
+        String token = jwtUtil.generateToken(user.getId(), user.getEmail(), user.getRole().toString());
+        
+        return new AuthResponse(user, token, "Login successful");
     }
 }

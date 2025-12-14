@@ -17,9 +17,10 @@ public class AuthResponse {
     private User.UserRole role;
     private String department;
     private Boolean isActive;
+    private String token;
     private String message;
     
-    public AuthResponse(User user, String message) {
+    public AuthResponse(User user, String token, String message) {
         this.id = user.getId();
         this.firstName = user.getFirstName();
         this.lastName = user.getLastName();
@@ -27,6 +28,7 @@ public class AuthResponse {
         this.role = user.getRole();
         this.department = user.getDepartment();
         this.isActive = user.getIsActive();
+        this.token = token;
         this.message = message;
     }
 }

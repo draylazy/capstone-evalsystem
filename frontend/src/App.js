@@ -18,6 +18,10 @@ import Evaluations from './pages/DashboardAdviser/Evaluations';
 import Completed from './pages/DashboardAdviser/Completed';
 import Account from './pages/DashboardAdviser/Account';
 
+// Profile Pages
+import Profile from './pages/Profile/Profile';
+import GoogleCallback from './pages/Profile/GoogleCallback';
+
 function App() {
   return (
     <Router>
@@ -76,6 +80,20 @@ function App() {
                 <Student />
               </ProtectedRoute>
             } 
+          />
+
+          {/* Profile Routes */}
+          <Route 
+            path="/profile" 
+            element={
+              <ProtectedRoute allowedRoles={['TEACHER', 'ADVISER']}>
+                <Profile />
+              </ProtectedRoute>
+            } 
+          />
+          <Route 
+            path="/profile/google-callback" 
+            element={<GoogleCallback />} 
           />
 
           {/* Adviser Routes */}

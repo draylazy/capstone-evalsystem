@@ -21,6 +21,7 @@ const TeacherSidebar = () => {
         <li onClick={() => navigate('/teacher/students')}>Students</li>
         <li onClick={() => navigate('/teacher/questionnaires')}>Questionnaires</li>
         <li onClick={() => navigate('/teacher/reports')}>Reports</li>
+        <li onClick={() => navigate('/profile')}>Profile</li>
         <li onClick={handleLogout}>Logout</li>
       </ul>
     </div>

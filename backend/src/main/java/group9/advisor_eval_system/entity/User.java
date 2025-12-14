@@ -55,6 +55,27 @@ public class User {
     @Column(nullable = false)
     private Boolean isActive = true;
     
+    // Google OAuth fields for account linking
+    @Column(nullable = true)
+    private String googleId;
+    
+    @Column(nullable = true, length = 1000)
+    @JsonIgnore
+    private String googleAccessToken;
+    
+    @Column(nullable = true, length = 1000)
+    @JsonIgnore
+    private String googleRefreshToken;
+    
+    @Column(nullable = true)
+    private LocalDateTime googleTokenExpiry;
+    
+    @Column(nullable = true)
+    private String googleEmail;
+    
+    @Column(nullable = false)
+    private Boolean isGoogleLinked = false;
+    
     @CreationTimestamp
     @Column(updatable = false)
     private LocalDateTime createdAt;
