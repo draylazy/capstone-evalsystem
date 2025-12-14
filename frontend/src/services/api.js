@@ -142,7 +142,8 @@ export const classAPI = {
     });
     
     if (!response.ok) {
-      throw new Error('Failed to create class');
+      const error = await response.json().catch(() => ({ message: 'Failed to create class' }));
+      throw new Error(error.message || 'Failed to create class');
     }
     
     return await response.json();

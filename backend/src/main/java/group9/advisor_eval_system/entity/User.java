@@ -1,5 +1,6 @@
 package group9.advisor_eval_system.entity;
 
+import com.fasterxml.jackson.annotation.JsonIgnore;
 import jakarta.persistence.*;
 import jakarta.validation.constraints.Email;
 import jakarta.validation.constraints.NotBlank;
@@ -9,8 +10,8 @@ import lombok.NoArgsConstructor;
 import org.hibernate.annotations.CreationTimestamp;
 import org.hibernate.annotations.UpdateTimestamp;
 import java.time.LocalDateTime;
-import java.util.HashSet;
-import java.util.Set;
+import java.util.ArrayList;
+import java.util.List;
 
 @Entity
 @Table(name = "users")
@@ -38,6 +39,7 @@ public class User {
     
     @NotBlank
     @Column(nullable = false)
+    @JsonIgnore
     private String password; // Encrypted
     
     @Enumerated(EnumType.STRING)
@@ -62,10 +64,16 @@ public class User {
     
     // Relationships
     @OneToMany(mappedBy = "teacher", cascade = CascadeType.ALL)
-    private Set<SchoolClass> createdClasses = new HashSet<>();
+    @JsonIgnore
+    @lombok.ToString.Exclude
+    @lombok.EqualsAndHashCode.Exclude
+    private List<SchoolClass> createdClasses = new ArrayList<>();
     
     @ManyToMany(mappedBy = "advisers")
-    private Set<Team> advisedTeams = new HashSet<>();
+    @JsonIgnore
+    @lombok.ToString.Exclude
+    @lombok.EqualsAndHashCode.Exclude
+    private List<Team> advisedTeams = new ArrayList<>();
     
     public enum UserRole {
         TEACHER,

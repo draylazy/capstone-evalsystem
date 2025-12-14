@@ -1,5 +1,7 @@
 package group9.advisor_eval_system.entity;
 
+import com.fasterxml.jackson.annotation.JsonIgnore;
+import com.fasterxml.jackson.annotation.JsonIgnoreProperties;
 import jakarta.persistence.*;
 import jakarta.validation.constraints.NotBlank;
 import lombok.AllArgsConstructor;
@@ -9,8 +11,8 @@ import org.hibernate.annotations.CreationTimestamp;
 import org.hibernate.annotations.UpdateTimestamp;
 
 import java.time.LocalDateTime;
-import java.util.HashSet;
-import java.util.Set;
+import java.util.ArrayList;
+import java.util.List;
 
 @Entity
 @Table(name = "teams")
@@ -43,10 +45,16 @@ public class Team {
     // Relationships
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "class_id", nullable = false)
+    @JsonIgnoreProperties({"students", "teams", "teacher"})
+    @lombok.ToString.Exclude
+    @lombok.EqualsAndHashCode.Exclude
     private SchoolClass schoolClass;
     
     @OneToMany(mappedBy = "team", cascade = CascadeType.ALL)
-    private Set<Student> members = new HashSet<>();
+    @JsonIgnore
+    @lombok.ToString.Exclude
+    @lombok.EqualsAndHashCode.Exclude
+    private List<Student> members = new ArrayList<>();
     
     @ManyToMany
     @JoinTable(
@@ -54,10 +62,16 @@ public class Team {
         joinColumns = @JoinColumn(name = "team_id"),
         inverseJoinColumns = @JoinColumn(name = "adviser_id")
     )
-    private Set<User> advisers = new HashSet<>();
+    @JsonIgnore
+    @lombok.ToString.Exclude
+    @lombok.EqualsAndHashCode.Exclude
+    private List<User> advisers = new ArrayList<>();
     
     @OneToMany(mappedBy = "team", cascade = CascadeType.ALL)
-    private Set<Evaluation> evaluations = new HashSet<>();
+    @JsonIgnore
+    @lombok.ToString.Exclude
+    @lombok.EqualsAndHashCode.Exclude
+    private List<Evaluation> evaluations = new ArrayList<>();
     
     @ManyToMany
     @JoinTable(
@@ -65,5 +79,8 @@ public class Team {
         joinColumns = @JoinColumn(name = "team_id"),
         inverseJoinColumns = @JoinColumn(name = "questionnaire_id")
     )
-    private Set<Questionnaire> questionnaires = new HashSet<>();
+    @JsonIgnore
+    @lombok.ToString.Exclude
+    @lombok.EqualsAndHashCode.Exclude
+    private List<Questionnaire> questionnaires = new ArrayList<>();
 }
