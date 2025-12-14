@@ -241,7 +241,7 @@ const Classes = () => {
                     <td>{classItem.section || "N/A"}</td>
                     <td>{classItem.schoolYear}</td>
                     <td>{students.filter(s => s.classIds && s.classIds.includes(classItem.id)).length} Students</td>
-                    <td>{classItem.teams?.length || 0} Teams</td>
+                    <td>{classItem.teamIds?.length || 0} Teams</td>
                     <td>
                       <span className={classItem.isActive ? "status-active" : "status-inactive"}>
                         {classItem.isActive ? "Active" : "Inactive"}

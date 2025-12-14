@@ -2,6 +2,7 @@ package group9.advisor_eval_system.entity;
 
 import com.fasterxml.jackson.annotation.JsonIgnore;
 import com.fasterxml.jackson.annotation.JsonIgnoreProperties;
+import com.fasterxml.jackson.annotation.JsonProperty;
 import jakarta.persistence.*;
 import jakarta.validation.constraints.NotBlank;
 import lombok.AllArgsConstructor;
@@ -13,6 +14,7 @@ import org.hibernate.annotations.UpdateTimestamp;
 import java.time.LocalDateTime;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.stream.Collectors;
 
 @Entity
 @Table(name = "teams")
@@ -42,6 +44,70 @@ public class Team {
     @UpdateTimestamp
     private LocalDateTime updatedAt;
     
+    // Expose class ID without exposing full class object
+    @JsonProperty("classId")
+    public Long getClassId() {
+        return schoolClass != null ? schoolClass.getId() : null;
+    }
+    
+    // Allow setting class by ID during deserialization
+    @JsonProperty("classId")
+    public void setClassId(Long classId) {
+        if (classId != null) {
+            SchoolClass tempClass = new SchoolClass();
+            tempClass.setId(classId);
+            this.schoolClass = tempClass;
+        }
+    }
+    
+    // Expose member IDs without exposing full member objects
+    @JsonProperty("memberIds")
+    public List<Long> getMemberIds() {
+        return members != null ? members.stream()
+                .map(Student::getId)
+                .collect(Collectors.toList()) : new ArrayList<>();
+    }
+    
+    // Allow setting members by IDs during deserialization
+    @JsonProperty("memberIds")
+    public void setMemberIds(List<Long> memberIds) {
+        if (memberIds != null && !memberIds.isEmpty()) {
+            this.members = memberIds.stream()
+                    .map(id -> {
+                        Student student = new Student();
+                        student.setId(id);
+                        return student;
+                    })
+                    .collect(Collectors.toList());
+        } else {
+            this.members = new ArrayList<>();
+        }
+    }
+    
+    // Expose adviser IDs without exposing full adviser objects
+    @JsonProperty("adviserIds")
+    public List<Long> getAdviserIds() {
+        return advisers != null ? advisers.stream()
+                .map(User::getId)
+                .collect(Collectors.toList()) : new ArrayList<>();
+    }
+    
+    // Allow setting advisers by IDs during deserialization
+    @JsonProperty("adviserIds")
+    public void setAdviserIds(List<Long> adviserIds) {
+        if (adviserIds != null && !adviserIds.isEmpty()) {
+            this.advisers = adviserIds.stream()
+                    .map(id -> {
+                        User user = new User();
+                        user.setId(id);
+                        return user;
+                    })
+                    .collect(Collectors.toList());
+        } else {
+            this.advisers = new ArrayList<>();
+        }
+    }
+    
     // Relationships
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "class_id", nullable = false)
@@ -50,7 +116,7 @@ public class Team {
     @lombok.EqualsAndHashCode.Exclude
     private SchoolClass schoolClass;
     
-    @OneToMany(mappedBy = "team", cascade = CascadeType.ALL)
+    @ManyToMany(mappedBy = "teams")
     @JsonIgnore
     @lombok.ToString.Exclude
     @lombok.EqualsAndHashCode.Exclude

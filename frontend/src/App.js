@@ -8,7 +8,6 @@ import ProtectedRoute from './components/ProtectedRoute';
 import Teacher from './pages/DashboardTeacher/Teacher';
 import Classes from './pages/DashboardTeacher/Classes';
 import Teams from './pages/DashboardTeacher/Teams';
-import Advisers from './pages/DashboardTeacher/Advisers';
 import Questionnaires from './pages/DashboardTeacher/Questionnaires';
 import Reports from './pages/DashboardTeacher/Reports';
 import Student from './pages/DashboardTeacher/Student';
@@ -51,14 +50,6 @@ function App() {
             element={
               <ProtectedRoute allowedRoles={['TEACHER']}>
                 <Teams />
-              </ProtectedRoute>
-            } 
-          />
-          <Route 
-            path="/teacher/advisers" 
-            element={
-              <ProtectedRoute allowedRoles={['TEACHER']}>
-                <Advisers />
               </ProtectedRoute>
             } 
           />

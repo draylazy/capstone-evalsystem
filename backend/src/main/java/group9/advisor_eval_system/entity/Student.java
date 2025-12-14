@@ -1,7 +1,6 @@
 package group9.advisor_eval_system.entity;
 
 import com.fasterxml.jackson.annotation.JsonIgnore;
-import com.fasterxml.jackson.annotation.JsonIgnoreProperties;
 import com.fasterxml.jackson.annotation.JsonProperty;
 import jakarta.persistence.*;
 import java.util.ArrayList;
@@ -78,21 +77,27 @@ public class Student {
         }
     }
     
-    // Expose team ID without exposing full team object
-    @JsonProperty("teamId")
-    public Long getTeamId() {
-        return team != null ? team.getId() : null;
+    // Expose team IDs without exposing full team objects
+    @JsonProperty("teamIds")
+    public List<Long> getTeamIds() {
+        return teams != null ? teams.stream()
+                .map(Team::getId)
+                .collect(Collectors.toList()) : new ArrayList<>();
     }
     
-    // Allow setting team by ID during deserialization
-    @JsonProperty("teamId")
-    public void setTeamId(Long teamId) {
-        if (teamId != null) {
-            Team tempTeam = new Team();
-            tempTeam.setId(teamId);
-            this.team = tempTeam;
+    // Allow setting teams by IDs during deserialization
+    @JsonProperty("teamIds")
+    public void setTeamIds(List<Long> teamIds) {
+        if (teamIds != null && !teamIds.isEmpty()) {
+            this.teams = teamIds.stream()
+                    .map(id -> {
+                        Team tempTeam = new Team();
+                        tempTeam.setId(id);
+                        return tempTeam;
+                    })
+                    .collect(Collectors.toList());
         } else {
-            this.team = null;
+            this.teams = new ArrayList<>();
         }
     }
     
@@ -108,10 +113,14 @@ public class Student {
     @lombok.EqualsAndHashCode.Exclude
     private List<SchoolClass> classes = new ArrayList<>();
     
-    @ManyToOne(fetch = FetchType.LAZY)
-    @JoinColumn(name = "team_id", nullable = true)
+    @ManyToMany(fetch = FetchType.LAZY)
+    @JoinTable(
+        name = "student_teams",
+        joinColumns = @JoinColumn(name = "student_id"),
+        inverseJoinColumns = @JoinColumn(name = "team_id")
+    )
     @JsonIgnore
     @lombok.ToString.Exclude
     @lombok.EqualsAndHashCode.Exclude
-    private Team team;
+    private List<Team> teams = new ArrayList<>();
 }

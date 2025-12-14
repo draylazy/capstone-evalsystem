@@ -73,6 +73,32 @@ export const authAPI = {
   isAuthenticated: () => {
     const user = localStorage.getItem('user');
     return !!user; // Check if user data exists instead of token
+  },
+  
+  getAllUsers: async () => {
+    const response = await fetch(`${API_BASE_URL}/users`, {
+      method: 'GET',
+      headers: getHeaders(false),
+    });
+    
+    if (!response.ok) {
+      throw new Error('Failed to fetch users');
+    }
+    
+    return await response.json();
+  },
+  
+  getUsersByRole: async (role) => {
+    const response = await fetch(`${API_BASE_URL}/users/role/${role}`, {
+      method: 'GET',
+      headers: getHeaders(false),
+    });
+    
+    if (!response.ok) {
+      throw new Error('Failed to fetch users by role');
+    }
+    
+    return await response.json();
   }
 };
 

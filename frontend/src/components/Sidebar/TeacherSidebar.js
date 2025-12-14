@@ -19,7 +19,6 @@ const TeacherSidebar = () => {
         <li onClick={() => navigate('/teacher/classes')}>Classes</li>
         <li onClick={() => navigate('/teacher/teams')}>Teams</li>
         <li onClick={() => navigate('/teacher/students')}>Students</li>
-        <li onClick={() => navigate('/teacher/advisers')}>Advisers</li>
         <li onClick={() => navigate('/teacher/questionnaires')}>Questionnaires</li>
         <li onClick={() => navigate('/teacher/reports')}>Reports</li>
         <li onClick={handleLogout}>Logout</li>

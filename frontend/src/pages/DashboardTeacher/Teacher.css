@@ -228,3 +228,67 @@
     width: auto;
     margin-right: 8px;
   }  
+
+  /* Team Management Styles */
+  .team-section {
+    margin: 20px 0;
+    padding: 20px;
+    border: 1px solid #e8e8e8;
+    border-radius: 4px;
+    background: #fafafa;
+  }
+
+  .team-section h3 {
+    font-size: 16px;
+    font-weight: 600;
+    color: #1a1a1a;
+    margin-bottom: 12px;
+  }
+
+  .team-section h4 {
+    font-size: 14px;
+    font-weight: 600;
+    color: #333;
+    margin-top: 16px;
+    margin-bottom: 8px;
+  }
+
+  .member-list {
+    list-style: none;
+    padding: 0;
+    margin: 0 0 16px 0;
+  }
+
+  .member-list li {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 10px 12px;
+    margin-bottom: 8px;
+    background: #ffffff;
+    border: 1px solid #e0e0e0;
+    border-radius: 4px;
+  }
+
+  .member-list li:hover {
+    background: #f8f8f8;
+  }
+
+  .add-member-section {
+    margin-top: 16px;
+  }
+
+  .add-member-section select {
+    width: 100%;
+    padding: 8px 12px;
+    border: 1px solid #ccc;
+    border-radius: 4px;
+    font-size: 14px;
+  }
+
+  .info-text {
+    font-size: 13px;
+    color: #666;
+    font-style: italic;
+    margin-top: 8px;
+  }

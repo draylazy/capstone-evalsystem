@@ -1,7 +1,6 @@
 package group9.advisor_eval_system.entity;
 
 import com.fasterxml.jackson.annotation.JsonIgnore;
-import com.fasterxml.jackson.annotation.JsonIgnoreProperties;
 import com.fasterxml.jackson.annotation.JsonProperty;
 import jakarta.persistence.*;
 import jakarta.validation.constraints.NotBlank;
@@ -64,6 +63,14 @@ public class SchoolClass {
             tempTeacher.setId(teacherId);
             this.teacher = tempTeacher;
         }
+    }
+    
+    // Expose team IDs without exposing full team objects
+    @JsonProperty("teamIds")
+    public List<Long> getTeamIds() {
+        return teams != null ? teams.stream()
+                .map(Team::getId)
+                .collect(java.util.stream.Collectors.toList()) : new ArrayList<>();
     }
     
     // Relationships

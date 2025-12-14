@@ -56,28 +56,79 @@ public class StudentService {
         student.setEmail(studentDetails.getEmail());
         student.setPhoneNumber(studentDetails.getPhoneNumber());
         
+        // Track removed classes BEFORE updating the classes list
+        List<Long> oldClassIds = student.getClasses().stream()
+                .map(SchoolClass::getId)
+                .collect(java.util.stream.Collectors.toList());
+        List<Long> removedClassIds = new ArrayList<>();
+        
         // Handle classes assignment (many-to-many)
-        if (studentDetails.getClasses() != null && !studentDetails.getClasses().isEmpty()) {
-            List<SchoolClass> classes = new ArrayList<>();
-            for (SchoolClass cls : studentDetails.getClasses()) {
-                if (cls.getId() != null) {
-                    SchoolClass schoolClass = schoolClassRepository.findById(cls.getId())
-                        .orElseThrow(() -> new RuntimeException("Class not found with id: " + cls.getId()));
-                    classes.add(schoolClass);
+        if (studentDetails.getClasses() != null) {
+            List<Long> newClassIds = new ArrayList<>();
+            
+            if (!studentDetails.getClasses().isEmpty()) {
+                List<SchoolClass> classes = new ArrayList<>();
+                for (SchoolClass cls : studentDetails.getClasses()) {
+                    if (cls.getId() != null) {
+                        SchoolClass schoolClass = schoolClassRepository.findById(cls.getId())
+                            .orElseThrow(() -> new RuntimeException("Class not found with id: " + cls.getId()));
+                        classes.add(schoolClass);
+                        newClassIds.add(cls.getId());
+                    }
+                }
+                student.setClasses(classes);
+            } else {
+                // Explicitly clear classes if empty array is sent
+                student.setClasses(new ArrayList<>());
+            }
+            
+            // Find removed classes
+            removedClassIds = oldClassIds.stream()
+                    .filter(classId -> !newClassIds.contains(classId))
+                    .collect(java.util.stream.Collectors.toList());
+        }
+        // If studentDetails.getClasses() is null, don't touch the existing classes
+        
+        // Handle teams assignment (many-to-many)
+        if (studentDetails.getTeams() != null) {
+            if (!studentDetails.getTeams().isEmpty()) {
+                List<Team> teams = new ArrayList<>();
+                for (Team team : studentDetails.getTeams()) {
+                    if (team.getId() != null) {
+                        Team foundTeam = teamRepository.findById(team.getId())
+                            .orElseThrow(() -> new RuntimeException("Team not found with id: " + team.getId()));
+                        teams.add(foundTeam);
+                    }
+                }
+                student.setTeams(teams);
+            } else {
+                // Explicitly clear teams if empty array is sent
+                student.setTeams(new ArrayList<>());
+            }
+        }
+        // If studentDetails.getTeams() is null, don't touch the existing teams
+        
+        // AFTER handling teams, remove student from teams in removed classes
+        if (!removedClassIds.isEmpty()) {
+            // Collect team IDs to remove
+            List<Long> teamIdsToRemove = new ArrayList<>();
+            
+            for (Team team : student.getTeams()) {
+                // Fetch full team with schoolClass to check
+                Team fullTeam = teamRepository.findById(team.getId()).orElse(null);
+                if (fullTeam != null && fullTeam.getSchoolClass() != null 
+                        && removedClassIds.contains(fullTeam.getSchoolClass().getId())) {
+                    teamIdsToRemove.add(team.getId());
                 }
             }
-            student.setClasses(classes);
-        } else if (studentDetails.getClasses() != null && studentDetails.getClasses().isEmpty()) {
-            student.setClasses(new ArrayList<>());
-        }
-        
-        // Handle team assignment
-        if (studentDetails.getTeam() != null && studentDetails.getTeam().getId() != null) {
-            Team team = teamRepository.findById(studentDetails.getTeam().getId())
-                .orElseThrow(() -> new RuntimeException("Team not found with id: " + studentDetails.getTeam().getId()));
-            student.setTeam(team);
-        } else if (studentDetails.getTeam() == null) {
-            student.setTeam(null);
+            
+            // Remove teams by filtering out the ones to remove
+            if (!teamIdsToRemove.isEmpty()) {
+                List<Team> updatedTeams = student.getTeams().stream()
+                        .filter(team -> !teamIdsToRemove.contains(team.getId()))
+                        .collect(java.util.stream.Collectors.toList());
+                student.setTeams(updatedTeams);
+            }
         }
         
         return studentRepository.save(student);

@@ -1,7 +1,6 @@
 package group9.advisor_eval_system.repository;
 
 import group9.advisor_eval_system.entity.Student;
-import group9.advisor_eval_system.entity.SchoolClass;
 import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.stereotype.Repository;
 

@@ -161,7 +161,15 @@ const Student = () => {
                       <td>{student.studentId}</td>
                       <td>{student.firstName}</td>
                       <td>{student.lastName}</td>
-                      <td>{student.schoolClass?.name || 'N/A'}</td>
+                      <td>
+                        {student.classIds && student.classIds.length > 0 
+                          ? student.classIds.map(classId => {
+                              const cls = classes.find(c => c.id === classId);
+                              return cls ? cls.name : '';
+                            }).filter(n => n).join(', ')
+                          : 'N/A'
+                        }
+                      </td>
                       <td>{student.email || 'N/A'}</td>
                       <td>{student.phoneNumber || 'N/A'}</td>
                       <td>
