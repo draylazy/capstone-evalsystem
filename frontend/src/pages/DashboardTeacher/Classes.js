@@ -113,7 +113,7 @@ const Classes = () => {
   const handleManageClass = (classItem) => {
     setSelectedClass(classItem);
     // Filter students belonging to this class
-    const filteredStudents = students.filter(s => s.schoolClass?.id === classItem.id);
+    const filteredStudents = students.filter(s => s.classIds && s.classIds.includes(classItem.id));
     setClassStudents(filteredStudents);
     setShowManageModal(true);
   };
@@ -133,9 +133,10 @@ const Classes = () => {
       }
       
       // Update the student to assign them to this class
+      const currentClassIds = student.classIds || [];
       const updatedStudent = {
         ...student,
-        schoolClass: { id: selectedClass.id }
+        classIds: [...currentClassIds, selectedClass.id]
       };
       await studentAPI.updateStudent(student.id, updatedStudent);
       
@@ -145,7 +146,7 @@ const Classes = () => {
       // Reload students and update class students
       await loadStudents();
       const updatedStudents = await studentAPI.getAllStudents();
-      const filteredStudents = updatedStudents.filter(s => s.schoolClass?.id === selectedClass.id);
+      const filteredStudents = updatedStudents.filter(s => s.classIds && s.classIds.includes(selectedClass.id));
       setClassStudents(filteredStudents);
       alert("Student added successfully!");
     } catch (err) {
@@ -154,14 +155,29 @@ const Classes = () => {
   };
 
   const handleRemoveStudent = async (studentId) => {
-    if (window.confirm("Are you sure you want to remove this student from the class?")) {
+    if (window.confirm("Are you sure you want to remove this student from this class?")) {
       try {
-        await studentAPI.deleteStudent(studentId);
+        // Get the student
+        const student = students.find(s => s.id === studentId);
+        if (!student) {
+          alert("Student not found");
+          return;
+        }
+        
+        // Remove this class from the student's classIds array
+        const updatedClassIds = (student.classIds || []).filter(id => id !== selectedClass.id);
+        const updatedStudent = {
+          ...student,
+          classIds: updatedClassIds
+        };
+        
+        await studentAPI.updateStudent(studentId, updatedStudent);
+        
         // Update local state
         const updatedStudents = classStudents.filter(s => s.id !== studentId);
         setClassStudents(updatedStudents);
         await loadStudents();
-        alert("Student removed successfully!");
+        alert("Student removed from class successfully!");
       } catch (err) {
         alert("Failed to remove student: " + err.message);
       }
@@ -169,9 +185,9 @@ const Classes = () => {
   };
 
   const openAddStudentModal = () => {
-    // Filter students that don't have a class assigned
-    const unassignedStudents = students.filter(s => !s.schoolClass || s.schoolClass.id === null);
-    setAvailableStudents(unassignedStudents);
+    // Filter students that are not already in this class
+    const availableForClass = students.filter(s => !s.classIds || !s.classIds.includes(selectedClass.id));
+    setAvailableStudents(availableForClass);
     setSelectedStudentId("");
     setShowAddStudentModal(true);
   };
@@ -224,7 +240,7 @@ const Classes = () => {
                     <td>{classItem.name}</td>
                     <td>{classItem.section || "N/A"}</td>
                     <td>{classItem.schoolYear}</td>
-                    <td>{students.filter(s => s.schoolClass?.id === classItem.id).length} Students</td>
+                    <td>{students.filter(s => s.classIds && s.classIds.includes(classItem.id)).length} Students</td>
                     <td>{classItem.teams?.length || 0} Teams</td>
                     <td>
                       <span className={classItem.isActive ? "status-active" : "status-inactive"}>

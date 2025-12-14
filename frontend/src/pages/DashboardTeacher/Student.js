@@ -17,7 +17,7 @@ const Student = () => {
     lastName: '',
     email: '',
     phoneNumber: '',
-    schoolClass: { id: '' }
+    classIds: []
   });
 
   useEffect(() => {
@@ -50,10 +50,12 @@ const Student = () => {
 
   const handleInputChange = (e) => {
     const { name, value } = e.target;
-    if (name === 'classId') {
+    if (name === 'classIds') {
+      // Handle multi-select
+      const selectedOptions = Array.from(e.target.selectedOptions, option => parseInt(option.value));
       setCurrentStudent({
         ...currentStudent,
-        schoolClass: { id: value }
+        classIds: selectedOptions
       });
     } else {
       setCurrentStudent({
@@ -72,7 +74,7 @@ const Student = () => {
       lastName: '',
       email: '',
       phoneNumber: '',
-      schoolClass: { id: '' }
+      classIds: []
     });
     setShowModal(true);
   };
@@ -186,14 +188,15 @@ const Student = () => {
               {error && <div className="error-message">{error}</div>}
               <form onSubmit={handleSubmit}>
                 <div className="form-group">
-                  <label>Class *</label>
+                  <label>Classes * (Hold Ctrl/Cmd to select multiple)</label>
                   <select
-                    name="classId"
-                    value={currentStudent.schoolClass?.id || ''}
+                    name="classIds"
+                    value={currentStudent.classIds || []}
                     onChange={handleInputChange}
+                    multiple
                     required
+                    style={{ minHeight: '100px' }}
                   >
-                    <option value="">Select a class</option>
                     {classes.map((cls) => (
                       <option key={cls.id} value={cls.id}>
                         {cls.name} {cls.section ? `- ${cls.section}` : ''} ({cls.schoolYear})

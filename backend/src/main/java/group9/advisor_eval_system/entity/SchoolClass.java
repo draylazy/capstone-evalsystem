@@ -74,7 +74,7 @@ public class SchoolClass {
     @lombok.EqualsAndHashCode.Exclude
     private User teacher;
     
-    @OneToMany(mappedBy = "schoolClass", cascade = CascadeType.ALL, orphanRemoval = true)
+    @ManyToMany(mappedBy = "classes")
     @JsonIgnore
     @lombok.ToString.Exclude
     @lombok.EqualsAndHashCode.Exclude

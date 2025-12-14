@@ -10,8 +10,8 @@ import java.util.Optional;
 
 @Repository
 public interface StudentRepository extends JpaRepository<Student, Long> {
-    List<Student> findBySchoolClass(SchoolClass schoolClass);
-    List<Student> findBySchoolClassId(Long classId);
+    // Find students by a specific class using the join table
+    List<Student> findByClassesId(Long classId);
     Optional<Student> findByStudentId(String studentId);
     boolean existsByStudentId(String studentId);
 }
