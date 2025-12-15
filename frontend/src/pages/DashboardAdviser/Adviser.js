@@ -1,9 +1,47 @@
-import React from "react";
+import React, { useEffect, useMemo, useState } from "react";
+import { useNavigate } from "react-router-dom";
 import AdviserSidebar from "../../components/Sidebar/AdviserSidebar";
 import SummaryCard from "../../components/Cards/SummaryCard";
+import { teamAPI } from "../../services/api";
 import "./Adviser.css";
 
 const Adviser = () => {
+  const navigate = useNavigate();
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState(null);
+  const [assignedTeams, setAssignedTeams] = useState([]);
+
+  const currentUser = useMemo(() => {
+    const raw = localStorage.getItem("user");
+    return raw ? JSON.parse(raw) : null;
+  }, []);
+
+  useEffect(() => {
+    const load = async () => {
+      try {
+        setLoading(true);
+        setError(null);
+
+        if (!currentUser?.id) {
+          setError("User not logged in");
+          return;
+        }
+
+        const allTeams = await teamAPI.getAllTeams();
+        const mine = (allTeams || []).filter(
+          (t) => Array.isArray(t.adviserIds) && t.adviserIds.includes(currentUser.id)
+        );
+        setAssignedTeams(mine);
+      } catch (e) {
+        setError(e?.message || "Failed to load dashboard data");
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    load();
+  }, [currentUser]);
+
   return (
     <div className="adviser-container">
       <AdviserSidebar />
@@ -12,13 +50,21 @@ const Adviser = () => {
         <h1>Adviser Dashboard</h1>
 
         <div className="summary-row">
-          <SummaryCard title="Teams Assigned" value="5" />
-          <SummaryCard title="Completed" value="2" />
-          <SummaryCard title="Pending" value="3" />
+          <SummaryCard title="Teams Assigned" value={loading ? "-" : String(assignedTeams.length)} />
+          <SummaryCard title="Completed" value={loading ? "-" : "0"} />
+          <SummaryCard title="Pending" value={loading ? "-" : "0"} />
         </div>
+
+        {error && <div className="error-message">{error}</div>}
 
         <div className="section">
           <h2>Assigned Teams</h2>
+
+          {loading ? (
+            <p>Loading...</p>
+          ) : assignedTeams.length === 0 ? (
+            <p>No assigned teams found.</p>
+          ) : (
 
           <table className="team-table">
             <thead>
@@ -31,21 +77,24 @@ const Adviser = () => {
             </thead>
 
             <tbody>
-              <tr>
-                <td>Team Alpha</td>
-                <td>4 Members</td>
-                <td className="pending">Pending</td>
-                <td><button className="btn">Evaluate</button></td>
-              </tr>
-
-              <tr>
-                <td>Team Delta</td>
-                <td>5 Members</td>
-                <td className="completed">Completed</td>
-                <td><button className="btn-secondary">View</button></td>
-              </tr>
+              {assignedTeams.map((t) => (
+                <tr key={t.id}>
+                  <td>{t.name}</td>
+                  <td>{(t.memberIds?.length || 0)} Members</td>
+                  <td className={t.isActive ? "pending" : "completed"}>
+                    {t.isActive ? "Active" : "Inactive"}
+                  </td>
+                  <td>
+                    <button className="btn" onClick={() => navigate("/adviser/evaluations")}>
+                      Open
+                    </button>
+                  </td>
+                </tr>
+              ))}
             </tbody>
           </table>
+
+          )}
         </div>
 
       </div>
