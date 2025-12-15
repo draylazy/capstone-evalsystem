@@ -50,10 +50,10 @@ npm install
 
 Run the frontend:  
 ```bash
-npm run dev
+npm start
 ```  
-
-Frontend will run at: **http://localhost:5173/**
+ 
+Frontend will run at: **http://localhost:3000/**
 
 ---
 

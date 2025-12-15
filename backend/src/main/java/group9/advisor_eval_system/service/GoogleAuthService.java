@@ -3,6 +3,11 @@ package group9.advisor_eval_system.service;
 import com.google.api.client.googleapis.auth.oauth2.GoogleAuthorizationCodeFlow;
 import com.google.api.client.googleapis.auth.oauth2.GoogleAuthorizationCodeTokenRequest;
 import com.google.api.client.googleapis.auth.oauth2.GoogleTokenResponse;
+import com.google.api.client.http.GenericUrl;
+import com.google.api.client.http.HttpRequest;
+import com.google.api.client.http.HttpRequestFactory;
+import com.google.api.client.http.HttpResponse;
+import com.google.api.client.http.HttpHeaders;
 import com.google.api.client.http.javanet.NetHttpTransport;
 import com.google.api.client.json.gson.GsonFactory;
 import group9.advisor_eval_system.entity.User;
@@ -12,9 +17,11 @@ import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+import java.io.InputStreamReader;
 import java.time.LocalDateTime;
 import java.util.Arrays;
 import java.util.List;
+import java.util.Map;
 
 @Service
 @Slf4j
@@ -182,17 +189,39 @@ public class GoogleAuthService {
      * Get user email from Google using access token
      */
     private String getUserEmail(String accessToken) {
-        // TODO: Implement API call to get user info
-        // For now, return placeholder
-        return "google-user@example.com";
+        Map<String, Object> userInfo = getUserInfo(accessToken);
+        Object email = userInfo.get("email");
+        return email != null ? String.valueOf(email) : null;
     }
 
     /**
      * Get user ID from Google using access token
      */
     private String getUserId(String accessToken) {
-        // TODO: Implement API call to get user info
-        // For now, return placeholder
-        return "google-user-id";
+        Map<String, Object> userInfo = getUserInfo(accessToken);
+        Object id = userInfo.get("id");
+        if (id == null) {
+            id = userInfo.get("sub");
+        }
+        return id != null ? String.valueOf(id) : null;
+    }
+
+    @SuppressWarnings("unchecked")
+    private Map<String, Object> getUserInfo(String accessToken) {
+        try {
+            HttpRequestFactory requestFactory = new NetHttpTransport().createRequestFactory();
+            GenericUrl url = new GenericUrl("https://www.googleapis.com/oauth2/v2/userinfo");
+
+            HttpRequest request = requestFactory.buildGetRequest(url);
+            request.setHeaders(new HttpHeaders().setAuthorization("Bearer " + accessToken));
+
+            HttpResponse response = request.execute();
+            try (InputStreamReader reader = new InputStreamReader(response.getContent())) {
+                return GsonFactory.getDefaultInstance().createJsonParser(reader).parse(Map.class);
+            }
+        } catch (Exception e) {
+            log.error("Error fetching Google user info", e);
+            throw new RuntimeException("Failed to fetch Google user info", e);
+        }
     }
 }

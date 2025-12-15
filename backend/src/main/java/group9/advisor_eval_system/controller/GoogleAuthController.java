@@ -74,11 +74,12 @@ public class GoogleAuthController {
             ));
         } catch (Exception e) {
             log.error("Error handling OAuth callback", e);
-            return ResponseEntity.ok(new GoogleLinkStatusResponse(
-                    false,
-                    null,
-                    "Failed to link Google account: " + e.getMessage()
-            ));
+            return ResponseEntity.status(HttpStatus.BAD_REQUEST)
+                    .body(new GoogleLinkStatusResponse(
+                            false,
+                            null,
+                            "Failed to link Google account: " + e.getMessage()
+                    ));
         }
     }
 
@@ -134,11 +135,12 @@ public class GoogleAuthController {
             ));
         } catch (Exception e) {
             log.error("Error unlinking account", e);
-            return ResponseEntity.ok(new GoogleLinkStatusResponse(
-                    true,
-                    null,
-                    "Failed to unlink Google account: " + e.getMessage()
-            ));
+            return ResponseEntity.status(HttpStatus.BAD_REQUEST)
+                    .body(new GoogleLinkStatusResponse(
+                            true,
+                            null,
+                            "Failed to unlink Google account: " + e.getMessage()
+                    ));
         }
     }
 

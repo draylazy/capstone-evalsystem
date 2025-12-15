@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { authAPI } from '../../services/api';
 import TeacherSidebar from '../../components/Sidebar/TeacherSidebar';
@@ -9,6 +9,7 @@ const API_BASE_URL = 'http://localhost:8080';
 
 const Profile = () => {
   const navigate = useNavigate();
+  const oauthHandledRef = useRef(false);
   const [user, setUser] = useState(null);
   const [googleLinkStatus, setGoogleLinkStatus] = useState({
     isLinked: false,
@@ -68,6 +69,7 @@ const Profile = () => {
   const handleLinkGoogleAccount = async () => {
     try {
       setLinkingGoogle(true);
+      oauthHandledRef.current = false;
       const response = await fetch(`${API_BASE_URL}/api/google-auth/authorization-url`, {
         method: 'GET',
         headers: getHeaders(),
@@ -92,16 +94,14 @@ const Profile = () => {
       );
 
       // Listen for OAuth callback
+      window.removeEventListener('message', handleOAuthCallback);
       window.addEventListener('message', handleOAuthCallback);
-      
-      // Check if popup was closed
-      const checkPopup = setInterval(() => {
-        if (popup.closed) {
-          clearInterval(checkPopup);
-          setLinkingGoogle(false);
-          window.removeEventListener('message', handleOAuthCallback);
-        }
-      }, 1000);
+
+      // Fallback cleanup (avoid popup.closed polling because it triggers COOP warnings in some browsers)
+      setTimeout(() => {
+        setLinkingGoogle(false);
+        window.removeEventListener('message', handleOAuthCallback);
+      }, 2 * 60 * 1000);
     } catch (error) {
       console.error('Error initiating Google OAuth:', error);
       alert('Failed to initiate Google account linking');
@@ -114,6 +114,12 @@ const Profile = () => {
     if (event.origin !== window.location.origin) return;
     
     if (event.data.type === 'GOOGLE_OAUTH_CODE') {
+      if (oauthHandledRef.current) {
+        return;
+      }
+      oauthHandledRef.current = true;
+      window.removeEventListener('message', handleOAuthCallback);
+
       try {
         const response = await fetch(`${API_BASE_URL}/api/google-auth/callback`, {
           method: 'POST',
@@ -122,14 +128,15 @@ const Profile = () => {
         });
         
         if (!response.ok) {
-          throw new Error('Failed to link account');
+          const errText = await response.text().catch(() => '');
+          throw new Error(errText || 'Failed to link account');
         }
         
         const data = await response.json();
         setGoogleLinkStatus(data);
         alert(data.message);
-        
-        window.removeEventListener('message', handleOAuthCallback);
+
+        await checkGoogleLinkStatus();
       } catch (error) {
         console.error('Error completing OAuth:', error);
         alert('Failed to link Google account');
