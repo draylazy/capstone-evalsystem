@@ -34,6 +34,9 @@ public class QuestionnaireItem {
     @Column(nullable = true)
     private Integer minScore;
     
+    @Column(columnDefinition = "TEXT")
+    private String choices; // JSON string storing multiple choice options
+    
     // Relationships
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "questionnaire_id", nullable = false)

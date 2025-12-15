@@ -36,7 +36,6 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
                 logger.info("JWT Filter - Token valid: " + isValid);
                 
                 if (isValid) {
-                    String email = tokenProvider.getEmailFromToken(jwt);
                     Long userId = tokenProvider.getUserIdFromToken(jwt);
                     String role = tokenProvider.getRoleFromToken(jwt);
                     

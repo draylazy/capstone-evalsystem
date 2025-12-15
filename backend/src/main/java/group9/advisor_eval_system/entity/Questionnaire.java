@@ -47,6 +47,18 @@ public class Questionnaire {
     private LocalDateTime updatedAt;
     
     // Relationships
+    @ManyToOne(fetch = FetchType.LAZY)
+    @JoinColumn(name = "created_by_teacher_id", nullable = false)
+    private User createdByTeacher;
+    
+    @ManyToMany
+    @JoinTable(
+        name = "class_questionnaires",
+        joinColumns = @JoinColumn(name = "questionnaire_id"),
+        inverseJoinColumns = @JoinColumn(name = "class_id")
+    )
+    private Set<SchoolClass> assignedClasses = new HashSet<>();
+    
     @ManyToMany(mappedBy = "questionnaires")
     private Set<Team> assignedTeams = new HashSet<>();
     

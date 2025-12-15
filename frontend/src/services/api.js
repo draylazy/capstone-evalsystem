@@ -371,6 +371,19 @@ export const questionnaireAPI = {
     return await response.json();
   },
   
+  getQuestionnairesByClass: async (classId) => {
+    const response = await fetch(`${API_BASE_URL}/questionnaires/class/${classId}`, {
+      method: 'GET',
+      headers: getHeaders(),
+    });
+    
+    if (!response.ok) {
+      throw new Error('Failed to fetch questionnaires for class');
+    }
+    
+    return await response.json();
+  },
+  
   createQuestionnaire: async (questionnaireData) => {
     const response = await fetch(`${API_BASE_URL}/questionnaires`, {
       method: 'POST',
@@ -379,7 +392,8 @@ export const questionnaireAPI = {
     });
     
     if (!response.ok) {
-      throw new Error('Failed to create questionnaire');
+      const error = await response.json().catch(() => ({ message: 'Failed to create questionnaire' }));
+      throw new Error(error.message || 'Failed to create questionnaire');
     }
     
     return await response.json();
@@ -393,7 +407,8 @@ export const questionnaireAPI = {
     });
     
     if (!response.ok) {
-      throw new Error('Failed to update questionnaire');
+      const error = await response.json().catch(() => ({ message: 'Failed to update questionnaire' }));
+      throw new Error(error.message || 'Failed to update questionnaire');
     }
     
     return await response.json();
@@ -406,7 +421,38 @@ export const questionnaireAPI = {
     });
     
     if (!response.ok) {
-      throw new Error('Failed to delete questionnaire');
+      const error = await response.json().catch(() => ({ message: 'Failed to delete questionnaire' }));
+      throw new Error(error.message || 'Failed to delete questionnaire');
+    }
+    
+    return await response.json();
+  },
+  
+  assignToClasses: async (id, classIds) => {
+    const response = await fetch(`${API_BASE_URL}/questionnaires/${id}/assign`, {
+      method: 'POST',
+      headers: getHeaders(),
+      body: JSON.stringify({ classIds }),
+    });
+    
+    if (!response.ok) {
+      const error = await response.json().catch(() => ({ message: 'Failed to assign questionnaire' }));
+      throw new Error(error.message || 'Failed to assign questionnaire');
+    }
+    
+    return await response.json();
+  },
+  
+  unassignFromClasses: async (id, classIds) => {
+    const response = await fetch(`${API_BASE_URL}/questionnaires/${id}/unassign`, {
+      method: 'POST',
+      headers: getHeaders(),
+      body: JSON.stringify({ classIds }),
+    });
+    
+    if (!response.ok) {
+      const error = await response.json().catch(() => ({ message: 'Failed to unassign questionnaire' }));
+      throw new Error(error.message || 'Failed to unassign questionnaire');
     }
     
     return await response.json();

@@ -163,14 +163,16 @@ public class GoogleAuthService {
     @Transactional
     protected void refreshAccessToken(User user) {
         try {
-            GoogleTokenResponse tokenResponse = new GoogleAuthorizationCodeTokenRequest(
+            com.google.api.client.googleapis.auth.oauth2.GoogleRefreshTokenRequest refreshRequest = 
+                new com.google.api.client.googleapis.auth.oauth2.GoogleRefreshTokenRequest(
                     new NetHttpTransport(),
                     GsonFactory.getDefaultInstance(),
-                    clientId,
-                    clientSecret,
                     user.getGoogleRefreshToken(),
-                    redirectUri
-            ).execute();
+                    clientId,
+                    clientSecret
+                );
+
+            GoogleTokenResponse tokenResponse = refreshRequest.execute();
 
             user.setGoogleAccessToken(tokenResponse.getAccessToken());
             user.setGoogleTokenExpiry(LocalDateTime.now().plusSeconds(tokenResponse.getExpiresInSeconds()));
