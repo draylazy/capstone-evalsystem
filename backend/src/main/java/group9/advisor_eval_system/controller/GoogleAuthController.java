@@ -6,7 +6,7 @@ import group9.advisor_eval_system.dto.GoogleLinkStatusResponse;
 import group9.advisor_eval_system.entity.User;
 import group9.advisor_eval_system.repository.UserRepository;
 import group9.advisor_eval_system.service.GoogleAuthService;
-import group9.advisor_eval_system.util.JwtUtil;
+import group9.advisor_eval_system.util.JwtTokenProvider;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.http.HttpStatus;
@@ -16,13 +16,12 @@ import org.springframework.web.bind.annotation.*;
 @RestController
 @RequestMapping("/api/google-auth")
 @RequiredArgsConstructor
-@CrossOrigin(origins = "http://localhost:3000")
 @Slf4j
 public class GoogleAuthController {
 
     private final GoogleAuthService googleAuthService;
     private final UserRepository userRepository;
-    private final JwtUtil jwtUtil;
+    private final JwtTokenProvider jwtTokenProvider;
 
     /**
      * Get Google OAuth authorization URL
@@ -152,13 +151,13 @@ public class GoogleAuthController {
         }
         
         String token = authHeader.substring(7);
-        Long userId = jwtUtil.extractUserId(token);
-        String email = jwtUtil.extractEmail(token);
         
         // Validate token
-        if (!jwtUtil.validateToken(token, email)) {
+        if (!jwtTokenProvider.validateToken(token)) {
             throw new RuntimeException("Invalid or expired token");
         }
+        
+        Long userId = jwtTokenProvider.getUserIdFromToken(token);
         
         return userRepository.findById(userId)
                 .orElseThrow(() -> new RuntimeException("User not found"));

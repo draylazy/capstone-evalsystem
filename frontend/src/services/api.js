@@ -3,7 +3,15 @@ const API_BASE_URL = 'http://localhost:8080/api';
 
 // Helper function to get auth token
 const getAuthToken = () => {
-  const user = JSON.parse(localStorage.getItem('user'));
+  const userStr = localStorage.getItem('user');
+  console.log('Raw user from localStorage:', userStr);
+  if (!userStr) {
+    console.warn('No user found in localStorage');
+    return null;
+  }
+  const user = JSON.parse(userStr);
+  console.log('Parsed user object:', user);
+  console.log('Token from user:', user?.token);
   return user?.token || null;
 };
 
@@ -78,7 +86,7 @@ export const authAPI = {
   getAllUsers: async () => {
     const response = await fetch(`${API_BASE_URL}/users`, {
       method: 'GET',
-      headers: getHeaders(false),
+      headers: getHeaders(),
     });
     
     if (!response.ok) {
@@ -91,7 +99,7 @@ export const authAPI = {
   getUsersByRole: async (role) => {
     const response = await fetch(`${API_BASE_URL}/users/role/${role}`, {
       method: 'GET',
-      headers: getHeaders(false),
+      headers: getHeaders(),
     });
     
     if (!response.ok) {
@@ -135,12 +143,17 @@ export const userAPI = {
 // Classes API
 export const classAPI = {
   getAllClasses: async () => {
+    const headers = getHeaders();
+    console.log('Fetching classes with headers:', headers);
     const response = await fetch(`${API_BASE_URL}/classes`, {
       method: 'GET',
-      headers: getHeaders(),
+      headers: headers,
     });
     
+    console.log('Classes response status:', response.status);
     if (!response.ok) {
+      const errorText = await response.text();
+      console.error('Classes error response:', errorText);
       throw new Error('Failed to fetch classes');
     }
     
@@ -459,12 +472,17 @@ export const reportAPI = {
 // Students API
 export const studentAPI = {
   getAllStudents: async () => {
+    const headers = getHeaders();
+    console.log('Fetching students with headers:', headers);
     const response = await fetch(`${API_BASE_URL}/students`, {
       method: 'GET',
-      headers: getHeaders(),
+      headers: headers,
     });
     
+    console.log('Students response status:', response.status);
     if (!response.ok) {
+      const errorText = await response.text();
+      console.error('Students error response:', errorText);
       throw new Error('Failed to fetch students');
     }
     

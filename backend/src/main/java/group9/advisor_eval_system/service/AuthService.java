@@ -5,7 +5,7 @@ import group9.advisor_eval_system.dto.LoginRequest;
 import group9.advisor_eval_system.dto.RegisterRequest;
 import group9.advisor_eval_system.entity.User;
 import group9.advisor_eval_system.repository.UserRepository;
-import group9.advisor_eval_system.util.JwtUtil;
+import group9.advisor_eval_system.util.JwtTokenProvider;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
@@ -20,7 +20,7 @@ public class AuthService {
     private PasswordEncoder passwordEncoder;
     
     @Autowired
-    private JwtUtil jwtUtil;
+    private JwtTokenProvider jwtTokenProvider;
     
     public AuthResponse register(RegisterRequest request) {
         // Check if email already exists
@@ -42,7 +42,7 @@ public class AuthService {
         User savedUser = userRepository.save(user);
         
         // Generate JWT token
-        String token = jwtUtil.generateToken(savedUser.getId(), savedUser.getEmail(), savedUser.getRole().toString());
+        String token = jwtTokenProvider.generateToken(savedUser.getEmail(), savedUser.getId(), savedUser.getRole().toString());
         
         return new AuthResponse(savedUser, token, "Registration successful");
     }
@@ -63,7 +63,7 @@ public class AuthService {
         }
         
         // Generate JWT token
-        String token = jwtUtil.generateToken(user.getId(), user.getEmail(), user.getRole().toString());
+        String token = jwtTokenProvider.generateToken(user.getEmail(), user.getId(), user.getRole().toString());
         
         return new AuthResponse(user, token, "Login successful");
     }
