@@ -16,7 +16,6 @@ import Student from './pages/DashboardTeacher/Student';
 import Adviser from './pages/DashboardAdviser/Adviser';
 import Evaluations from './pages/DashboardAdviser/Evaluations';
 import Completed from './pages/DashboardAdviser/Completed';
-import Account from './pages/DashboardAdviser/Account';
 
 // Profile Pages
 import Profile from './pages/Profile/Profile';
@@ -118,14 +117,6 @@ function App() {
             element={
               <ProtectedRoute allowedRoles={['ADVISER']}>
                 <Completed />
-              </ProtectedRoute>
-            } 
-          />
-          <Route 
-            path="/adviser/account" 
-            element={
-              <ProtectedRoute allowedRoles={['ADVISER']}>
-                <Account />
               </ProtectedRoute>
             } 
           />
