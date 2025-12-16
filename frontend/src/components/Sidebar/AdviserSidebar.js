@@ -18,7 +18,7 @@ const AdviserSidebar = () => {
         <li onClick={() => navigate('/adviser/dashboard')}>Dashboard</li>
         <li onClick={() => navigate('/adviser/evaluations')}>Evaluations</li>
         <li onClick={() => navigate('/adviser/completed')}>Completed</li>
-        <li onClick={() => navigate('/adviser/account')}>Account</li>
+        <li onClick={() => navigate('/profile')}>Profile</li>
         <li onClick={handleLogout}>Logout</li>
       </ul>
     </div>

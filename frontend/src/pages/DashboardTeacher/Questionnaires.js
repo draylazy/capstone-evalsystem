@@ -66,7 +66,14 @@ const Questionnaires = () => {
   const fetchClasses = async () => {
     try {
       const data = await classAPI.getAllClasses();
-      setClasses(data);
+      // Filter classes for this teacher only
+      const user = JSON.parse(localStorage.getItem('user'));
+      if (user && user.id) {
+        const teacherClasses = data.filter(c => c.teacherId === user.id);
+        setClasses(teacherClasses);
+      } else {
+        setClasses(data);
+      }
     } catch (err) {
       console.error('Error fetching classes:', err);
     }
