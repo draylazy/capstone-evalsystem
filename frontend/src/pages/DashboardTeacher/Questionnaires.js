@@ -279,7 +279,7 @@ const Questionnaires = () => {
                         View Form
                       </button>
                       <button 
-                        className="btn" 
+                        className="btn btn-assign" 
                         onClick={() => openAssignModal(q)}
                         style={{ marginRight: '5px', fontSize: '12px' }}
                       >

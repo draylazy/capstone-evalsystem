@@ -16,9 +16,11 @@
 
 .profile-content {
   flex: 1;
-  max-width: 1000px;
+  max-width: 1200px;
   margin: 0 auto;
   padding: 32px 40px 40px 40px;
+  margin-left: 280px; /* space for sidebar to avoid closing in */
+  width: calc(100% - 320px);
 }
 
 .profile-header {

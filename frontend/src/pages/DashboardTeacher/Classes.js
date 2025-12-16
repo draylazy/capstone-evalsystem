@@ -362,8 +362,7 @@ const Classes = () => {
                       <button 
                         className="btn btn-sm" 
                         onClick={() => handleManageClass(classItem)}
-                      >
-                        Manage
+                      > Manage
                       </button>
                       <button 
                         className="btn btn-sm btn-danger" 

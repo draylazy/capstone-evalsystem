@@ -69,16 +69,19 @@
   .class-table th {
     background: #ffe4b8;
     padding: 14px;
-    text-align: left;
+  text-align: center;
     font-weight: 700;
     border-bottom: 1px solid #f0d399;
     color: var(--dtm-maroon);
+  vertical-align: middle;
   }
   
   .class-table td {
     padding: 14px;
     background: #ffffff;
     border-bottom: 1px solid #f7e3b9;
+  text-align: center;
+  vertical-align: middle;
   }
   
   /* BUTTON */
@@ -96,6 +99,19 @@
   .btn:hover {
     background: #000000;
     border-color: #000000;
+  }
+
+  /* Assign button styling to differentiate from default action buttons */
+  .btn.btn-assign {
+    background: #f2c94c;
+    color: #6c0f17;
+    border: 1px solid #e0b63a;
+  }
+
+  .btn.btn-assign:hover {
+    background: #e5b833;
+    border-color: #d9aa2a;
+    color: #5a0c12;
   }
   .btn-secondary {
     padding: 10px 16px;
