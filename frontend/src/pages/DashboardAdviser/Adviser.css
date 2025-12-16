@@ -20,8 +20,8 @@
   /* MAIN CONTENT */
   .adviser-content {
     flex: 1;
-    padding: 36px 30px 30px 30px;
-    margin-left: 240px; /* space for sidebar */
+    padding: 36px 40px 30px 40px;
+    margin-left: 280px; /* space for sidebar + breathing room */
   }
   
   .adviser-content h1 {

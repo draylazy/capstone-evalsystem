@@ -1,43 +1,58 @@
+:root {
+  --dtm-maroon: #8a151f;
+  --dtm-bg: #fff7e6;
+  --dtm-card: #ffffff;
+  --dtm-border: #f6d69a;
+  --dtm-shadow: 0 10px 28px rgba(0,0,0,0.08);
+  --dtm-text: #1f1f1f;
+  --dtm-muted: #7a7a7a;
+}
+
 .profile-container {
   display: flex;
   min-height: 100vh;
+  background: var(--dtm-bg);
 }
 
 .profile-content {
   flex: 1;
-  max-width: 900px;
+  max-width: 1000px;
   margin: 0 auto;
-  padding: 20px;
+  padding: 32px 40px 40px 40px;
 }
 
 .profile-header {
   margin-bottom: 30px;
+  text-align: center;
 }
 
 .profile-header h1 {
   font-size: 28px;
-  color: #333;
+  color: var(--dtm-maroon);
   margin: 0;
+  font-weight: 800;
 }
 
 .profile-section {
-  background: white;
-  border-radius: 8px;
-  padding: 24px;
-  margin-bottom: 20px;
-  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+  background: var(--dtm-card);
+  border-radius: 16px;
+  padding: 28px;
+  margin-bottom: 22px;
+  box-shadow: var(--dtm-shadow);
+  border: 1.5px solid var(--dtm-border);
 }
 
 .profile-section h2 {
   font-size: 20px;
-  color: #333;
+  color: var(--dtm-maroon);
   margin: 0 0 16px 0;
   padding-bottom: 12px;
-  border-bottom: 2px solid #f0f0f0;
+  border-bottom: 2px solid #f6e0b4;
+  font-weight: 700;
 }
 
 .section-description {
-  color: #666;
+  color: var(--dtm-muted);
   margin-bottom: 20px;
   font-size: 14px;
 }
@@ -54,9 +69,9 @@
 }
 
 .info-row label {
-  font-weight: 600;
-  color: #555;
-  min-width: 120px;
+  font-weight: 700;
+  color: var(--dtm-text);
+  min-width: 140px;
   font-size: 14px;
 }
 
@@ -67,7 +82,7 @@
 
 /* Google Section Styles */
 .google-section {
-  border: 2px solid #e8f0fe;
+  border: 2px solid #f6e0b4;
 }
 
 .google-link-status {
@@ -125,23 +140,25 @@
   background: white;
   color: #3c4043;
   border: 1px solid #dadce0;
-  border-radius: 4px;
+  border-radius: 8px;
   font-size: 14px;
-  font-weight: 500;
+  font-weight: 600;
   cursor: pointer;
   transition: all 0.2s;
   width: fit-content;
+  box-shadow: 0 4px 12px rgba(0,0,0,0.06);
 }
 
 .btn-link-google:hover:not(:disabled) {
   background-color: #f8f9fa;
   border-color: #5f6368;
-  box-shadow: 0 1px 2px rgba(0, 0, 0, 0.1);
+  box-shadow: 0 6px 16px rgba(0, 0, 0, 0.08);
 }
 
 .btn-link-google:disabled {
   opacity: 0.6;
   cursor: not-allowed;
+  box-shadow: none;
 }
 
 .btn-unlink {
@@ -149,16 +166,18 @@
   background-color: #c5221f;
   color: white;
   border: none;
-  border-radius: 4px;
+  border-radius: 8px;
   font-size: 14px;
-  font-weight: 500;
+  font-weight: 600;
   cursor: pointer;
-  transition: background-color 0.2s;
+  transition: background-color 0.2s, box-shadow 0.2s;
   width: fit-content;
+  box-shadow: 0 4px 12px rgba(197, 34, 31, 0.18);
 }
 
 .btn-unlink:hover {
   background-color: #a50e0e;
+  box-shadow: 0 6px 16px rgba(165, 14, 14, 0.22);
 }
 
 .info-text {

@@ -1,12 +1,12 @@
 .sidebar {
-  width: 240px;
+  width: 260px;
   height: 100vh;
   background: #8a151f;
   border-right: 1px solid #70101a;
-  padding: 24px;
+  padding: 28px 24px;
   position: fixed;
   color: #fff;
-  box-shadow: 4px 0 12px rgba(0,0,0,0.08);
+  box-shadow: 6px 0 18px rgba(0,0,0,0.08);
 }
 
 .sidebar h2 {
