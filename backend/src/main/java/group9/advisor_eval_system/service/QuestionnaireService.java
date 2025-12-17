@@ -53,37 +53,17 @@ public class QuestionnaireService {
         questionnaire.setIsActive(true);
 
         Questionnaire savedQuestionnaire = questionnaireRepository.save(questionnaire);
-        log.info("Saved questionnaire with ID: {}", savedQuestionnaire.getId());
 
         // Save questions
         if (questions != null && !questions.isEmpty()) {
-            log.info("Attempting to save {} questions", questions.size());
-            for (int i = 0; i < questions.size(); i++) {
-                QuestionnaireItem item = questions.get(i);
+            for (QuestionnaireItem item : questions) {
                 item.setQuestionnaire(savedQuestionnaire);
                 questionnaireItemRepository.save(item);
-                log.info("Saved question {}: {} (ID: {})", i + 1, item.getQuestionText(), item.getId());
             }
-            log.info("Saved {} questions to database", questions.size());
-        } else {
-            log.warn("No questions provided for questionnaire {}", savedQuestionnaire.getId());
-        }
-        
-        // Force flush to ensure items are persisted
-        questionnaireItemRepository.flush();
-        
-        // Reload questionnaire with items using JOIN FETCH
-        savedQuestionnaire = questionnaireRepository.findByIdWithItems(savedQuestionnaire.getId())
-                .orElse(savedQuestionnaire);
-        
-        int itemCount = savedQuestionnaire.getItems() != null ? savedQuestionnaire.getItems().size() : 0;
-        log.info("Reloaded questionnaire. Items count: {}", itemCount);
-        
-        if (itemCount == 0 && questions != null && !questions.isEmpty()) {
-            log.error("WARNING: Questions were saved but not loaded! This is a critical issue.");
         }
 
-        log.info("Created questionnaire {} with Google Form ID {}", savedQuestionnaire.getId(), googleForm.getFormId());
+        log.info("Created questionnaire {} with {} questions", savedQuestionnaire.getId(), 
+            questions != null ? questions.size() : 0);
 
         return savedQuestionnaire;
     }
@@ -99,7 +79,7 @@ public class QuestionnaireService {
             throw new RuntimeException("Only teachers can access questionnaires");
         }
 
-        return questionnaireRepository.findByCreatedByTeacherAndIsActiveTrue(teacherId);
+        return questionnaireRepository.findByCreatedByTeacherIdAndIsActiveTrue(teacherId);
     }
 
     /**
@@ -199,22 +179,10 @@ public class QuestionnaireService {
      * Get questionnaires for a specific class
      */
     public List<Questionnaire> getQuestionnairesByClass(Long classId) {
-        try {
-            SchoolClass schoolClass = schoolClassRepository.findById(classId)
-                    .orElseThrow(() -> new RuntimeException("Class not found"));
+        SchoolClass schoolClass = schoolClassRepository.findById(classId)
+                .orElseThrow(() -> new RuntimeException("Class not found"));
 
-            List<Questionnaire> questionnaires = questionnaireRepository.findByAssignedClassesContainingAndIsActiveTrueWithItems(schoolClass);
-            log.info("Found {} questionnaires for class {}", questionnaires.size(), classId);
-            for (Questionnaire q : questionnaires) {
-                log.info("Questionnaire {} ({}): items = {}", q.getId(), q.getTitle(), 
-                    q.getItems() != null ? q.getItems().size() : "NULL");
-            }
-            return questionnaires;
-        } catch (Exception e) {
-            log.error("Error getting questionnaires for class {}: {}", classId, e.getMessage());
-            e.printStackTrace();
-            return new ArrayList<>();
-        }
+        return questionnaireRepository.findByAssignedClassesContainingAndIsActiveTrue(schoolClass);
     }
 
     /**

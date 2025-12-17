@@ -1,7 +1,6 @@
 package group9.advisor_eval_system.dto;
 
 import group9.advisor_eval_system.entity.Questionnaire;
-import group9.advisor_eval_system.entity.QuestionnaireItem;
 import group9.advisor_eval_system.entity.SchoolClass;
 import lombok.AllArgsConstructor;
 import lombok.Data;
@@ -70,21 +69,8 @@ public class QuestionnaireResponse {
             response.setAssignedClassNames(new ArrayList<>());
         }
         
-        try {
-            if (questionnaire.getItems() != null) {
-                // Create a defensive copy to avoid concurrent modification
-                List<QuestionnaireItem> itemsCopy = new ArrayList<>(questionnaire.getItems());
-                response.setQuestionCount(itemsCopy.size());
-                System.out.println("Questionnaire " + questionnaire.getId() + " has " + itemsCopy.size() + " items");
-            } else {
-                response.setQuestionCount(0);
-                System.out.println("Questionnaire " + questionnaire.getId() + " items is NULL");
-            }
-        } catch (Exception e) {
-            response.setQuestionCount(0);
-            System.out.println("Exception getting items for questionnaire " + questionnaire.getId() + ": " + e.getMessage());
-            e.printStackTrace();
-        }
+        // Note: questionCount is set by the controller using direct database query
+        response.setQuestionCount(0);
         
         response.setCreatedAt(questionnaire.getCreatedAt());
         response.setUpdatedAt(questionnaire.getUpdatedAt());

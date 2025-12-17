@@ -1,14 +1,14 @@
 package group9.advisor_eval_system.repository;
 
 import group9.advisor_eval_system.entity.QuestionnaireItem;
-import group9.advisor_eval_system.entity.Questionnaire;
 import org.springframework.data.jpa.repository.JpaRepository;
+import org.springframework.data.jpa.repository.Query;
+import org.springframework.data.repository.query.Param;
 import org.springframework.stereotype.Repository;
-
-import java.util.List;
 
 @Repository
 public interface QuestionnaireItemRepository extends JpaRepository<QuestionnaireItem, Long> {
-    List<QuestionnaireItem> findByQuestionnaire(Questionnaire questionnaire);
-    List<QuestionnaireItem> findByQuestionnaireIdOrderByOrderIndexAsc(Long questionnaireId);
+    
+    @Query("SELECT COUNT(qi) FROM QuestionnaireItem qi WHERE qi.questionnaire.id = :questionnaireId")
+    long countByQuestionnaireId(@Param("questionnaireId") Long questionnaireId);
 }
