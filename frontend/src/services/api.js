@@ -592,6 +592,103 @@ export const studentAPI = {
   }
 };
 
+// Adviser Evaluation API
+export const adviserAPI = {
+  // Get teams assigned to logged-in adviser
+  getMyTeams: async () => {
+    const response = await fetch(`${API_BASE_URL}/adviser/teams`, {
+      method: 'GET',
+      headers: getHeaders(),
+    });
+
+    if (!response.ok) {
+      throw new Error('Failed to fetch adviser teams');
+    }
+
+    return await response.json();
+  },
+
+  // Get questionnaires for a team
+  getTeamQuestionnaires: async (teamId) => {
+    const response = await fetch(`${API_BASE_URL}/adviser/teams/${teamId}/questionnaires`, {
+      method: 'GET',
+      headers: getHeaders(),
+    });
+
+    if (!response.ok) {
+      throw new Error('Failed to fetch team questionnaires');
+    }
+
+    return await response.json();
+  },
+
+  // Get or create evaluation
+  getEvaluation: async (teamId, questionnaireId) => {
+    const response = await fetch(
+      `${API_BASE_URL}/adviser/evaluation/${teamId}/${questionnaireId}`,
+      {
+        method: 'GET',
+        headers: getHeaders(),
+      }
+    );
+
+    if (!response.ok) {
+      throw new Error('Failed to get evaluation');
+    }
+
+    return await response.json();
+  },
+
+  // Save draft evaluation
+  saveEvaluation: async (payload) => {
+    const response = await fetch(`${API_BASE_URL}/adviser/evaluation/save`, {
+      method: 'POST',
+      headers: getHeaders(),
+      body: JSON.stringify(payload),
+    });
+
+    if (!response.ok) {
+      throw new Error('Failed to save evaluation');
+    }
+
+    return await response.json();
+  },
+
+  // Submit evaluation
+  submitEvaluation: async (evaluationId) => {
+    const response = await fetch(
+      `${API_BASE_URL}/adviser/evaluation/submit/${evaluationId}`,
+      {
+        method: 'POST',
+        headers: getHeaders(),
+      }
+    );
+
+    if (!response.ok) {
+      throw new Error('Failed to submit evaluation');
+    }
+
+    return await response.json();
+  },
+
+  getCompletedEvaluations: async () => {
+    const response = await fetch(
+      `${API_BASE_URL}/adviser/evaluations/completed`,
+      {
+        method: "GET",
+        headers: getHeaders(),
+      }
+    );
+
+    if (!response.ok) {
+      throw new Error("Failed to fetch completed evaluations");
+    }
+
+    return await response.json();
+  },
+};
+
+
 export default {
   authAPI,
   userAPI,
@@ -600,5 +697,6 @@ export default {
   evaluationAPI,
   questionnaireAPI,
   reportAPI,
-  studentAPI
+  studentAPI,
+  adviserAPI
 };

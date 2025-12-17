@@ -7,9 +7,8 @@ import "./Adviser.css";
 
 const Adviser = () => {
   const navigate = useNavigate();
+  const [teams, setTeams] = useState([]);
   const [loading, setLoading] = useState(true);
-  const [error, setError] = useState(null);
-  const [assignedTeams, setAssignedTeams] = useState([]);
 
   const currentUser = useMemo(() => {
     const raw = localStorage.getItem("user");
@@ -17,88 +16,68 @@ const Adviser = () => {
   }, []);
 
   useEffect(() => {
-    const load = async () => {
+    const loadTeams = async () => {
       try {
-        setLoading(true);
-        setError(null);
-
-        if (!currentUser?.id) {
-          setError("User not logged in");
-          return;
-        }
-
         const allTeams = await teamAPI.getAllTeams();
-        const mine = (allTeams || []).filter(
-          (t) => Array.isArray(t.adviserIds) && t.adviserIds.includes(currentUser.id)
+        const assigned = allTeams.filter(
+          t => Array.isArray(t.adviserIds) && t.adviserIds.includes(currentUser.id)
         );
-        setAssignedTeams(mine);
+        setTeams(assigned);
       } catch (e) {
-        setError(e?.message || "Failed to load dashboard data");
+        console.error(e);
       } finally {
         setLoading(false);
       }
     };
 
-    load();
+    loadTeams();
   }, [currentUser]);
 
   return (
     <div className="adviser-container">
       <AdviserSidebar />
-
       <div className="adviser-content">
         <h1>Adviser Dashboard</h1>
 
         <div className="summary-row">
-          <SummaryCard title="Teams Assigned" value={loading ? "-" : String(assignedTeams.length)} />
-          <SummaryCard title="Completed" value={loading ? "-" : "0"} />
-          <SummaryCard title="Pending" value={loading ? "-" : "0"} />
+          <SummaryCard title="Teams Assigned" value={loading ? "-" : teams.length} />
+          <SummaryCard title="Completed" value="—" />
+          <SummaryCard title="Pending" value="—" />
         </div>
-
-        {error && <div className="error-message">{error}</div>}
 
         <div className="section">
           <h2>Assigned Teams</h2>
 
-          {loading ? (
-            <p>Loading...</p>
-          ) : assignedTeams.length === 0 ? (
-            <p>No assigned teams found.</p>
-          ) : (
-
-          <table className="class-table">
-            <thead>
-              <tr>
-                <th>Team</th>
-                <th>Members</th>
-                <th>Status</th>
-                <th>Action</th>
-              </tr>
-            </thead>
-
-            <tbody>
-              {assignedTeams.map((t) => (
-                <tr key={t.id}>
-                  <td>{t.name}</td>
-                  <td>{(t.memberIds?.length || 0)} Members</td>
-                  <td>
-                    <span className={t.isActive ? "status-active" : "status-inactive"}>
-                      {t.isActive ? "Active" : "Inactive"}
-                    </span>
-                  </td>
-                  <td>
-                    <button className="btn" onClick={() => navigate("/adviser/evaluations")}>
-                      Open
-                    </button>
-                  </td>
+          {loading ? <p>Loading...</p> : (
+            <table className="class-table">
+              <thead>
+                <tr>
+                  <th>Team</th>
+                  <th>Members</th>
+                  <th>Status</th>
+                  <th>Action</th>
                 </tr>
-              ))}
-            </tbody>
-          </table>
-
+              </thead>
+              <tbody>
+                {teams.map(team => (
+                  <tr key={team.id}>
+                    <td>{team.name}</td>
+                    <td>{team.memberIds?.length || 0}</td>
+                    <td>{team.isActive ? "Active" : "Inactive"}</td>
+                    <td>
+                      <button
+                        className="btn"
+                        onClick={() => navigate(`/adviser/evaluations/${team.id}`)}
+                      >
+                        Open
+                      </button>
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
           )}
         </div>
-
       </div>
     </div>
   );
