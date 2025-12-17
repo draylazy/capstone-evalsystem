@@ -66,7 +66,7 @@ const Adviser = () => {
             <p>No assigned teams found.</p>
           ) : (
 
-          <table className="team-table">
+          <table className="class-table">
             <thead>
               <tr>
                 <th>Team</th>
@@ -81,8 +81,10 @@ const Adviser = () => {
                 <tr key={t.id}>
                   <td>{t.name}</td>
                   <td>{(t.memberIds?.length || 0)} Members</td>
-                  <td className={t.isActive ? "pending" : "completed"}>
-                    {t.isActive ? "Active" : "Inactive"}
+                  <td>
+                    <span className={t.isActive ? "status-active" : "status-inactive"}>
+                      {t.isActive ? "Active" : "Inactive"}
+                    </span>
                   </td>
                   <td>
                     <button className="btn" onClick={() => navigate("/adviser/evaluations")}>

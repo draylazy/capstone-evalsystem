@@ -10,7 +10,7 @@ const Evaluations = () => {
         <h1>Evaluations</h1>
         <div className="section">
           <h2>Pending Evaluations</h2>
-          <table className="team-table">
+          <table className="class-table">
             <thead>
               <tr>
                 <th>Team</th>
@@ -23,7 +23,7 @@ const Evaluations = () => {
               <tr>
                 <td>Bravo</td>
                 <td>2025-12-20</td>
-                <td className="pending">Pending</td>
+                <td><span className="pending">Pending</span></td>
                 <td><button className="btn">Evaluate</button></td>
               </tr>
             </tbody>

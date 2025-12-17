@@ -10,7 +10,7 @@ const Completed = () => {
         <h1>Completed Evaluations</h1>
         <div className="section">
           <h2>Completed Teams</h2>
-          <table className="team-table">
+          <table className="class-table">
             <thead>
               <tr>
                 <th>Team</th>
