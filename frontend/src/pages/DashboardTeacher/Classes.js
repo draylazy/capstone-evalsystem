@@ -305,17 +305,15 @@ const Classes = () => {
     <div className="teacher-container">
       <TeacherSidebar />
       <div className="teacher-content">
-        <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "20px" }}>
-          <h1>Classes</h1>
-          <button className="btn btn-primary" onClick={() => setShowCreateModal(true)}>
-            + Create New Class
-          </button>
-        </div>
+        <h1>Classes</h1>
 
         {error && <div className="error-message">{error}</div>}
 
         <div className="section">
-          <h2>Your Classes</h2>
+          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '20px' }}>
+            <h2>Your Classes</h2>
+            <button className="btn" onClick={() => setShowCreateModal(true)}>Create New Class</button>
+          </div>
           {classes.length === 0 ? (
             <p>No classes found. Create your first class to get started.</p>
           ) : (

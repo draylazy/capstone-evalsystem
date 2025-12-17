@@ -22,6 +22,10 @@ const EvaluateForm = () => {
           questionnaireId
         );
 
+        console.log("Evaluation data:", evalData);
+        console.log("Questionnaire:", evalData?.questionnaire);
+        console.log("Items:", evalData?.questionnaire?.items);
+
         setEvaluation(evalData);
 
         const existing = {};
@@ -33,6 +37,7 @@ const EvaluateForm = () => {
         setAnswers(existing);
         setComments(evalData.generalComments || "");
       } catch (e) {
+        console.error("Error loading evaluation:", e);
         setError(e.message || "Failed to load evaluation");
       } finally {
         setLoading(false);
@@ -67,6 +72,12 @@ const EvaluateForm = () => {
 
   if (loading) return <p>Loading...</p>;
   if (error) return <p className="error-message">{error}</p>;
+  
+  if (!evaluation || !evaluation.questionnaire) {
+    return <p className="error-message">Evaluation data is incomplete</p>;
+  }
+
+  const items = evaluation.questionnaire.items || [];
 
   return (
     <div className="adviser-container">
@@ -75,7 +86,14 @@ const EvaluateForm = () => {
       <div className="adviser-content">
         <h1>{evaluation.questionnaire.title}</h1>
 
-        {evaluation.questionnaire.items.map((item) => (
+        {items.length === 0 ? (
+          <div className="error-message">
+            <p>No questions found in this questionnaire.</p>
+            <p>Please contact the teacher to add questions to this questionnaire.</p>
+          </div>
+        ) : null}
+
+        {items.map((item) => (
           <div key={item.id} className="form-group">
             <label>{item.questionText}</label>
 

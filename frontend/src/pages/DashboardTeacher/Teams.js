@@ -243,16 +243,13 @@ const Teams = () => {
       <div className="teacher-content">
         <h1>Teams</h1>
 
-        <div className="actions">
-          <button className="btn btn-primary" onClick={() => setShowCreateModal(true)}>
-            Create New Team
-          </button>
-        </div>
-
         {error && <div className="error-message">{error}</div>}
 
         <div className="section">
-          <h2>Your Teams</h2>
+          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '20px' }}>
+            <h2>Your Teams</h2>
+            <button className="btn" onClick={() => setShowCreateModal(true)}>Create New Team</button>
+          </div>
           {teams.length === 0 ? (
             <p>No teams found. Create your first team to get started.</p>
           ) : (

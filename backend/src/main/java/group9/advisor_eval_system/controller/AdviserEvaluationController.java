@@ -9,12 +9,16 @@ import group9.advisor_eval_system.service.QuestionnaireService;
 import group9.advisor_eval_system.service.TeamService;
 import group9.advisor_eval_system.util.JwtUtil;
 import lombok.RequiredArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
+import org.springframework.http.HttpStatus;
+import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
 import jakarta.servlet.http.HttpServletRequest;
 import java.util.List;
 import java.util.Map;
 
+@Slf4j
 @RestController
 @RequestMapping("/api/adviser")
 @RequiredArgsConstructor
@@ -54,13 +58,24 @@ public class AdviserEvaluationController {
     }
 
     @GetMapping("/evaluation/{teamId}/{questionnaireId}")
-    public Evaluation getOrCreateEvaluation(
+    public ResponseEntity<?> getOrCreateEvaluation(
             @PathVariable Long teamId,
             @PathVariable Long questionnaireId,
             HttpServletRequest request
     ) {
-        Long adviserId = getAdviserId(request);
-        return evaluationService.getOrCreateEvaluation(adviserId, teamId, questionnaireId);
+        try {
+            log.info("Getting evaluation for teamId={}, questionnaireId={}", teamId, questionnaireId);
+            Long adviserId = getAdviserId(request);
+            log.info("Adviser ID: {}", adviserId);
+            Evaluation evaluation = evaluationService.getOrCreateEvaluation(adviserId, teamId, questionnaireId);
+            log.info("Evaluation retrieved successfully: {}", evaluation.getId());
+            return ResponseEntity.ok(evaluation);
+        } catch (Exception e) {
+            log.error("Error getting evaluation for teamId={}, questionnaireId={}: {}", 
+                teamId, questionnaireId, e.getMessage(), e);
+            return ResponseEntity.status(HttpStatus.BAD_REQUEST)
+                .body(Map.of("error", e.getMessage()));
+        }
     }
 
     @PostMapping("/evaluation/save")

@@ -1,7 +1,7 @@
 import React, { useEffect, useState } from "react";
 import { useParams, useNavigate } from "react-router-dom";
 import AdviserSidebar from "../../components/Sidebar/AdviserSidebar";
-import { questionnaireAPI } from "../../services/api";
+import { questionnaireAPI, teamAPI } from "../../services/api";
 import "./Adviser.css";
 
 const Evaluations = () => {
@@ -10,17 +10,34 @@ const Evaluations = () => {
 
   const [questionnaires, setQuestionnaires] = useState([]);
   const [error, setError] = useState(null);
+  const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    if (!teamId) {
-      setError("Invalid team");
-      return;
-    }
+    const loadQuestionnaires = async () => {
+      if (!teamId) {
+        setError("Invalid team");
+        setLoading(false);
+        return;
+      }
 
-    questionnaireAPI
-      .getQuestionnairesByClass(teamId)
-      .then(setQuestionnaires)
-      .catch(() => setError("Failed to load questionnaires"));
+      try {
+        const team = await teamAPI.getTeamById(teamId);
+        if (!team.classId) {
+          setError("Team has no associated class");
+          setLoading(false);
+          return;
+        }
+
+        const questionnairesData = await questionnaireAPI.getQuestionnairesByClass(team.classId);
+        setQuestionnaires(questionnairesData);
+      } catch (err) {
+        setError("Failed to load questionnaires: " + err.message);
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    loadQuestionnaires();
   }, [teamId]);
 
   return (
@@ -35,7 +52,9 @@ const Evaluations = () => {
 
           {error && <div className="error-message">{error}</div>}
 
-          {questionnaires.length === 0 ? (
+          {loading ? (
+            <p>Loading questionnaires...</p>
+          ) : questionnaires.length === 0 ? (
             <p>No questionnaires assigned to this team.</p>
           ) : (
             <table className="class-table">

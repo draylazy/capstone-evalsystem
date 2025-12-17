@@ -3,6 +3,7 @@ package group9.advisor_eval_system.service;
 import group9.advisor_eval_system.entity.*;
 import group9.advisor_eval_system.repository.*;
 import lombok.RequiredArgsConstructor;
+import org.hibernate.Hibernate;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -42,9 +43,12 @@ public class EvaluationService {
 
         Questionnaire questionnaire = questionnaireRepository.findById(questionnaireId)
                 .orElseThrow(() -> new RuntimeException("Questionnaire not found"));
+        
+        // Explicitly fetch items to avoid lazy loading issues
+        Hibernate.initialize(questionnaire.getItems());
 
-        return evaluationRepository
-                .findByTeamIdAndAdviserId(teamId, adviserId)
+        Evaluation evaluation = evaluationRepository
+                .findByTeamIdAndAdviserIdAndQuestionnaireId(teamId, adviserId, questionnaireId)
                 .orElseGet(() -> {
                     Evaluation eval = new Evaluation();
                     eval.setAdviser(adviser);
@@ -54,6 +58,11 @@ public class EvaluationService {
                     eval.setAllowEdit(true);
                     return evaluationRepository.save(eval);
                 });
+        
+        // Ensure items are loaded for the evaluation's questionnaire
+        Hibernate.initialize(evaluation.getQuestionnaire().getItems());
+        
+        return evaluation;
     }
 
     /**
