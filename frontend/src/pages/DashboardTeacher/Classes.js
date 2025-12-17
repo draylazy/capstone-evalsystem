@@ -96,6 +96,12 @@ const Classes = () => {
   const loadClassQuestionnaires = async (classId) => {
     try {
       const data = await questionnaireAPI.getQuestionnairesByClass(classId);
+      console.log(`Questionnaires for class ${classId}:`, data);
+      if (data && data.length > 0) {
+        data.forEach(q => {
+          console.log(`Questionnaire ${q.id} (${q.title}): questionCount = ${q.questionCount}`);
+        });
+      }
       return data;
     } catch (err) {
       console.error(`Failed to load questionnaires for class ${classId}:`, err);

@@ -35,6 +35,7 @@ public class CreateQuestionnaireRequest {
         
         private Integer maxScore;
         private Integer minScore;
+        private List<String> choices; // Array of choices for multiple choice questions
         
         public QuestionnaireItem toEntity() {
             QuestionnaireItem item = new QuestionnaireItem();
@@ -43,6 +44,17 @@ public class CreateQuestionnaireRequest {
             item.setQuestionType(QuestionnaireItem.QuestionType.valueOf(this.questionType));
             item.setMaxScore(this.maxScore);
             item.setMinScore(this.minScore);
+            
+            // Convert choices array to JSON string
+            if (this.choices != null && !this.choices.isEmpty()) {
+                try {
+                    ObjectMapper mapper = new ObjectMapper();
+                    item.setChoices(mapper.writeValueAsString(this.choices));
+                } catch (Exception e) {
+                    item.setChoices(null);
+                }
+            }
+            
             return item;
         }
     }

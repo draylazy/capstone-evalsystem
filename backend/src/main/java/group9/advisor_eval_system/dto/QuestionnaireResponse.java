@@ -75,11 +75,15 @@ public class QuestionnaireResponse {
                 // Create a defensive copy to avoid concurrent modification
                 List<QuestionnaireItem> itemsCopy = new ArrayList<>(questionnaire.getItems());
                 response.setQuestionCount(itemsCopy.size());
+                System.out.println("Questionnaire " + questionnaire.getId() + " has " + itemsCopy.size() + " items");
             } else {
                 response.setQuestionCount(0);
+                System.out.println("Questionnaire " + questionnaire.getId() + " items is NULL");
             }
         } catch (Exception e) {
             response.setQuestionCount(0);
+            System.out.println("Exception getting items for questionnaire " + questionnaire.getId() + ": " + e.getMessage());
+            e.printStackTrace();
         }
         
         response.setCreatedAt(questionnaire.getCreatedAt());

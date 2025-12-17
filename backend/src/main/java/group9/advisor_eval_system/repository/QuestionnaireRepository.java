@@ -13,10 +13,16 @@ import java.util.Optional;
 
 @Repository
 public interface QuestionnaireRepository extends JpaRepository<Questionnaire, Long> {
+    
+    @Query("SELECT q FROM Questionnaire q LEFT JOIN FETCH q.items WHERE q.id = :id")
+    Optional<Questionnaire> findByIdWithItems(@Param("id") Long id);
+    
     Optional<Questionnaire> findByGoogleFormId(String googleFormId);
+    
+    @Query("SELECT q FROM Questionnaire q LEFT JOIN FETCH q.items WHERE q.isActive = true")
     List<Questionnaire> findByIsActiveTrue();
     
-    @Query("SELECT q FROM Questionnaire q WHERE q.createdByTeacher.id = :teacherId AND q.isActive = true")
+    @Query("SELECT q FROM Questionnaire q LEFT JOIN FETCH q.items WHERE q.createdByTeacher.id = :teacherId AND q.isActive = true")
     List<Questionnaire> findByCreatedByTeacherAndIsActiveTrue(@Param("teacherId") Long teacherId);
     
     @Query("SELECT q FROM Questionnaire q JOIN q.assignedClasses c WHERE c.id IN :classIds AND q.isActive = true")
@@ -24,4 +30,7 @@ public interface QuestionnaireRepository extends JpaRepository<Questionnaire, Lo
     
     @Query("SELECT q FROM Questionnaire q JOIN q.assignedClasses c WHERE c = :schoolClass AND q.isActive = true")
     List<Questionnaire> findByAssignedClassesContainingAndIsActiveTrue(@Param("schoolClass") SchoolClass schoolClass);
+    
+    @Query("SELECT DISTINCT q FROM Questionnaire q JOIN q.assignedClasses c LEFT JOIN FETCH q.items WHERE c = :schoolClass AND q.isActive = true")
+    List<Questionnaire> findByAssignedClassesContainingAndIsActiveTrueWithItems(@Param("schoolClass") SchoolClass schoolClass);
 }

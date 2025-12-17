@@ -44,15 +44,20 @@ public class QuestionnaireController {
                         .body(new ErrorResponse("Only teachers can create questionnaires"));
             }
 
+            log.info("Received request with {} questions in DTO", 
+                request.getQuestions() != null ? request.getQuestions().size() : 0);
+            
             List<QuestionnaireItem> questions = request.getQuestions() != null
                     ? request.getQuestions().stream()
                             .map(CreateQuestionnaireRequest.QuestionnaireItemDto::toEntity)
                             .collect(Collectors.toList())
                     : List.of();
 
-            log.info("Creating questionnaire with {} questions", questions.size());
+            log.info("Creating questionnaire with {} questions after conversion", questions.size());
             if (!questions.isEmpty()) {
                 questions.forEach(q -> log.info("Question: {} - Type: {}", q.getQuestionText(), q.getQuestionType()));
+            } else {
+                log.warn("Questions list is empty after conversion!");
             }
 
             Questionnaire questionnaire = questionnaireService.createQuestionnaire(
@@ -62,8 +67,14 @@ public class QuestionnaireController {
                     questions
             );
 
+            log.info("Questionnaire created. Items in returned entity: {}", 
+                questionnaire.getItems() != null ? questionnaire.getItems().size() : "NULL");
+            
+            QuestionnaireResponse response = QuestionnaireResponse.fromEntity(questionnaire);
+            log.info("Response DTO questionCount: {}", response.getQuestionCount());
+
             return ResponseEntity.status(HttpStatus.CREATED)
-                    .body(QuestionnaireResponse.fromEntity(questionnaire));
+                    .body(response);
 
         } catch (Exception e) {
             log.error("Error creating questionnaire", e);
