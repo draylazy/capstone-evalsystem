@@ -1,33 +1,73 @@
-import React from "react";
+import React, { useEffect, useState } from "react";
+import { useParams, useNavigate } from "react-router-dom";
 import AdviserSidebar from "../../components/Sidebar/AdviserSidebar";
+import { questionnaireAPI } from "../../services/api";
 import "./Adviser.css";
 
 const Evaluations = () => {
+  const { teamId } = useParams();
+  const navigate = useNavigate();
+
+  const [questionnaires, setQuestionnaires] = useState([]);
+  const [error, setError] = useState(null);
+
+  useEffect(() => {
+    if (!teamId) {
+      setError("Invalid team");
+      return;
+    }
+
+    questionnaireAPI
+      .getQuestionnairesByClass(teamId)
+      .then(setQuestionnaires)
+      .catch(() => setError("Failed to load questionnaires"));
+  }, [teamId]);
+
   return (
     <div className="adviser-container">
       <AdviserSidebar />
+
       <div className="adviser-content">
         <h1>Evaluations</h1>
+
         <div className="section">
-          <h2>Pending Evaluations</h2>
-          <table className="class-table">
-            <thead>
-              <tr>
-                <th>Team</th>
-                <th>Due Date</th>
-                <th>Status</th>
-                <th>Action</th>
-              </tr>
-            </thead>
-            <tbody>
-              <tr>
-                <td>Bravo</td>
-                <td>2025-12-20</td>
-                <td><span className="pending">Pending</span></td>
-                <td><button className="btn">Evaluate</button></td>
-              </tr>
-            </tbody>
-          </table>
+          <h2>Assigned Questionnaires</h2>
+
+          {error && <div className="error-message">{error}</div>}
+
+          {questionnaires.length === 0 ? (
+            <p>No questionnaires assigned to this team.</p>
+          ) : (
+            <table className="class-table">
+              <thead>
+                <tr>
+                  <th>Title</th>
+                  <th>Description</th>
+                  <th>Action</th>
+                </tr>
+              </thead>
+              <tbody>
+                {questionnaires.map((q) => (
+                  <tr key={q.id}>
+                    <td>{q.title}</td>
+                    <td>{q.description}</td>
+                    <td>
+                      <button
+                        className="btn"
+                        onClick={() =>
+                          navigate(
+                            `/adviser/evaluate/${teamId}/${q.id}`
+                          )
+                        }
+                      >
+                        Evaluate
+                      </button>
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          )}
         </div>
       </div>
     </div>
@@ -35,4 +75,3 @@ const Evaluations = () => {
 };
 
 export default Evaluations;
-
