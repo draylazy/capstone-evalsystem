@@ -108,15 +108,43 @@ const EvaluateForm = () => {
 
             {(item.questionType === "NUMERIC_SCALE" ||
               item.questionType === "RATING") && (
-              <input
-                type="number"
-                min={item.minScore}
-                max={item.maxScore}
-                value={answers[item.id] || ""}
-                onChange={(e) =>
-                  handleChange(item.id, e.target.value)
-                }
-              />
+              <div>
+                <input
+                  type="number"
+                  min={item.minScore}
+                  max={item.maxScore}
+                  value={answers[item.id] || ""}
+                  onChange={(e) =>
+                    handleChange(item.id, e.target.value)
+                  }
+                />
+                <small style={{ marginLeft: "10px", color: "#666" }}>
+                  ({item.minScore} - {item.maxScore})
+                </small>
+              </div>
+            )}
+
+            {item.questionType === "MULTIPLE_CHOICE" && (
+              <div className="radio-group">
+                {item.choices && item.choices.length > 0 ? (
+                  item.choices.map((choice, index) => (
+                    <label key={index} className="radio-label">
+                      <input
+                        type="radio"
+                        name={`question-${item.id}`}
+                        value={choice}
+                        checked={answers[item.id] === choice}
+                        onChange={(e) =>
+                          handleChange(item.id, e.target.value)
+                        }
+                      />
+                      <span>{choice}</span>
+                    </label>
+                  ))
+                ) : (
+                  <p className="error-message">No choices available for this question</p>
+                )}
+              </div>
             )}
           </div>
         ))}
@@ -129,7 +157,7 @@ const EvaluateForm = () => {
           />
         </div>
 
-        <div className="actions">
+        <div className="form-actions">
           <button className="btn-secondary" onClick={saveDraft}>
             Save Draft
           </button>

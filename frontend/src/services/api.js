@@ -688,6 +688,54 @@ export const adviserAPI = {
   },
 };
 
+// Teacher Report API
+export const teacherReportAPI = {
+  getQuestionnaires: async () => {
+    const response = await fetch(`${API_BASE_URL}/teacher/reports/questionnaires`, {
+      method: 'GET',
+      headers: getHeaders(),
+    });
+
+    if (!response.ok) {
+      throw new Error('Failed to fetch questionnaires');
+    }
+
+    return await response.json();
+  },
+
+  getQuestionnaireEvaluations: async (questionnaireId) => {
+    const response = await fetch(
+      `${API_BASE_URL}/teacher/reports/questionnaire/${questionnaireId}/evaluations`,
+      {
+        method: 'GET',
+        headers: getHeaders(),
+      }
+    );
+
+    if (!response.ok) {
+      throw new Error('Failed to fetch evaluations');
+    }
+
+    return await response.json();
+  },
+
+  getEvaluationDetails: async (evaluationId) => {
+    const response = await fetch(
+      `${API_BASE_URL}/teacher/reports/evaluation/${evaluationId}`,
+      {
+        method: 'GET',
+        headers: getHeaders(),
+      }
+    );
+
+    if (!response.ok) {
+      throw new Error('Failed to fetch evaluation details');
+    }
+
+    return await response.json();
+  },
+};
+
 
 export default {
   authAPI,
@@ -698,5 +746,6 @@ export default {
   questionnaireAPI,
   reportAPI,
   studentAPI,
-  adviserAPI
+  adviserAPI,
+  teacherReportAPI
 };

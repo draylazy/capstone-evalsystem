@@ -3,15 +3,20 @@ package group9.advisor_eval_system.service;
 import group9.advisor_eval_system.entity.*;
 import group9.advisor_eval_system.repository.*;
 import lombok.RequiredArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
 import org.hibernate.Hibernate;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
+
+import java.util.HashSet;
+import java.util.List;
 
 import java.time.LocalDateTime;
 import java.util.*;
 
 @Service
 @RequiredArgsConstructor
+@Slf4j
 public class EvaluationService {
 
     private final EvaluationRepository evaluationRepository;
@@ -19,13 +24,13 @@ public class EvaluationService {
     private final QuestionnaireRepository questionnaireRepository;
     private final TeamRepository teamRepository;
     private final UserRepository userRepository;
+    private final QuestionnaireItemRepository questionnaireItemRepository;
 
     /**
      * Get or create an evaluation for adviser + team + questionnaire
      */
     @Transactional
     public Evaluation getOrCreateEvaluation(Long adviserId, Long teamId, Long questionnaireId) {
-
         User adviser = userRepository.findById(adviserId)
                 .orElseThrow(() -> new RuntimeException("Adviser not found"));
 
@@ -36,16 +41,12 @@ public class EvaluationService {
         Team team = teamRepository.findById(teamId)
                 .orElseThrow(() -> new RuntimeException("Team not found"));
 
-        // Security: adviser must belong to team
         if (team.getAdvisers().stream().noneMatch(a -> a.getId().equals(adviserId))) {
             throw new RuntimeException("Adviser not assigned to this team");
         }
 
         Questionnaire questionnaire = questionnaireRepository.findById(questionnaireId)
                 .orElseThrow(() -> new RuntimeException("Questionnaire not found"));
-        
-        // Explicitly fetch items to avoid lazy loading issues
-        Hibernate.initialize(questionnaire.getItems());
 
         Evaluation evaluation = evaluationRepository
                 .findByTeamIdAndAdviserIdAndQuestionnaireId(teamId, adviserId, questionnaireId)
@@ -58,10 +59,7 @@ public class EvaluationService {
                     eval.setAllowEdit(true);
                     return evaluationRepository.save(eval);
                 });
-        
-        // Ensure items are loaded for the evaluation's questionnaire
-        Hibernate.initialize(evaluation.getQuestionnaire().getItems());
-        
+
         return evaluation;
     }
 

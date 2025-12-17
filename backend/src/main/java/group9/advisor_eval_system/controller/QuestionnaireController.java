@@ -9,7 +9,7 @@ import group9.advisor_eval_system.entity.User;
 import group9.advisor_eval_system.repository.QuestionnaireItemRepository;
 import group9.advisor_eval_system.repository.UserRepository;
 import group9.advisor_eval_system.service.QuestionnaireService;
-import group9.advisor_eval_system.util.JwtTokenProvider;
+import group9.advisor_eval_system.util.JwtUtil;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
@@ -18,6 +18,7 @@ import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
 import java.util.List;
+import java.util.Map;
 import java.util.stream.Collectors;
 
 @RestController
@@ -28,7 +29,7 @@ public class QuestionnaireController {
 
     private final QuestionnaireService questionnaireService;
     private final UserRepository userRepository;
-    private final JwtTokenProvider jwtTokenProvider;
+    private final JwtUtil jwtUtil;
     private final QuestionnaireItemRepository questionnaireItemRepository;
 
     /**
@@ -282,23 +283,36 @@ public class QuestionnaireController {
     }
 
     /**
-     * Extract user from JWT token
+     * Debug endpoint to check questionnaire items
      */
+    @GetMapping("/{id}/items")
+    public ResponseEntity<?> getQuestionnaireItems(@PathVariable Long id) {
+        try {
+            Questionnaire questionnaire = questionnaireService.getQuestionnaireById(id);
+            long itemCount = questionnaireItemRepository.countByQuestionnaireId(id);
+            
+            return ResponseEntity.ok(Map.of(
+                "questionnaireId", id,
+                "title", questionnaire.getTitle(),
+                "itemCount", itemCount,
+                "items", questionnaire.getItems() != null ? questionnaire.getItems().size() : 0
+            ));
+        } catch (Exception e) {
+            log.error("Error getting questionnaire items", e);
+            return ResponseEntity.status(HttpStatus.BAD_REQUEST)
+                .body(Map.of("error", e.getMessage()));
+        }
+    }
+
     private User getUserFromToken(String authHeader) {
-        if (authHeader == null || !authHeader.startsWith("Bearer ")) {
-            throw new RuntimeException("Invalid or missing Authorization header");
-        }
-
-        String token = authHeader.substring(7);
-
-        if (!jwtTokenProvider.validateToken(token)) {
-            throw new RuntimeException("Invalid or expired token");
-        }
-
-        Long userId = jwtTokenProvider.getUserIdFromToken(token);
-
+        Long userId = getUserIdFromToken(authHeader);
         return userRepository.findById(userId)
                 .orElseThrow(() -> new RuntimeException("User not found"));
+    }
+
+    private Long getUserIdFromToken(String authHeader) {
+        String token = authHeader.substring(7);
+        return jwtUtil.extractUserId(token);
     }
 
     public static class ErrorResponse {

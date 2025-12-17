@@ -25,4 +25,7 @@ public interface QuestionnaireRepository extends JpaRepository<Questionnaire, Lo
     
     @Query("SELECT q FROM Questionnaire q JOIN q.assignedClasses c WHERE c = :schoolClass AND q.isActive = true")
     List<Questionnaire> findByAssignedClassesContainingAndIsActiveTrue(@Param("schoolClass") SchoolClass schoolClass);
+    
+    @Query("SELECT DISTINCT q FROM Questionnaire q LEFT JOIN FETCH q.items WHERE q.id = :id")
+    Optional<Questionnaire> findByIdWithItems(@Param("id") Long id);
 }

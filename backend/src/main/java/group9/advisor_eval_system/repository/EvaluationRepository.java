@@ -18,4 +18,5 @@ public interface EvaluationRepository extends JpaRepository<Evaluation, Long> {
     Optional<Evaluation> findByTeamIdAndAdviserId(Long teamId, Long adviserId);
     Optional<Evaluation> findByTeamIdAndAdviserIdAndQuestionnaireId(Long teamId, Long adviserId, Long questionnaireId);
     List<Evaluation> findByStatus(Evaluation.EvaluationStatus status);
+    List<Evaluation> findByQuestionnaireId(Long questionnaireId);
 }

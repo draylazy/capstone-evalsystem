@@ -10,6 +10,7 @@ import Classes from './pages/DashboardTeacher/Classes';
 import Teams from './pages/DashboardTeacher/Teams';
 import Questionnaires from './pages/DashboardTeacher/Questionnaires';
 import Reports from './pages/DashboardTeacher/Reports';
+import EvaluationDetail from './pages/DashboardTeacher/EvaluationDetail';
 import Student from './pages/DashboardTeacher/Student';
 
 // Adviser Pages
@@ -59,6 +60,12 @@ function App() {
         <Route path="/teacher/reports" element={
           <ProtectedRoute allowedRoles={['TEACHER']}>
             <Reports />
+          </ProtectedRoute>
+        } />
+
+        <Route path="/teacher/reports/evaluation/:evaluationId" element={
+          <ProtectedRoute allowedRoles={['TEACHER']}>
+            <EvaluationDetail />
           </ProtectedRoute>
         } />
 
