@@ -84,16 +84,15 @@ public class EvaluationService {
             throw new RuntimeException("Evaluation editing is locked");
         }
 
-        // Clear previous scores
-        evaluationScoreRepository.deleteAll(evaluation.getScores());
-        evaluation.getScores().clear();
+        // Delete previous scores using repository
+        evaluationScoreRepository.deleteByEvaluationId(evaluationId);
 
+        // Create new scores
         for (Map.Entry<Long, Object> entry : answers.entrySet()) {
             Long itemId = entry.getKey();
 
-            QuestionnaireItem item = evaluation.getQuestionnaire().getItems().stream()
-                    .filter(q -> q.getId().equals(itemId))
-                    .findFirst()
+            // Fetch the questionnaire item directly from repository
+            QuestionnaireItem item = questionnaireItemRepository.findById(itemId)
                     .orElseThrow(() -> new RuntimeException("Invalid questionnaire item"));
 
             EvaluationScore score = new EvaluationScore();
@@ -107,7 +106,7 @@ public class EvaluationService {
                 score.setNumericScore(Double.valueOf(entry.getValue().toString()));
             }
 
-            evaluation.getScores().add(score);
+            evaluationScoreRepository.save(score);
         }
 
         evaluation.setGeneralComments(generalComments);

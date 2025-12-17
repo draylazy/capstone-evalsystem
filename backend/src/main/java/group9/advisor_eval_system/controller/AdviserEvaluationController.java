@@ -125,7 +125,13 @@ public class AdviserEvaluationController {
 
         Long evaluationId = Long.valueOf(payload.get("evaluationId").toString());
         String generalComments = (String) payload.get("generalComments");
-        Map<Long, Object> answers = (Map<Long, Object>) payload.get("answers");
+        
+        // Convert answers map from String keys to Long keys
+        Map<String, Object> answersRaw = (Map<String, Object>) payload.get("answers");
+        Map<Long, Object> answers = new java.util.HashMap<>();
+        for (Map.Entry<String, Object> entry : answersRaw.entrySet()) {
+            answers.put(Long.valueOf(entry.getKey()), entry.getValue());
+        }
 
         Evaluation evaluation = evaluationService.saveEvaluation(adviserId, evaluationId, answers, generalComments);
         return EvaluationResponse.fromEntity(evaluation);

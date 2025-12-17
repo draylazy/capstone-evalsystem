@@ -11,4 +11,5 @@ import java.util.List;
 public interface EvaluationScoreRepository extends JpaRepository<EvaluationScore, Long> {
     List<EvaluationScore> findByEvaluation(Evaluation evaluation);
     List<EvaluationScore> findByEvaluationId(Long evaluationId);
+    void deleteByEvaluationId(Long evaluationId);
 }
