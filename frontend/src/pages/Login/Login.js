@@ -1,10 +1,12 @@
 import React, { useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { authAPI } from '../../services/api';
+import { useToast } from '../../contexts/ToastContext';
 import './Login.css';
 
 function Login() {
   const navigate = useNavigate();
+  const toast = useToast();
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [error, setError] = useState('');
@@ -16,27 +18,24 @@ function Login() {
     setLoading(true);
 
     try {
-      console.log('Attempting login with:', email);
+      toast.info('Attempting login...');
       const data = await authAPI.login(email, password);
-      console.log('Login response:', data);
       
       // Store user data in localStorage
       localStorage.setItem('user', JSON.stringify(data));
-      console.log('User data stored, role:', data.role);
+      toast.success('Login successful!');
       
       // Redirect based on role
       if (data.role === 'TEACHER') {
-        console.log('Redirecting to teacher dashboard');
         navigate('/teacher/dashboard');
       } else if (data.role === 'ADVISER') {
-        console.log('Redirecting to adviser dashboard');
         navigate('/adviser/dashboard');
       } else {
-        console.log('Unknown role, redirecting to home');
+        toast.warning('Unknown role, redirecting to home');
         navigate('/');
       }
     } catch (err) {
-      console.error('Login error:', err);
+      toast.error('Login failed: ' + (err.message || 'Unable to connect to server'));
       setError(err.message || 'Unable to connect to server. Please try again.');
     } finally {
       setLoading(false);

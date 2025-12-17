@@ -1,10 +1,12 @@
 import React, { useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { authAPI } from '../../services/api';
+import { useToast } from '../../contexts/ToastContext';
 import './Register.css';
 
 function Register() {
   const navigate = useNavigate();
+  const toast = useToast();
   const [formData, setFormData] = useState({
     firstName: '',
     lastName: '',
@@ -40,13 +42,14 @@ function Register() {
     try {
       const { confirmPassword, ...registerData } = formData;
       
+      toast.info('Creating account...');
       await authAPI.register(registerData);
       
-      alert('Registration successful! Please login.');
+      toast.success('Registration successful! Please login.');
       navigate('/login');
     } catch (err) {
       setError(err.message || 'Registration failed');
-      console.error('Registration error:', err);
+      toast.error('Registration failed: ' + (err.message || 'Unknown error'));
     } finally {
       setLoading(false);
     }

@@ -3,6 +3,7 @@ import { BrowserRouter as Router, Routes, Route, Navigate } from 'react-router-d
 import Login from './pages/Login/Login';
 import Register from './pages/Register/Register';
 import ProtectedRoute from './components/ProtectedRoute';
+import { ToastProvider } from './contexts/ToastContext';
 
 // Teacher Pages
 import Teacher from './pages/DashboardTeacher/Teacher';
@@ -25,8 +26,9 @@ import GoogleCallback from './pages/Profile/GoogleCallback';
 
 function App() {
   return (
-    <Router>
-      <Routes>
+    <ToastProvider>
+      <Router>
+        <Routes>
         {/* Public */}
         <Route path="/" element={<Navigate to="/login" />} />
         <Route path="/login" element={<Login />} />
@@ -112,7 +114,8 @@ function App() {
         {/* Fallback */}
         <Route path="*" element={<Navigate to="/login" />} />
       </Routes>
-    </Router>
+      </Router>
+    </ToastProvider>
   );
 }
 

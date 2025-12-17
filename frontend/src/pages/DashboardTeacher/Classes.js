@@ -1,9 +1,12 @@
 import React, { useState, useEffect } from "react";
 import TeacherSidebar from "../../components/Sidebar/TeacherSidebar";
 import { classAPI, studentAPI, questionnaireAPI } from "../../services/api";
+import { useToast } from "../../contexts/ToastContext";
+import ConfirmModal from "../../components/ConfirmModal/ConfirmModal";
 import "./Teacher.css";
 
 const Classes = () => {
+  const toast = useToast();
   const [classes, setClasses] = useState([]);
   const [students, setStudents] = useState([]);
   const [classQuestionnaires, setClassQuestionnaires] = useState({});
@@ -33,6 +36,14 @@ const Classes = () => {
   const [allQuestionnaires, setAllQuestionnaires] = useState([]);
   const [availableQuestionnaires, setAvailableQuestionnaires] = useState([]);
   const [selectedQuestionnaireId, setSelectedQuestionnaireId] = useState("");
+  
+  // Confirm modal states
+  const [confirmModal, setConfirmModal] = useState({
+    isOpen: false,
+    title: "",
+    message: "",
+    onConfirm: null
+  });
 
   // Load classes on component mount
   useEffect(() => {
@@ -69,7 +80,7 @@ const Classes = () => {
       setError(null);
     } catch (err) {
       setError("Failed to load classes: " + err.message);
-      console.error(err);
+      toast.error("Failed to load classes: " + err.message);
     } finally {
       setLoading(false);
     }
@@ -80,7 +91,7 @@ const Classes = () => {
       const data = await studentAPI.getAllStudents();
       setStudents(data);
     } catch (err) {
-      console.error("Failed to load students:", err);
+      toast.error("Failed to load students");
     }
   };
 
@@ -89,7 +100,7 @@ const Classes = () => {
       const data = await questionnaireAPI.getAllQuestionnaires();
       setAllQuestionnaires(data);
     } catch (err) {
-      console.error("Failed to load questionnaires:", err);
+      toast.error("Failed to load questionnaires");
     }
   };
 
@@ -98,7 +109,6 @@ const Classes = () => {
       const data = await questionnaireAPI.getQuestionnairesByClass(classId);
       return data;
     } catch (err) {
-      console.error(`Failed to load questionnaires for class ${classId}:`, err);
       return [];
     }
   };
@@ -106,7 +116,7 @@ const Classes = () => {
   const handleCreateClass = async (e) => {
     e.preventDefault();
     try {
-      console.log("Creating class with data:", newClass);
+      toast.info("Creating class...");
       
       // Get the logged-in teacher's ID from localStorage
       const user = JSON.parse(localStorage.getItem('user'));
@@ -115,8 +125,7 @@ const Classes = () => {
         teacherId: user?.id
       };
       
-      const result = await classAPI.createClass(classData);
-      console.log("Class created:", result);
+      await classAPI.createClass(classData);
       setShowCreateModal(false);
       setNewClass({
         name: "",
@@ -126,23 +135,28 @@ const Classes = () => {
         isActive: true
       });
       loadClasses();
-      alert("Class created successfully!");
+      toast.success("Class created successfully!");
     } catch (err) {
-      console.error("Create class error:", err);
-      alert("Failed to create class: " + err.message);
+      toast.error("Failed to create class: " + err.message);
     }
   };
 
-  const handleDeleteClass = async (classId) => {
-    if (window.confirm("Are you sure you want to delete this class? This will remove all associated students and teams.")) {
-      try {
-        await classAPI.deleteClass(classId);
-        loadClasses();
-        alert("Class deleted successfully!");
-      } catch (err) {
-        alert("Failed to delete class: " + err.message);
+  const handleDeleteClass = (classId) => {
+    setConfirmModal({
+      isOpen: true,
+      title: "Delete Class",
+      message: "Are you sure you want to delete this class? This will remove all associated students and teams.",
+      onConfirm: async () => {
+        setConfirmModal({ ...confirmModal, isOpen: false });
+        try {
+          await classAPI.deleteClass(classId);
+          loadClasses();
+          toast.success("Class deleted successfully!");
+        } catch (err) {
+          toast.error("Failed to delete class: " + err.message);
+        }
       }
-    }
+    });
   };
 
   const handleManageClass = (classItem) => {
@@ -159,14 +173,14 @@ const Classes = () => {
   const handleAddStudent = async (e) => {
     e.preventDefault();
     if (!selectedStudentId) {
-      alert("Please select a student");
+      toast.warning("Please select a student");
       return;
     }
     try {
       // Get the selected student
       const student = students.find(s => s.id === parseInt(selectedStudentId));
       if (!student) {
-        alert("Student not found");
+        toast.error("Student not found");
         return;
       }
       
@@ -186,40 +200,46 @@ const Classes = () => {
       const updatedStudents = await studentAPI.getAllStudents();
       const filteredStudents = updatedStudents.filter(s => s.classIds && s.classIds.includes(selectedClass.id));
       setClassStudents(filteredStudents);
-      alert("Student added successfully!");
+      toast.success("Student added successfully!");
     } catch (err) {
-      alert("Failed to add student: " + err.message);
+      toast.error("Failed to add student: " + err.message);
     }
   };
 
-  const handleRemoveStudent = async (studentId) => {
-    if (window.confirm("Are you sure you want to remove this student from this class?")) {
-      try {
-        // Get the student
-        const student = students.find(s => s.id === studentId);
-        if (!student) {
-          alert("Student not found");
-          return;
+  const handleRemoveStudent = (studentId) => {
+    setConfirmModal({
+      isOpen: true,
+      title: "Remove Student",
+      message: "Are you sure you want to remove this student from this class?",
+      onConfirm: async () => {
+        setConfirmModal({ ...confirmModal, isOpen: false });
+        try {
+          // Get the student
+          const student = students.find(s => s.id === studentId);
+          if (!student) {
+            toast.error("Student not found");
+            return;
+          }
+          
+          // Remove this class from the student's classIds array
+          const updatedClassIds = (student.classIds || []).filter(id => id !== selectedClass.id);
+          const updatedStudent = {
+            ...student,
+            classIds: updatedClassIds
+          };
+          
+          await studentAPI.updateStudent(studentId, updatedStudent);
+          
+          // Update local state
+          const updatedStudents = classStudents.filter(s => s.id !== studentId);
+          setClassStudents(updatedStudents);
+          await loadStudents();
+          toast.success("Student removed from class successfully!");
+        } catch (err) {
+          toast.error("Failed to remove student: " + err.message);
         }
-        
-        // Remove this class from the student's classIds array
-        const updatedClassIds = (student.classIds || []).filter(id => id !== selectedClass.id);
-        const updatedStudent = {
-          ...student,
-          classIds: updatedClassIds
-        };
-        
-        await studentAPI.updateStudent(studentId, updatedStudent);
-        
-        // Update local state
-        const updatedStudents = classStudents.filter(s => s.id !== studentId);
-        setClassStudents(updatedStudents);
-        await loadStudents();
-        alert("Student removed from class successfully!");
-      } catch (err) {
-        alert("Failed to remove student: " + err.message);
       }
-    }
+    });
   };
 
   const openAddStudentModal = () => {
@@ -242,7 +262,7 @@ const Classes = () => {
   const handleAddQuestionnaire = async (e) => {
     e.preventDefault();
     if (!selectedQuestionnaireId) {
-      alert("Please select a questionnaire");
+      toast.warning("Please select a questionnaire");
       return;
     }
     try {
@@ -261,32 +281,38 @@ const Classes = () => {
         [selectedClass.id]: updatedQuestionnaires
       });
       
-      alert("Questionnaire added successfully!");
+      toast.success("Questionnaire added successfully!");
     } catch (err) {
-      alert("Failed to add questionnaire: " + err.message);
+      toast.error("Failed to add questionnaire: " + err.message);
     }
   };
 
-  const handleRemoveQuestionnaire = async (questionnaireId) => {
-    if (window.confirm("Are you sure you want to remove this questionnaire from this class?")) {
-      try {
-        await questionnaireAPI.unassignFromClasses(questionnaireId, [selectedClass.id]);
-        
-        // Update local state
-        const updatedQuestionnaires = classQuestionnairesList.filter(q => q.id !== questionnaireId);
-        setClassQuestionnairesList(updatedQuestionnaires);
-        
-        // Update the class questionnaires map
-        setClassQuestionnaires({
-          ...classQuestionnaires,
-          [selectedClass.id]: updatedQuestionnaires
-        });
-        
-        alert("Questionnaire removed from class successfully!");
-      } catch (err) {
-        alert("Failed to remove questionnaire: " + err.message);
+  const handleRemoveQuestionnaire = (questionnaireId) => {
+    setConfirmModal({
+      isOpen: true,
+      title: "Remove Questionnaire",
+      message: "Are you sure you want to remove this questionnaire from this class?",
+      onConfirm: async () => {
+        setConfirmModal({ ...confirmModal, isOpen: false });
+        try {
+          await questionnaireAPI.unassignFromClasses(questionnaireId, [selectedClass.id]);
+          
+          // Update local state
+          const updatedQuestionnaires = classQuestionnairesList.filter(q => q.id !== questionnaireId);
+          setClassQuestionnairesList(updatedQuestionnaires);
+          
+          // Update the class questionnaires map
+          setClassQuestionnaires({
+            ...classQuestionnaires,
+            [selectedClass.id]: updatedQuestionnaires
+          });
+          
+          toast.success("Questionnaire removed from class successfully!");
+        } catch (err) {
+          toast.error("Failed to remove questionnaire: " + err.message);
+        }
       }
-    }
+    });
   };
 
   if (loading) {
@@ -628,6 +654,16 @@ const Classes = () => {
           </div>
         </div>
       )}
+
+      {/* Confirm Modal */}
+      <ConfirmModal
+        isOpen={confirmModal.isOpen}
+        title={confirmModal.title}
+        message={confirmModal.message}
+        onConfirm={confirmModal.onConfirm}
+        onCancel={() => setConfirmModal({ ...confirmModal, isOpen: false })}
+        isDanger={true}
+      />
     </div>
   );
 };

@@ -1,6 +1,7 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { authAPI } from '../../services/api';
+import { useToast } from '../../contexts/ToastContext';
 import TeacherSidebar from '../../components/Sidebar/TeacherSidebar';
 import AdviserSidebar from '../../components/Sidebar/AdviserSidebar';
 import './Profile.css';
@@ -9,6 +10,7 @@ const API_BASE_URL = 'http://localhost:8080';
 
 const Profile = () => {
   const navigate = useNavigate();
+  const toast = useToast();
   const oauthHandledRef = useRef(false);
   const [user, setUser] = useState(null);
   const [googleLinkStatus, setGoogleLinkStatus] = useState({
@@ -45,7 +47,7 @@ const Profile = () => {
       const currentUser = authAPI.getCurrentUser();
       setUser(currentUser);
     } catch (error) {
-      console.error('Error fetching user profile:', error);
+      toast.error('Error fetching user profile');
     } finally {
       setLoading(false);
     }
@@ -62,7 +64,7 @@ const Profile = () => {
         setGoogleLinkStatus(data);
       }
     } catch (error) {
-      console.error('Error checking Google link status:', error);
+      toast.error('Error checking Google link status');
     }
   };
 
@@ -103,8 +105,7 @@ const Profile = () => {
         window.removeEventListener('message', handleOAuthCallback);
       }, 2 * 60 * 1000);
     } catch (error) {
-      console.error('Error initiating Google OAuth:', error);
-      alert('Failed to initiate Google account linking');
+      toast.error('Failed to initiate Google account linking');
       setLinkingGoogle(false);
     }
   };
@@ -134,12 +135,11 @@ const Profile = () => {
         
         const data = await response.json();
         setGoogleLinkStatus(data);
-        alert(data.message);
+        toast.success(data.message);
 
         await checkGoogleLinkStatus();
       } catch (error) {
-        console.error('Error completing OAuth:', error);
-        alert('Failed to link Google account');
+        toast.error('Failed to link Google account');
       } finally {
         setLinkingGoogle(false);
       }
@@ -163,10 +163,9 @@ const Profile = () => {
       
       const data = await response.json();
       setGoogleLinkStatus(data);
-      alert(data.message);
+      toast.success(data.message);
     } catch (error) {
-      console.error('Error unlinking Google account:', error);
-      alert('Failed to unlink Google account');
+      toast.error('Failed to unlink Google account');
     }
   };
 

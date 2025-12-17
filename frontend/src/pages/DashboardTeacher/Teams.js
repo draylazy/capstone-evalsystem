@@ -1,15 +1,24 @@
 import React, { useState, useEffect } from "react";
 import TeacherSidebar from "../../components/Sidebar/TeacherSidebar";
 import { teamAPI, classAPI, studentAPI, authAPI } from "../../services/api";
+import { useToast } from "../../contexts/ToastContext";
+import ConfirmModal from "../../components/ConfirmModal/ConfirmModal";
 import "./Teacher.css";
 
 const Teams = () => {
+  const toast = useToast();
   const [teams, setTeams] = useState([]);
   const [classes, setClasses] = useState([]);
   const [students, setStudents] = useState([]);
   const [advisers, setAdvisers] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
+  const [confirmModal, setConfirmModal] = useState({
+    isOpen: false,
+    title: "",
+    message: "",
+    onConfirm: null
+  });
   const [showCreateModal, setShowCreateModal] = useState(false);
   const [showManageModal, setShowManageModal] = useState(false);
   const [selectedTeam, setSelectedTeam] = useState(null);
@@ -45,7 +54,7 @@ const Teams = () => {
       setError(null);
     } catch (err) {
       setError("Failed to load teams: " + err.message);
-      console.error(err);
+      toast.error("Failed to load teams: " + err.message);
     } finally {
       setLoading(false);
     }
@@ -68,7 +77,7 @@ const Teams = () => {
       setClasses(teacherClasses);
       setError(null);
     } catch (err) {
-      console.error("Failed to load classes:", err);
+      toast.error("Failed to load classes");
     } finally {
       setLoading(false);
     }
@@ -79,7 +88,7 @@ const Teams = () => {
       const data = await studentAPI.getAllStudents();
       setStudents(data);
     } catch (err) {
-      console.error("Failed to load students:", err);
+      toast.error("Failed to load students");
     }
   };
 
@@ -90,14 +99,14 @@ const Teams = () => {
       const adviserList = data.filter(user => user.role === 'ADVISER');
       setAdvisers(adviserList);
     } catch (err) {
-      console.error("Failed to load advisers:", err);
+      toast.error("Failed to load advisers");
     }
   };
 
   const handleCreateTeam = async (e) => {
     e.preventDefault();
     if (!newTeam.classId) {
-      alert("Please select a class");
+      toast.warning("Please select a class");
       return;
     }
     try {
@@ -110,6 +119,7 @@ const Teams = () => {
         isActive: newTeam.isActive
       };
       
+      toast.info("Creating team...");
       await teamAPI.createTeam(teamData);
       setShowCreateModal(false);
       setNewTeam({
@@ -119,23 +129,28 @@ const Teams = () => {
         isActive: true
       });
       loadTeams();
-      alert("Team created successfully!");
+      toast.success("Team created successfully!");
     } catch (err) {
-      console.error("Create team error:", err);
-      alert("Failed to create team: " + err.message);
+      toast.error("Failed to create team: " + err.message);
     }
   };
 
-  const handleDeleteTeam = async (teamId) => {
-    if (window.confirm("Are you sure you want to delete this team?")) {
-      try {
-        await teamAPI.deleteTeam(teamId);
-        loadTeams();
-        alert("Team deleted successfully!");
-      } catch (err) {
-        alert("Failed to delete team: " + err.message);
+  const handleDeleteTeam = (teamId) => {
+    setConfirmModal({
+      isOpen: true,
+      title: "Delete Team",
+      message: "Are you sure you want to delete this team?",
+      onConfirm: async () => {
+        setConfirmModal({ ...confirmModal, isOpen: false });
+        try {
+          await teamAPI.deleteTeam(teamId);
+          loadTeams();
+          toast.success("Team deleted successfully!");
+        } catch (err) {
+          toast.error("Failed to delete team: " + err.message);
+        }
       }
-    }
+    });
   };
 
   const handleManageTeam = (team) => {
@@ -181,6 +196,7 @@ const Teams = () => {
 
   const handleSaveTeam = async () => {
     try {
+      toast.info("Saving team changes...");
       await teamAPI.updateTeam(selectedTeam.id, {
         name: selectedTeam.name,
         description: selectedTeam.description,
@@ -190,9 +206,9 @@ const Teams = () => {
       });
       setShowManageModal(false);
       loadTeams();
-      alert("Team updated successfully!");
+      toast.success("Team updated successfully!");
     } catch (err) {
-      alert("Failed to update team: " + err.message);
+      toast.error("Failed to update team: " + err.message);
     }
   };
 
@@ -474,6 +490,16 @@ const Teams = () => {
           </div>
         </div>
       )}
+
+      {/* Confirm Modal */}
+      <ConfirmModal
+        isOpen={confirmModal.isOpen}
+        title={confirmModal.title}
+        message={confirmModal.message}
+        onConfirm={confirmModal.onConfirm}
+        onCancel={() => setConfirmModal({ ...confirmModal, isOpen: false })}
+        isDanger={true}
+      />
     </div>
   );
 };

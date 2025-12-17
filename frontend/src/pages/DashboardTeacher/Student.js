@@ -1,13 +1,22 @@
 import React, { useState, useEffect } from "react";
 import TeacherSidebar from "../../components/Sidebar/TeacherSidebar";
 import { studentAPI, classAPI } from "../../services/api";
+import { useToast } from "../../contexts/ToastContext";
+import ConfirmModal from "../../components/ConfirmModal/ConfirmModal";
 import "./Teacher.css";
 
 const Student = () => {
+  const toast = useToast();
   const [students, setStudents] = useState([]);
   const [classes, setClasses] = useState([]);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
+  const [confirmModal, setConfirmModal] = useState({
+    isOpen: false,
+    title: "",
+    message: "",
+    onConfirm: null
+  });
   const [showModal, setShowModal] = useState(false);
   const [editMode, setEditMode] = useState(false);
   const [currentStudent, setCurrentStudent] = useState({
@@ -33,7 +42,7 @@ const Student = () => {
       setStudents(data);
     } catch (err) {
       setError('Failed to load students: ' + err.message);
-      console.error(err);
+      toast.error('Failed to load students: ' + err.message);
     } finally {
       setLoading(false);
     }
@@ -44,7 +53,7 @@ const Student = () => {
       const data = await classAPI.getAllClasses();
       setClasses(data);
     } catch (err) {
-      console.error('Failed to load classes:', err);
+      toast.error('Failed to load classes');
     }
   };
 
@@ -85,16 +94,22 @@ const Student = () => {
     setShowModal(true);
   };
 
-  const handleDelete = async (id) => {
-    if (window.confirm('Are you sure you want to delete this student?')) {
-      try {
-        await studentAPI.deleteStudent(id);
-        await fetchStudents();
-        alert('Student deleted successfully');
-      } catch (err) {
-        alert('Failed to delete student: ' + err.message);
+  const handleDelete = (id) => {
+    setConfirmModal({
+      isOpen: true,
+      title: "Delete Student",
+      message: "Are you sure you want to delete this student? This action cannot be undone.",
+      onConfirm: async () => {
+        setConfirmModal({ ...confirmModal, isOpen: false });
+        try {
+          await studentAPI.deleteStudent(id);
+          await fetchStudents();
+          toast.success('Student deleted successfully');
+        } catch (err) {
+          toast.error('Failed to delete student: ' + err.message);
+        }
       }
-    }
+    });
   };
 
   const handleSubmit = async (e) => {
@@ -104,15 +119,16 @@ const Student = () => {
     try {
       if (editMode) {
         await studentAPI.updateStudent(currentStudent.id, currentStudent);
-        alert('Student updated successfully');
+        toast.success('Student updated successfully');
       } else {
         await studentAPI.createStudent(currentStudent);
-        alert('Student added successfully');
+        toast.success('Student added successfully');
       }
       setShowModal(false);
       await fetchStudents();
     } catch (err) {
       setError('Failed to save student: ' + err.message);
+      toast.error('Failed to save student: ' + err.message);
     }
   };
 
@@ -277,6 +293,16 @@ const Student = () => {
             </div>
           </div>
         )}
+
+        {/* Confirm Modal */}
+        <ConfirmModal
+          isOpen={confirmModal.isOpen}
+          title={confirmModal.title}
+          message={confirmModal.message}
+          onConfirm={confirmModal.onConfirm}
+          onCancel={() => setConfirmModal({ ...confirmModal, isOpen: false })}
+          isDanger={true}
+        />
       </div>
     </div>
   );

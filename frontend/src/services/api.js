@@ -4,14 +4,10 @@ const API_BASE_URL = 'http://localhost:8080/api';
 // Helper function to get auth token
 const getAuthToken = () => {
   const userStr = localStorage.getItem('user');
-  console.log('Raw user from localStorage:', userStr);
   if (!userStr) {
-    console.warn('No user found in localStorage');
     return null;
   }
   const user = JSON.parse(userStr);
-  console.log('Parsed user object:', user);
-  console.log('Token from user:', user?.token);
   return user?.token || null;
 };
 
@@ -34,23 +30,18 @@ const getHeaders = (includeAuth = true) => {
 // Authentication API
 export const authAPI = {
   login: async (email, password) => {
-    console.log('API: Sending login request to:', `${API_BASE_URL}/auth/login`);
     const response = await fetch(`${API_BASE_URL}/auth/login`, {
       method: 'POST',
       headers: getHeaders(false),
       body: JSON.stringify({ email, password }),
     });
     
-    console.log('API: Response status:', response.status);
-    
     if (!response.ok) {
       const error = await response.json();
-      console.error('API: Login error response:', error);
       throw new Error(error.message || 'Login failed');
     }
     
     const data = await response.json();
-    console.log('API: Login success, data:', data);
     return data;
   },
   
@@ -144,16 +135,12 @@ export const userAPI = {
 export const classAPI = {
   getAllClasses: async () => {
     const headers = getHeaders();
-    console.log('Fetching classes with headers:', headers);
     const response = await fetch(`${API_BASE_URL}/classes`, {
       method: 'GET',
       headers: headers,
     });
     
-    console.log('Classes response status:', response.status);
     if (!response.ok) {
-      const errorText = await response.text();
-      console.error('Classes error response:', errorText);
       throw new Error('Failed to fetch classes');
     }
     
@@ -519,16 +506,12 @@ export const reportAPI = {
 export const studentAPI = {
   getAllStudents: async () => {
     const headers = getHeaders();
-    console.log('Fetching students with headers:', headers);
     const response = await fetch(`${API_BASE_URL}/students`, {
       method: 'GET',
       headers: headers,
     });
     
-    console.log('Students response status:', response.status);
     if (!response.ok) {
-      const errorText = await response.text();
-      console.error('Students error response:', errorText);
       throw new Error('Failed to fetch students');
     }
     

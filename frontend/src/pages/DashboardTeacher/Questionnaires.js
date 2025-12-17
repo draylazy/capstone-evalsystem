@@ -1,13 +1,22 @@
 import React, { useState, useEffect } from "react";
 import TeacherSidebar from "../../components/Sidebar/TeacherSidebar";
 import { questionnaireAPI, classAPI } from "../../services/api";
+import { useToast } from "../../contexts/ToastContext";
+import ConfirmModal from "../../components/ConfirmModal/ConfirmModal";
 import "./Teacher.css";
 
 const Questionnaires = () => {
+  const toast = useToast();
   const [questionnaires, setQuestionnaires] = useState([]);
   const [classes, setClasses] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
+  const [confirmModal, setConfirmModal] = useState({
+    isOpen: false,
+    title: "",
+    message: "",
+    onConfirm: null
+  });
   const [showCreateModal, setShowCreateModal] = useState(false);
   const [showAssignModal, setShowAssignModal] = useState(false);
   const [selectedQuestionnaire, setSelectedQuestionnaire] = useState(null);
@@ -46,7 +55,7 @@ const Questionnaires = () => {
       const data = await response.json();
       setGoogleLinked(data.isLinked);
     } catch (err) {
-      console.error('Error checking Google link status:', err);
+      toast.error('Error checking Google link status');
     }
   };
 
@@ -75,7 +84,7 @@ const Questionnaires = () => {
         setClasses(data);
       }
     } catch (err) {
-      console.error('Error fetching classes:', err);
+      toast.error('Error fetching classes');
     }
   };
 
@@ -87,32 +96,34 @@ const Questionnaires = () => {
       return;
     }
 
-    console.log('Sending questionnaire data:', formData);
-    console.log('Number of questions:', formData.questions.length);
-
     try {
+      toast.info('Creating questionnaire...');
       await questionnaireAPI.createQuestionnaire(formData);
-      alert('Questionnaire created successfully!');
+      toast.success('Questionnaire created successfully!');
       setShowCreateModal(false);
       resetForm();
       fetchQuestionnaires();
     } catch (err) {
-      alert('Error creating questionnaire: ' + err.message);
+      toast.error('Error creating questionnaire: ' + err.message);
     }
   };
 
-  const handleDeleteQuestionnaire = async (id) => {
-    if (!window.confirm('Are you sure you want to delete this questionnaire?')) {
-      return;
-    }
-
-    try {
-      await questionnaireAPI.deleteQuestionnaire(id);
-      alert('Questionnaire deleted successfully!');
-      fetchQuestionnaires();
-    } catch (err) {
-      alert('Error deleting questionnaire: ' + err.message);
-    }
+  const handleDeleteQuestionnaire = (id) => {
+    setConfirmModal({
+      isOpen: true,
+      title: "Delete Questionnaire",
+      message: "Are you sure you want to delete this questionnaire? This action cannot be undone.",
+      onConfirm: async () => {
+        setConfirmModal({ ...confirmModal, isOpen: false });
+        try {
+          await questionnaireAPI.deleteQuestionnaire(id);
+          fetchQuestionnaires();
+          toast.success('Questionnaire deleted successfully!');
+        } catch (err) {
+          toast.error('Error deleting questionnaire: ' + err.message);
+        }
+      }
+    });
   };
 
   const handleAddQuestion = () => {
@@ -580,6 +591,16 @@ const Questionnaires = () => {
             </div>
           </div>
         )}
+
+        {/* Confirm Modal */}
+        <ConfirmModal
+          isOpen={confirmModal.isOpen}
+          title={confirmModal.title}
+          message={confirmModal.message}
+          onConfirm={confirmModal.onConfirm}
+          onCancel={() => setConfirmModal({ ...confirmModal, isOpen: false })}
+          isDanger={true}
+        />
       </div>
 
       <style dangerouslySetInnerHTML={{__html: `
