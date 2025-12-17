@@ -62,7 +62,8 @@ public class QuestionnaireService {
             }
         }
 
-        log.info("Created questionnaire {} with Google Form ID {}", savedQuestionnaire.getId(), googleForm.getFormId());
+        log.info("Created questionnaire {} with {} questions", savedQuestionnaire.getId(), 
+            questions != null ? questions.size() : 0);
 
         return savedQuestionnaire;
     }
@@ -78,7 +79,7 @@ public class QuestionnaireService {
             throw new RuntimeException("Only teachers can access questionnaires");
         }
 
-        return questionnaireRepository.findByCreatedByTeacherAndIsActiveTrue(teacherId);
+        return questionnaireRepository.findByCreatedByTeacherIdAndIsActiveTrue(teacherId);
     }
 
     /**
@@ -178,15 +179,10 @@ public class QuestionnaireService {
      * Get questionnaires for a specific class
      */
     public List<Questionnaire> getQuestionnairesByClass(Long classId) {
-        try {
-            SchoolClass schoolClass = schoolClassRepository.findById(classId)
-                    .orElseThrow(() -> new RuntimeException("Class not found"));
+        SchoolClass schoolClass = schoolClassRepository.findById(classId)
+                .orElseThrow(() -> new RuntimeException("Class not found"));
 
-            return questionnaireRepository.findByAssignedClassesContainingAndIsActiveTrue(schoolClass);
-        } catch (Exception e) {
-            log.error("Error getting questionnaires for class {}: {}", classId, e.getMessage());
-            return new ArrayList<>();
-        }
+        return questionnaireRepository.findByAssignedClassesContainingAndIsActiveTrue(schoolClass);
     }
 
     /**

@@ -6,6 +6,7 @@ import group9.advisor_eval_system.dto.QuestionnaireResponse;
 import group9.advisor_eval_system.entity.Questionnaire;
 import group9.advisor_eval_system.entity.QuestionnaireItem;
 import group9.advisor_eval_system.entity.User;
+import group9.advisor_eval_system.repository.QuestionnaireItemRepository;
 import group9.advisor_eval_system.repository.UserRepository;
 import group9.advisor_eval_system.service.QuestionnaireService;
 import group9.advisor_eval_system.util.JwtTokenProvider;
@@ -28,6 +29,7 @@ public class QuestionnaireController {
     private final QuestionnaireService questionnaireService;
     private final UserRepository userRepository;
     private final JwtTokenProvider jwtTokenProvider;
+    private final QuestionnaireItemRepository questionnaireItemRepository;
 
     /**
      * Create a new questionnaire (Teacher only)
@@ -50,11 +52,6 @@ public class QuestionnaireController {
                             .collect(Collectors.toList())
                     : List.of();
 
-            log.info("Creating questionnaire with {} questions", questions.size());
-            if (!questions.isEmpty()) {
-                questions.forEach(q -> log.info("Question: {} - Type: {}", q.getQuestionText(), q.getQuestionType()));
-            }
-
             Questionnaire questionnaire = questionnaireService.createQuestionnaire(
                     user.getId(),
                     request.getTitle(),
@@ -62,8 +59,13 @@ public class QuestionnaireController {
                     questions
             );
 
+            QuestionnaireResponse response = QuestionnaireResponse.fromEntity(questionnaire);
+            // Set the actual question count from database
+            long count = questionnaireItemRepository.countByQuestionnaireId(questionnaire.getId());
+            response.setQuestionCount((int) count);
+
             return ResponseEntity.status(HttpStatus.CREATED)
-                    .body(QuestionnaireResponse.fromEntity(questionnaire));
+                    .body(response);
 
         } catch (Exception e) {
             log.error("Error creating questionnaire", e);
@@ -91,10 +93,13 @@ public class QuestionnaireController {
                 questionnaires = questionnaireService.getQuestionnairesForAdviser(user.getId());
             }
             
-            log.info("Found {} questionnaires", questionnaires.size());
-
             List<QuestionnaireResponse> responses = questionnaires.stream()
-                    .map(QuestionnaireResponse::fromEntity)
+                    .map(q -> {
+                        QuestionnaireResponse response = QuestionnaireResponse.fromEntity(q);
+                        long count = questionnaireItemRepository.countByQuestionnaireId(q.getId());
+                        response.setQuestionCount((int) count);
+                        return response;
+                    })
                     .collect(Collectors.toList());
 
             return ResponseEntity.ok(responses);
@@ -138,7 +143,13 @@ public class QuestionnaireController {
 
             List<Questionnaire> questionnaires = questionnaireService.getQuestionnairesByClass(classId);
             List<QuestionnaireResponse> responses = questionnaires.stream()
-                    .map(QuestionnaireResponse::fromEntity)
+                    .map(q -> {
+                        QuestionnaireResponse response = QuestionnaireResponse.fromEntity(q);
+                        // Directly query the count from database
+                        long count = questionnaireItemRepository.countByQuestionnaireId(q.getId());
+                        response.setQuestionCount((int) count);
+                        return response;
+                    })
                     .collect(Collectors.toList());
 
             return ResponseEntity.ok(responses);

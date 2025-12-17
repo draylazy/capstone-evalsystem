@@ -13,11 +13,12 @@ import java.util.Optional;
 
 @Repository
 public interface QuestionnaireRepository extends JpaRepository<Questionnaire, Long> {
+    
     Optional<Questionnaire> findByGoogleFormId(String googleFormId);
+    
     List<Questionnaire> findByIsActiveTrue();
     
-    @Query("SELECT q FROM Questionnaire q WHERE q.createdByTeacher.id = :teacherId AND q.isActive = true")
-    List<Questionnaire> findByCreatedByTeacherAndIsActiveTrue(@Param("teacherId") Long teacherId);
+    List<Questionnaire> findByCreatedByTeacherIdAndIsActiveTrue(Long teacherId);
     
     @Query("SELECT q FROM Questionnaire q JOIN q.assignedClasses c WHERE c.id IN :classIds AND q.isActive = true")
     List<Questionnaire> findByAssignedClassesIdInAndIsActiveTrue(@Param("classIds") List<Long> classIds);

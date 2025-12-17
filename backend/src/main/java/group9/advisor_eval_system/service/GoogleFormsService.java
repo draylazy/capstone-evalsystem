@@ -133,6 +133,7 @@ public class GoogleFormsService {
                 List<Option> options = new ArrayList<>();
                 
                 // Parse choices from JSON or comma-separated string
+                java.util.Set<String> uniqueChoices = new java.util.LinkedHashSet<>();
                 if (item.getChoices() != null && !item.getChoices().isEmpty()) {
                     try {
                         // Try to parse as JSON array first
@@ -140,9 +141,7 @@ public class GoogleFormsService {
                         String[] choicesArray = mapper.readValue(item.getChoices(), String[].class);
                         for (String choice : choicesArray) {
                             if (choice != null && !choice.trim().isEmpty()) {
-                                Option option = new Option();
-                                option.setValue(choice.trim());
-                                options.add(option);
+                                uniqueChoices.add(choice.trim());
                             }
                         }
                     } catch (Exception e) {
@@ -150,12 +149,17 @@ public class GoogleFormsService {
                         String[] choicesArray = item.getChoices().split(",");
                         for (String choice : choicesArray) {
                             if (choice != null && !choice.trim().isEmpty()) {
-                                Option option = new Option();
-                                option.setValue(choice.trim());
-                                options.add(option);
+                                uniqueChoices.add(choice.trim());
                             }
                         }
                     }
+                }
+                
+                // Convert unique choices to options
+                for (String choice : uniqueChoices) {
+                    Option option = new Option();
+                    option.setValue(choice);
+                    options.add(option);
                 }
                 
                 log.info("Parsed {} options for multiple choice", options.size());
