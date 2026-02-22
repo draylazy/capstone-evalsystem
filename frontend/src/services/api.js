@@ -572,6 +572,30 @@ export const studentAPI = {
     }
     
     return await response.json();
+  },
+  
+  importStudents: async (formData) => {
+    const token = getAuthToken();
+    const headers = {};
+    
+    if (token) {
+      headers['Authorization'] = `Bearer ${token}`;
+    }
+    
+    // DO NOT set Content-Type for multipart/form-data
+    // Let the browser set it automatically with the correct boundary
+    const response = await fetch(`${API_BASE_URL}/students/import`, {
+      method: 'POST',
+      headers: headers,
+      body: formData,
+    });
+    
+    if (!response.ok) {
+      const errorData = await response.json().catch(() => null);
+      throw new Error(errorData?.message || 'Failed to import students: ' + response.statusText);
+    }
+    
+    return await response.json();
   }
 };
 

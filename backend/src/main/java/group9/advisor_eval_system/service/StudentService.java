@@ -1,14 +1,18 @@
 package group9.advisor_eval_system.service;
 
+import group9.advisor_eval_system.dto.ImportStudentDTO;
 import group9.advisor_eval_system.entity.SchoolClass;
 import group9.advisor_eval_system.entity.Student;
 import group9.advisor_eval_system.entity.Team;
 import group9.advisor_eval_system.repository.SchoolClassRepository;
 import group9.advisor_eval_system.repository.StudentRepository;
 import group9.advisor_eval_system.repository.TeamRepository;
+import group9.advisor_eval_system.util.ExcelImportUtil;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
+import org.springframework.web.multipart.MultipartFile;
 
+import java.io.IOException;
 import java.util.ArrayList;
 import java.util.List;
 
@@ -28,16 +32,21 @@ public class StudentService {
         return studentRepository.findAll();
     }
     
+    public List<Student> getStudentsByTeacher(Long teacherId) {
+        return studentRepository.findByCreatedBy(teacherId);
+    }
+    
     public Student getStudentById(Long id) {
         return studentRepository.findById(id)
                 .orElseThrow(() -> new RuntimeException("Student not found with id: " + id));
     }
     
-    public Student createStudent(Student student) {
-        // Check if student ID already exists
-        if (studentRepository.existsByStudentId(student.getStudentId())) {
+    public Student createStudent(Student student, Long teacherId) {
+        // Check if student ID already exists for this teacher
+        if (studentRepository.existsByStudentIdAndCreatedBy(student.getStudentId(), teacherId)) {
             throw new RuntimeException("Student ID already exists: " + student.getStudentId());
         }
+        student.setCreatedBy(teacherId);
         return studentRepository.save(student);
     }
     
@@ -137,5 +146,56 @@ public class StudentService {
     public void deleteStudent(Long id) {
         Student student = getStudentById(id);
         studentRepository.delete(student);
+    }
+    
+    public ImportResult importStudentsFromExcel(MultipartFile file, Long teacherId) throws IOException {
+        List<ImportStudentDTO> importedData = ExcelImportUtil.parseStudentsFromExcel(file);
+        List<Student> createdStudents = new ArrayList<>();
+        List<String> errors = new ArrayList<>();
+        
+        for (int i = 0; i < importedData.size(); i++) {
+            try {
+                ImportStudentDTO dto = importedData.get(i);
+                
+                // Check if student ID already exists for this teacher
+                if (studentRepository.existsByStudentIdAndCreatedBy(dto.getStudentId(), teacherId)) {
+                    errors.add("Row " + (i + 2) + ": Student ID '" + dto.getStudentId() + "' already exists, skipped");
+                    continue;
+                }
+                
+                // Create new student
+                Student student = new Student();
+                student.setStudentId(dto.getStudentId());
+                student.setFirstName(dto.getFirstName());
+                student.setLastName(dto.getLastName());
+                // Only set email if it looks valid, otherwise leave null
+                String email = dto.getEmail();
+                if (email != null && email.contains("@") && email.contains(".")) {
+                    student.setEmail(email);
+                }
+                student.setPhoneNumber(dto.getPhoneNumber());
+                student.setCreatedBy(teacherId);
+                
+                Student savedStudent = studentRepository.save(student);
+                createdStudents.add(savedStudent);
+            } catch (Exception e) {
+                errors.add("Row " + (i + 2) + ": " + e.getMessage());
+            }
+        }
+        
+        return new ImportResult(createdStudents, errors);
+    }
+    
+    public static class ImportResult {
+        private final List<Student> importedStudents;
+        private final List<String> errors;
+        
+        public ImportResult(List<Student> importedStudents, List<String> errors) {
+            this.importedStudents = importedStudents;
+            this.errors = errors;
+        }
+        
+        public List<Student> getImportedStudents() { return importedStudents; }
+        public List<String> getErrors() { return errors; }
     }
 }

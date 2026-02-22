@@ -18,6 +18,10 @@ const Student = () => {
     onConfirm: null
   });
   const [showModal, setShowModal] = useState(false);
+  const [showImportModal, setShowImportModal] = useState(false);
+  const [importFile, setImportFile] = useState(null);
+  const [importLoading, setImportLoading] = useState(false);
+  const [importError, setImportError] = useState('');
   const [editMode, setEditMode] = useState(false);
   const [currentStudent, setCurrentStudent] = useState({
     id: null,
@@ -137,6 +141,47 @@ const Student = () => {
     setError('');
   };
 
+  const handleImportFileChange = (e) => {
+    const file = e.target.files[0];
+    if (file) {
+      setImportFile(file);
+      setImportError('');
+    }
+  };
+
+  const handleImportSubmit = async (e) => {
+    e.preventDefault();
+    if (!importFile) {
+      setImportError('Please select a file');
+      return;
+    }
+
+    setImportLoading(true);
+    setImportError('');
+
+    try {
+      const formData = new FormData();
+      formData.append('file', importFile);
+      
+      const response = await studentAPI.importStudents(formData);
+      toast.success(response.message || `Successfully imported students`);
+      setShowImportModal(false);
+      setImportFile(null);
+      await fetchStudents();
+    } catch (err) {
+      setImportError('Failed to import students: ' + err.message);
+      toast.error('Failed to import students: ' + err.message);
+    } finally {
+      setImportLoading(false);
+    }
+  };
+
+  const handleImportCancel = () => {
+    setShowImportModal(false);
+    setImportFile(null);
+    setImportError('');
+  };
+
   return (
     <div className="teacher-container">
       <TeacherSidebar />
@@ -148,7 +193,10 @@ const Student = () => {
         <div className="section">
           <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '20px' }}>
             <h2>All Students</h2>
-            <button className="btn" onClick={handleAddNew}>Add New Student</button>
+            <div style={{ display: 'flex', gap: '10px' }}>
+              <button className="btn" onClick={handleAddNew}>Add New Student</button>
+              <button className="btn" onClick={() => setShowImportModal(true)}>Import from Excel</button>
+            </div>
           </div>
 
           {loading ? (
@@ -286,6 +334,43 @@ const Student = () => {
                     {editMode ? 'Update' : 'Add'} Student
                   </button>
                   <button type="button" className="btn-secondary" onClick={handleCancel}>
+                    Cancel
+                  </button>
+                </div>
+              </form>
+            </div>
+          </div>
+        )}
+
+        {/* Import Modal */}
+        {showImportModal && (
+          <div className="modal-overlay">
+            <div className="modal-content">
+              <h2>Import Students from Excel</h2>
+              {importError && <div className="error-message">{importError}</div>}
+              <form onSubmit={handleImportSubmit}>
+                <div className="form-group">
+                  <label>Select Excel File (.xlsx or .xls) *</label>
+                  <p style={{ fontSize: '0.9em', color: '#666', marginBottom: '10px' }}>
+                    File should contain columns: Student ID, First Name, Last Name, Email (optional), Phone Number (optional)
+                  </p>
+                  <input
+                    type="file"
+                    accept=".xlsx,.xls"
+                    onChange={handleImportFileChange}
+                    required
+                  />
+                  {importFile && (
+                    <p style={{ fontSize: '0.9em', color: '#4CAF50', marginTop: '10px' }}>
+                      Selected: {importFile.name}
+                    </p>
+                  )}
+                </div>
+                <div style={{ display: 'flex', gap: '10px', marginTop: '20px' }}>
+                  <button type="submit" className="btn" disabled={importLoading}>
+                    {importLoading ? 'Importing...' : 'Import Students'}
+                  </button>
+                  <button type="button" className="btn-secondary" onClick={handleImportCancel} disabled={importLoading}>
                     Cancel
                   </button>
                 </div>

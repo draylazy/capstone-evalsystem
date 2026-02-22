@@ -6,7 +6,6 @@ import jakarta.persistence.*;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.stream.Collectors;
-import jakarta.validation.constraints.Email;
 import jakarta.validation.constraints.NotBlank;
 import lombok.AllArgsConstructor;
 import lombok.Data;
@@ -39,7 +38,6 @@ public class Student {
     @Column(nullable = false)
     private String lastName;
     
-    @Email
     @Column(nullable = true)
     private String email;
     
@@ -52,6 +50,9 @@ public class Student {
     
     @UpdateTimestamp
     private LocalDateTime updatedAt;
+    
+    @Column(name = "created_by", nullable = true)
+    private Long createdBy; // teacher user ID who created/imported this student
     
     // Expose class IDs without exposing full class objects
     @JsonProperty("classIds")

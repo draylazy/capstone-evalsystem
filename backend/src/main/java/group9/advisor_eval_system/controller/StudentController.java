@@ -2,12 +2,16 @@ package group9.advisor_eval_system.controller;
 
 import group9.advisor_eval_system.entity.Student;
 import group9.advisor_eval_system.service.StudentService;
+import group9.advisor_eval_system.util.JwtTokenProvider;
+import jakarta.servlet.http.HttpServletRequest;
 import jakarta.validation.Valid;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
+import org.springframework.web.multipart.MultipartFile;
 
+import java.io.IOException;
 import java.util.List;
 
 @RestController
@@ -16,11 +20,25 @@ public class StudentController {
     
     @Autowired
     private StudentService studentService;
+
+    @Autowired
+    private JwtTokenProvider jwtTokenProvider;
     
+    private Long getTeacherId(HttpServletRequest request) {
+        String auth = request.getHeader("Authorization");
+        if (auth != null && auth.startsWith("Bearer ")) {
+            return jwtTokenProvider.getUserIdFromToken(auth.substring(7));
+        }
+        return null;
+    }
+
     @GetMapping
-    public ResponseEntity<List<Student>> getAllStudents() {
-        List<Student> students = studentService.getAllStudents();
-        return ResponseEntity.ok(students);
+    public ResponseEntity<List<Student>> getAllStudents(HttpServletRequest request) {
+        Long teacherId = getTeacherId(request);
+        if (teacherId != null) {
+            return ResponseEntity.ok(studentService.getStudentsByTeacher(teacherId));
+        }
+        return ResponseEntity.ok(studentService.getAllStudents());
     }
     
     @GetMapping("/{id}")
@@ -35,9 +53,10 @@ public class StudentController {
     }
     
     @PostMapping
-    public ResponseEntity<?> createStudent(@Valid @RequestBody Student student) {
+    public ResponseEntity<?> createStudent(@Valid @RequestBody Student student, HttpServletRequest request) {
         try {
-            Student createdStudent = studentService.createStudent(student);
+            Long teacherId = getTeacherId(request);
+            Student createdStudent = studentService.createStudent(student, teacherId);
             return ResponseEntity.status(HttpStatus.CREATED).body(createdStudent);
         } catch (RuntimeException e) {
             return ResponseEntity.status(HttpStatus.BAD_REQUEST)
@@ -63,6 +82,37 @@ public class StudentController {
             return ResponseEntity.ok(new SuccessResponse("Student deleted successfully"));
         } catch (RuntimeException e) {
             return ResponseEntity.status(HttpStatus.NOT_FOUND)
+                    .body(new ErrorResponse(e.getMessage()));
+        }
+    }
+    
+    @PostMapping(value = "/import", consumes = "multipart/form-data")
+    public ResponseEntity<?> importStudents(@RequestParam("file") MultipartFile file, HttpServletRequest request) {
+        try {
+            if (file.isEmpty()) {
+                return ResponseEntity.status(HttpStatus.BAD_REQUEST)
+                        .body(new ErrorResponse("File is empty"));
+            }
+            
+            String filename = file.getOriginalFilename();
+            if (filename == null || (!filename.endsWith(".xlsx") && !filename.endsWith(".xls"))) {
+                return ResponseEntity.status(HttpStatus.BAD_REQUEST)
+                        .body(new ErrorResponse("File must be an Excel file (.xlsx or .xls)"));
+            }
+            
+            Long teacherId = getTeacherId(request);
+            StudentService.ImportResult result = studentService.importStudentsFromExcel(file, teacherId);
+            String message = "Successfully imported " + result.getImportedStudents().size() + " students";
+            if (!result.getErrors().isEmpty()) {
+                message += ". Skipped " + result.getErrors().size() + " rows: " + String.join("; ", result.getErrors());
+            }
+            return ResponseEntity.status(HttpStatus.CREATED)
+                    .body(new ImportResponse(message, result.getImportedStudents()));
+        } catch (IOException e) {
+            return ResponseEntity.status(HttpStatus.BAD_REQUEST)
+                    .body(new ErrorResponse("Error reading file: " + e.getMessage()));
+        } catch (RuntimeException e) {
+            return ResponseEntity.status(HttpStatus.BAD_REQUEST)
                     .body(new ErrorResponse(e.getMessage()));
         }
     }
@@ -97,6 +147,32 @@ public class StudentController {
         
         public void setMessage(String message) {
             this.message = message;
+        }
+    }
+    
+    public static class ImportResponse {
+        private String message;
+        private List<Student> data;
+        
+        public ImportResponse(String message, List<Student> data) {
+            this.message = message;
+            this.data = data;
+        }
+        
+        public String getMessage() {
+            return message;
+        }
+        
+        public void setMessage(String message) {
+            this.message = message;
+        }
+        
+        public List<Student> getData() {
+            return data;
+        }
+        
+        public void setData(List<Student> data) {
+            this.data = data;
         }
     }
 }
