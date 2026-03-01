@@ -26,7 +26,9 @@ function Login() {
       toast.success('Login successful!');
       
       // Redirect based on role
-      if (data.role === 'TEACHER') {
+      if (data.role === 'ADMIN') {
+        navigate('/admin/dashboard');
+      } else if (data.role === 'TEACHER') {
         navigate('/teacher/dashboard');
       } else if (data.role === 'ADVISER') {
         navigate('/adviser/dashboard');

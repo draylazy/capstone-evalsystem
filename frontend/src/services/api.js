@@ -744,6 +744,49 @@ export const teacherReportAPI = {
 };
 
 
+// Admin API
+export const adminAPI = {
+  getAllowedUsers: async () => {
+    const response = await fetch(`${API_BASE_URL}/admin/allowed-users`, {
+      method: 'GET',
+      headers: getHeaders(),
+    });
+    if (!response.ok) {
+      const err = await response.json().catch(() => null);
+      throw new Error(err?.message || 'Failed to fetch allowed users');
+    }
+    return await response.json();
+  },
+
+  deleteAllowedUser: async (id) => {
+    const response = await fetch(`${API_BASE_URL}/admin/allowed-users/${id}`, {
+      method: 'DELETE',
+      headers: getHeaders(),
+    });
+    if (!response.ok) {
+      const err = await response.json().catch(() => null);
+      throw new Error(err?.message || 'Failed to delete allowed user');
+    }
+    return await response.json();
+  },
+
+  uploadRoleSheet: async (formData) => {
+    const token = getAuthToken();
+    const headers = {};
+    if (token) headers['Authorization'] = `Bearer ${token}`;
+    const response = await fetch(`${API_BASE_URL}/admin/upload-roles`, {
+      method: 'POST',
+      headers: headers,
+      body: formData,
+    });
+    if (!response.ok) {
+      const err = await response.json().catch(() => null);
+      throw new Error(err?.message || 'Upload failed');
+    }
+    return await response.json();
+  },
+};
+
 export default {
   authAPI,
   userAPI,
@@ -754,5 +797,6 @@ export default {
   reportAPI,
   studentAPI,
   adviserAPI,
-  teacherReportAPI
+  teacherReportAPI,
+  adminAPI
 };

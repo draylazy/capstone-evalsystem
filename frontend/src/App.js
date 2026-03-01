@@ -20,6 +20,9 @@ import Evaluations from './pages/DashboardAdviser/Evaluations';
 import Completed from './pages/DashboardAdviser/Completed';
 import EvaluateForm from './pages/DashboardAdviser/EvaluateForm';
 
+// Admin Pages
+import AdminDashboard from './pages/DashboardAdmin/Admin';
+
 // Profile
 import Profile from './pages/Profile/Profile';
 import GoogleCallback from './pages/Profile/GoogleCallback';
@@ -33,6 +36,13 @@ function App() {
         <Route path="/" element={<Navigate to="/login" />} />
         <Route path="/login" element={<Login />} />
         <Route path="/register" element={<Register />} />
+
+        {/* Admin */}
+        <Route path="/admin/dashboard" element={
+          <ProtectedRoute allowedRoles={['ADMIN']}>
+            <AdminDashboard />
+          </ProtectedRoute>
+        } />
 
         {/* Teacher */}
         <Route path="/teacher/dashboard" element={
@@ -104,7 +114,7 @@ function App() {
 
         {/* Profile */}
         <Route path="/profile" element={
-          <ProtectedRoute allowedRoles={['TEACHER', 'ADVISER']}>
+          <ProtectedRoute allowedRoles={['TEACHER', 'ADVISER', 'ADMIN']}>
             <Profile />
           </ProtectedRoute>
         } />

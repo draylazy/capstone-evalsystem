@@ -5,13 +5,90 @@ import org.apache.poi.ss.usermodel.*;
 import org.apache.poi.xssf.usermodel.XSSFWorkbook;
 import org.springframework.web.multipart.MultipartFile;
 
+import java.io.BufferedReader;
 import java.io.IOException;
+import java.io.InputStreamReader;
+import java.nio.charset.StandardCharsets;
 import java.util.ArrayList;
 import java.util.List;
 
 public class ExcelImportUtil {
-    
+
     public static List<ImportStudentDTO> parseStudentsFromExcel(MultipartFile file) throws IOException {
+        String filename = file.getOriginalFilename();
+        if (filename != null && filename.toLowerCase().endsWith(".csv")) {
+            return parseStudentsFromCsv(file);
+        }
+        return parseStudentsFromExcelFile(file);
+    }
+
+    public static List<ImportStudentDTO> parseStudentsFromCsv(MultipartFile file) throws IOException {
+        List<ImportStudentDTO> students = new ArrayList<>();
+
+        try (BufferedReader reader = new BufferedReader(
+                new InputStreamReader(file.getInputStream(), StandardCharsets.UTF_8))) {
+
+            String line;
+            int rowIndex = 0;
+
+            while ((line = reader.readLine()) != null) {
+                // Skip blank lines
+                if (line.trim().isEmpty()) {
+                    rowIndex++;
+                    continue;
+                }
+
+                String[] cols = line.split(",", -1);
+                // Trim each cell
+                for (int i = 0; i < cols.length; i++) {
+                    cols[i] = cols[i].trim().replaceAll("^\"|\"$", ""); // remove surrounding quotes
+                }
+
+                String col0Upper = cols[0].toUpperCase();
+
+                // Skip header rows
+                if (col0Upper.contains("TEAM") || col0Upper.contains("CODE") ||
+                        col0Upper.contains("MEMBER") || col0Upper.contains("STUDENT") ||
+                        col0Upper.contains("ID") || col0Upper.contains("NAME")) {
+                    rowIndex++;
+                    continue;
+                }
+
+                // Detect format 2: Team Code in col 0 (contains -sem or year pattern)
+                boolean isFormat2 = cols[0].contains("-sem") || cols[0].matches(".*\\d{4}-sem.*");
+
+                ImportStudentDTO student = new ImportStudentDTO();
+
+                if (isFormat2) {
+                    // Format 2: Team Code, Member #, Student ID, Last Name, First Name, Email
+                    if (cols.length > 2) student.setStudentId(cols[2]);
+                    if (cols.length > 3) student.setLastName(cols[3]);
+                    if (cols.length > 4) student.setFirstName(cols[4]);
+                    if (cols.length > 5 && !cols[5].isEmpty()) student.setEmail(cols[5]);
+                } else {
+                    // Format 1: Student ID, First Name, Last Name, Email, Phone
+                    if (cols.length > 0) student.setStudentId(cols[0]);
+                    if (cols.length > 1) student.setFirstName(cols[1]);
+                    if (cols.length > 2) student.setLastName(cols[2]);
+                    if (cols.length > 3 && !cols[3].isEmpty()) student.setEmail(cols[3]);
+                    if (cols.length > 4 && !cols[4].isEmpty()) student.setPhoneNumber(cols[4]);
+                }
+
+                // Only add if required fields are present
+                if (student.getStudentId() != null && !student.getStudentId().isEmpty() &&
+                        student.getFirstName() != null && !student.getFirstName().isEmpty() &&
+                        student.getLastName() != null && !student.getLastName().isEmpty()) {
+                    students.add(student);
+                }
+
+                rowIndex++;
+            }
+        }
+
+        return students;
+    }
+
+    private static List<ImportStudentDTO> parseStudentsFromExcelFile(MultipartFile file) throws IOException {
         List<ImportStudentDTO> students = new ArrayList<>();
         
         try (Workbook workbook = new XSSFWorkbook(file.getInputStream())) {

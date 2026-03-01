@@ -95,9 +95,9 @@ public class StudentController {
             }
             
             String filename = file.getOriginalFilename();
-            if (filename == null || (!filename.endsWith(".xlsx") && !filename.endsWith(".xls"))) {
+            if (filename == null || (!filename.endsWith(".xlsx") && !filename.endsWith(".xls") && !filename.endsWith(".csv"))) {
                 return ResponseEntity.status(HttpStatus.BAD_REQUEST)
-                        .body(new ErrorResponse("File must be an Excel file (.xlsx or .xls)"));
+                        .body(new ErrorResponse("File must be an Excel (.xlsx, .xls) or CSV (.csv) file"));
             }
             
             Long teacherId = getTeacherId(request);

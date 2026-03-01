@@ -350,13 +350,13 @@ const Student = () => {
               {importError && <div className="error-message">{importError}</div>}
               <form onSubmit={handleImportSubmit}>
                 <div className="form-group">
-                  <label>Select Excel File (.xlsx or .xls) *</label>
+                  <label>Select File (.xlsx, .xls, or .csv) *</label>
                   <p style={{ fontSize: '0.9em', color: '#666', marginBottom: '10px' }}>
                     File should contain columns: Student ID, First Name, Last Name, Email (optional), Phone Number (optional)
                   </p>
                   <input
                     type="file"
-                    accept=".xlsx,.xls"
+                    accept=".xlsx,.xls,.csv"
                     onChange={handleImportFileChange}
                     required
                   />
