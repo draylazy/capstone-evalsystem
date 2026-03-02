@@ -744,10 +744,10 @@ export const teacherReportAPI = {
 };
 
 
-// Admin API
-export const adminAPI = {
+// User Management API (formerly Admin API)
+export const userManagementAPI = {
   getAllowedUsers: async () => {
-    const response = await fetch(`${API_BASE_URL}/admin/allowed-users`, {
+    const response = await fetch(`${API_BASE_URL}/user-management/allowed-users`, {
       method: 'GET',
       headers: getHeaders(),
     });
@@ -759,7 +759,7 @@ export const adminAPI = {
   },
 
   deleteAllowedUser: async (id) => {
-    const response = await fetch(`${API_BASE_URL}/admin/allowed-users/${id}`, {
+    const response = await fetch(`${API_BASE_URL}/user-management/allowed-users/${id}`, {
       method: 'DELETE',
       headers: getHeaders(),
     });
@@ -774,7 +774,7 @@ export const adminAPI = {
     const token = getAuthToken();
     const headers = {};
     if (token) headers['Authorization'] = `Bearer ${token}`;
-    const response = await fetch(`${API_BASE_URL}/admin/upload-roles`, {
+    const response = await fetch(`${API_BASE_URL}/user-management/upload-roles`, {
       method: 'POST',
       headers: headers,
       body: formData,
@@ -798,5 +798,5 @@ export default {
   studentAPI,
   adviserAPI,
   teacherReportAPI,
-  adminAPI
+  userManagementAPI
 };

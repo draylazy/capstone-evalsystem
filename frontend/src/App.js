@@ -13,15 +13,13 @@ import Questionnaires from './pages/DashboardTeacher/Questionnaires';
 import Reports from './pages/DashboardTeacher/Reports';
 import EvaluationDetail from './pages/DashboardTeacher/EvaluationDetail';
 import Student from './pages/DashboardTeacher/Student';
+import UserManagement from './pages/DashboardTeacher/UserManagement';
 
 // Adviser Pages
 import Adviser from './pages/DashboardAdviser/Adviser';
 import Evaluations from './pages/DashboardAdviser/Evaluations';
 import Completed from './pages/DashboardAdviser/Completed';
 import EvaluateForm from './pages/DashboardAdviser/EvaluateForm';
-
-// Admin Pages
-import AdminDashboard from './pages/DashboardAdmin/Admin';
 
 // Profile
 import Profile from './pages/Profile/Profile';
@@ -36,13 +34,6 @@ function App() {
         <Route path="/" element={<Navigate to="/login" />} />
         <Route path="/login" element={<Login />} />
         <Route path="/register" element={<Register />} />
-
-        {/* Admin */}
-        <Route path="/admin/dashboard" element={
-          <ProtectedRoute allowedRoles={['ADMIN']}>
-            <AdminDashboard />
-          </ProtectedRoute>
-        } />
 
         {/* Teacher */}
         <Route path="/teacher/dashboard" element={
@@ -87,6 +78,12 @@ function App() {
           </ProtectedRoute>
         } />
 
+        <Route path="/teacher/user-management" element={
+          <ProtectedRoute allowedRoles={['TEACHER']}>
+            <UserManagement />
+          </ProtectedRoute>
+        } />
+
         {/* Adviser */}
         <Route path="/adviser/dashboard" element={
           <ProtectedRoute allowedRoles={['ADVISER']}>
@@ -114,7 +111,7 @@ function App() {
 
         {/* Profile */}
         <Route path="/profile" element={
-          <ProtectedRoute allowedRoles={['TEACHER', 'ADVISER', 'ADMIN']}>
+          <ProtectedRoute allowedRoles={['TEACHER', 'ADVISER']}>
             <Profile />
           </ProtectedRoute>
         } />

@@ -1,8 +1,7 @@
 package group9.advisor_eval_system.controller;
 
 import group9.advisor_eval_system.entity.AllowedUser;
-import group9.advisor_eval_system.service.AdminService;
-import jakarta.servlet.http.HttpServletRequest;
+import group9.advisor_eval_system.service.UserManagementService;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
@@ -13,21 +12,21 @@ import java.io.IOException;
 import java.util.List;
 
 @RestController
-@RequestMapping("/api/admin")
-public class AdminController {
+@RequestMapping("/api/user-management")
+public class UserManagementController {
 
     @Autowired
-    private AdminService adminService;
+    private UserManagementService userManagementService;
 
     @GetMapping("/allowed-users")
     public ResponseEntity<List<AllowedUser>> getAllowedUsers() {
-        return ResponseEntity.ok(adminService.getAllAllowedUsers());
+        return ResponseEntity.ok(userManagementService.getAllAllowedUsers());
     }
 
     @DeleteMapping("/allowed-users/{id}")
     public ResponseEntity<?> deleteAllowedUser(@PathVariable Long id) {
         try {
-            adminService.deleteAllowedUser(id);
+            userManagementService.deleteAllowedUser(id);
             return ResponseEntity.ok(new MessageResponse("User removed from allowed list"));
         } catch (RuntimeException e) {
             return ResponseEntity.status(HttpStatus.NOT_FOUND).body(new MessageResponse(e.getMessage()));
@@ -50,7 +49,7 @@ public class AdminController {
         }
 
         try {
-            AdminService.UploadResult result = adminService.uploadRoleSheet(file);
+            UserManagementService.UploadResult result = userManagementService.uploadRoleSheet(file);
             String message = "Added: " + result.getAdded()
                     + ", Updated: " + result.getUpdated()
                     + ", Skipped: " + result.getSkipped();
@@ -72,12 +71,12 @@ public class AdminController {
 
     public static class UploadResponse {
         private String message;
-        private AdminService.UploadResult result;
-        public UploadResponse(String message, AdminService.UploadResult result) {
+        private UserManagementService.UploadResult result;
+        public UploadResponse(String message, UserManagementService.UploadResult result) {
             this.message = message;
             this.result = result;
         }
         public String getMessage() { return message; }
-        public AdminService.UploadResult getResult() { return result; }
+        public UserManagementService.UploadResult getResult() { return result; }
     }
 }

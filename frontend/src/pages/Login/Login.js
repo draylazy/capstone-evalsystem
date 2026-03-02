@@ -26,12 +26,14 @@ function Login() {
       toast.success('Login successful!');
       
       // Redirect based on role
-      if (data.role === 'ADMIN') {
-        navigate('/admin/dashboard');
-      } else if (data.role === 'TEACHER') {
+      if (data.role === 'TEACHER') {
         navigate('/teacher/dashboard');
       } else if (data.role === 'ADVISER') {
         navigate('/adviser/dashboard');
+      } else if (data.role === 'STUDENT') {
+        // TODO: Create student dashboard
+        toast.info('Student dashboard coming soon!');
+        navigate('/teacher/dashboard'); // Temporary redirect
       } else {
         toast.warning('Unknown role, redirecting to home');
         navigate('/');

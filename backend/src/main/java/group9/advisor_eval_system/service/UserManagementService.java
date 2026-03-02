@@ -18,7 +18,7 @@ import java.util.ArrayList;
 import java.util.List;
 
 @Service
-public class AdminService {
+public class UserManagementService {
 
     @Autowired
     private AllowedUserRepository allowedUserRepository;
@@ -88,17 +88,17 @@ public class AdminService {
             User.UserRole role;
             try {
                 // Accept common aliases
-                if (roleStr.equals("STUDENT")) roleStr = "ADVISER"; // map STUDENT -> ADVISER if needed
+                if (roleStr.equals("STUDENT")) roleStr = "STUDENT"; // Keep STUDENT as STUDENT
                 role = User.UserRole.valueOf(roleStr);
             } catch (IllegalArgumentException e) {
                 errors.add("Row " + (i + 2) + ": Unknown role '" + row[1].trim() + "' for email " + email
-                        + " (valid: ADMIN, TEACHER, ADVISER)");
+                        + " (valid: TEACHER, ADVISER, STUDENT)");
                 skipped++;
                 continue;
             }
 
-            // Don't allow modifying the system admin via upload
-            if (email.equals("admin@system.com")) {
+            // Don't allow modifying the system teacher admin via upload
+            if (email.equals("teacher@system.com")) {
                 skipped++;
                 continue;
             }

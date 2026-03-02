@@ -97,8 +97,8 @@ public class User {
     private List<Team> advisedTeams = new ArrayList<>();
     
     public enum UserRole {
-        ADMIN,
         TEACHER,
-        ADVISER
+        ADVISER,
+        STUDENT
     }
 }

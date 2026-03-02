@@ -21,35 +21,35 @@ public class DataSeeder implements CommandLineRunner {
     @Autowired
     private PasswordEncoder passwordEncoder;
 
-    private static final String ADMIN_EMAIL = "admin@system.com";
-    private static final String ADMIN_PASSWORD = "Admin@123";
+    private static final String TEACHER_ADMIN_EMAIL = "teacher@system.com";
+    private static final String TEACHER_ADMIN_PASSWORD = "Teacher@123";
 
     @Override
     public void run(String... args) throws Exception {
-        seedAdminAccount();
+        seedTeacherAdminAccount();
     }
 
-    private void seedAdminAccount() {
-        if (!userRepository.existsByEmail(ADMIN_EMAIL)) {
-            User admin = new User();
-            admin.setFirstName("System");
-            admin.setLastName("Admin");
-            admin.setEmail(ADMIN_EMAIL);
-            admin.setPassword(passwordEncoder.encode(ADMIN_PASSWORD));
-            admin.setRole(User.UserRole.ADMIN);
-            admin.setIsActive(true);
-            admin.setIsGoogleLinked(false);
-            userRepository.save(admin);
-            System.out.println("=== Default admin account created: " + ADMIN_EMAIL + " / " + ADMIN_PASSWORD + " ===");
+    private void seedTeacherAdminAccount() {
+        if (!userRepository.existsByEmail(TEACHER_ADMIN_EMAIL)) {
+            User teacherAdmin = new User();
+            teacherAdmin.setFirstName("System");
+            teacherAdmin.setLastName("Teacher");
+            teacherAdmin.setEmail(TEACHER_ADMIN_EMAIL);
+            teacherAdmin.setPassword(passwordEncoder.encode(TEACHER_ADMIN_PASSWORD));
+            teacherAdmin.setRole(User.UserRole.TEACHER);
+            teacherAdmin.setIsActive(true);
+            teacherAdmin.setIsGoogleLinked(false);
+            userRepository.save(teacherAdmin);
+            System.out.println("=== Default teacher admin account created: " + TEACHER_ADMIN_EMAIL + " / " + TEACHER_ADMIN_PASSWORD + " ===");
         }
 
-        // Ensure admin email is in allowed_users too
-        if (!allowedUserRepository.existsByEmail(ADMIN_EMAIL)) {
-            AllowedUser allowedAdmin = new AllowedUser();
-            allowedAdmin.setEmail(ADMIN_EMAIL);
-            allowedAdmin.setAssignedRole(User.UserRole.ADMIN);
-            allowedAdmin.setIsRegistered(true);
-            allowedUserRepository.save(allowedAdmin);
+        // Ensure teacher admin email is in allowed_users too
+        if (!allowedUserRepository.existsByEmail(TEACHER_ADMIN_EMAIL)) {
+            AllowedUser allowedTeacherAdmin = new AllowedUser();
+            allowedTeacherAdmin.setEmail(TEACHER_ADMIN_EMAIL);
+            allowedTeacherAdmin.setAssignedRole(User.UserRole.TEACHER);
+            allowedTeacherAdmin.setIsRegistered(true);
+            allowedUserRepository.save(allowedTeacherAdmin);
         }
     }
 }

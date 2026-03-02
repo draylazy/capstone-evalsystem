@@ -1,11 +1,11 @@
 import React, { useState, useEffect } from 'react';
-import { adminAPI } from '../../services/api';
+import { userManagementAPI } from '../../services/api';
 import { useToast } from '../../contexts/ToastContext';
-import AdminSidebar from '../../components/Sidebar/AdminSidebar';
+import TeacherSidebar from '../../components/Sidebar/TeacherSidebar';
 import SummaryCard from '../../components/Cards/SummaryCard';
-import '../DashboardTeacher/Teacher.css';
+import './Teacher.css';
 
-function Admin() {
+function UserManagement() {
   const toast = useToast();
 
   const [allowedUsers, setAllowedUsers] = useState([]);
@@ -23,7 +23,7 @@ function Admin() {
   const fetchAllowedUsers = async () => {
     setLoading(true);
     try {
-      const data = await adminAPI.getAllowedUsers();
+      const data = await userManagementAPI.getAllowedUsers();
       setAllowedUsers(data);
     } catch (err) {
       toast.error('Failed to load users: ' + err.message);
@@ -35,7 +35,7 @@ function Admin() {
   const handleDelete = async (id, email) => {
     if (!window.confirm(`Remove ${email} from the allowed list?`)) return;
     try {
-      await adminAPI.deleteAllowedUser(id);
+      await userManagementAPI.deleteAllowedUser(id);
       toast.success(`${email} removed`);
       fetchAllowedUsers();
     } catch (err) {
@@ -51,7 +51,7 @@ function Admin() {
     try {
       const formData = new FormData();
       formData.append('file', uploadFile);
-      const res = await adminAPI.uploadRoleSheet(formData);
+      const res = await userManagementAPI.uploadRoleSheet(formData);
       toast.success(res.message || 'Upload successful');
       setShowUploadModal(false);
       setUploadFile(null);
@@ -71,29 +71,30 @@ function Admin() {
     total: allowedUsers.length,
     teacher: allowedUsers.filter(u => u.assignedRole === 'TEACHER').length,
     adviser: allowedUsers.filter(u => u.assignedRole === 'ADVISER').length,
+    student: allowedUsers.filter(u => u.assignedRole === 'STUDENT').length,
     registered: allowedUsers.filter(u => u.isRegistered).length,
   };
 
   return (
     <div className="teacher-container">
-      <AdminSidebar />
+      <TeacherSidebar />
 
       <div className="teacher-content">
-        <h1>Admin Dashboard</h1>
+        <h1>User Management</h1>
 
         {/* Summary Cards */}
         <div className="summary-row">
           <SummaryCard title="Total Allowed Users" value={loading ? '-' : String(counts.total)} />
           <SummaryCard title="Teachers" value={loading ? '-' : String(counts.teacher)} />
           <SummaryCard title="Advisers" value={loading ? '-' : String(counts.adviser)} />
-          <SummaryCard title="Registered" value={loading ? '-' : String(counts.registered)} />
+          <SummaryCard title="Students" value={loading ? '-' : String(counts.student)} />
         </div>
 
         <div className="section">
           <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '16px' }}>
             <h2>Allowed Users</h2>
             <div style={{ display: 'flex', gap: '8px', alignItems: 'center' }}>
-              {['ALL', 'ADMIN', 'TEACHER', 'ADVISER'].map(role => (
+              {['ALL', 'TEACHER', 'ADVISER', 'STUDENT'].map(role => (
                 <button
                   key={role}
                   className={filterRole === role ? 'btn' : 'btn-secondary'}
@@ -116,7 +117,7 @@ function Admin() {
               <p>No users found. Upload a role sheet to get started.</p>
               <p style={{ fontSize: '13px', color: '#999', marginTop: '8px' }}>
                 Create an Excel or CSV with columns: <strong>Email</strong>, <strong>Role</strong>
-                &nbsp;(valid roles: TEACHER, ADVISER, ADMIN)
+                &nbsp;(valid roles: TEACHER, ADVISER, STUDENT)
               </p>
             </div>
           ) : (
@@ -142,8 +143,8 @@ function Admin() {
                         borderRadius: '12px',
                         fontSize: '11px',
                         fontWeight: '700',
-                        background: u.assignedRole === 'TEACHER' ? '#d4edda' : u.assignedRole === 'ADVISER' ? '#cce5ff' : '#fdecea',
-                        color: u.assignedRole === 'TEACHER' ? '#155724' : u.assignedRole === 'ADVISER' ? '#004085' : '#8a151f',
+                        background: u.assignedRole === 'TEACHER' ? '#d4edda' : u.assignedRole === 'ADVISER' ? '#cce5ff' : '#fff3cd',
+                        color: u.assignedRole === 'TEACHER' ? '#155724' : u.assignedRole === 'ADVISER' ? '#004085' : '#856404',
                       }}>
                         {u.assignedRole}
                       </span>
@@ -162,7 +163,7 @@ function Admin() {
                     </td>
                     <td>{u.createdAt ? new Date(u.createdAt).toLocaleDateString() : '—'}</td>
                     <td>
-                      {u.email !== 'admin@system.com' && (
+                      {u.email !== 'teacher@system.com' && (
                         <button
                           className="btn-secondary"
                           style={{ padding: '5px 12px', fontSize: '12px', color: '#dc3545', borderColor: '#dc3545' }}
@@ -196,10 +197,11 @@ function Admin() {
               <tbody>
                 <tr><td>teacher1@cit.edu</td><td>TEACHER</td></tr>
                 <tr><td>adviser1@cit.edu</td><td>ADVISER</td></tr>
+                <tr><td>student1@cit.edu</td><td>STUDENT</td></tr>
               </tbody>
             </table>
             <p style={{ fontSize: '12px', color: '#888', marginBottom: '16px' }}>
-              Valid roles: <strong>TEACHER</strong>, <strong>ADVISER</strong>, <strong>ADMIN</strong>
+              Valid roles: <strong>TEACHER</strong>, <strong>ADVISER</strong>, <strong>STUDENT</strong>
             </p>
             <form onSubmit={handleUploadSubmit}>
               <div className="form-group">
@@ -237,4 +239,4 @@ function Admin() {
   );
 }
 
-export default Admin;
+export default UserManagement;
