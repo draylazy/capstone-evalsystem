@@ -11,15 +11,6 @@ function Login() {
   const [error, setError] = useState('');
   const [loading, setLoading] = useState(false);
 
-  // If already logged in, redirect
-  useEffect(() => {
-    const stored = authAPI.getCurrentUser();
-    if (stored?.token && stored?.role) {
-      redirectByRole(stored.role);
-    }
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, []);
-
   useEffect(() => {
     // Wait for Google script to load
     const interval = setInterval(() => {
@@ -79,20 +70,15 @@ function Login() {
 
         {error && <div className="error-message">{error}</div>}
 
-        <div style={{ display: 'flex', justifyContent: 'center', marginTop: 16 }}>
+        <div className="google-button-container">
           <div ref={googleBtnRef} />
         </div>
 
         {loading && (
-          <p style={{ textAlign: 'center', marginTop: 12 }}>
+          <p className="loading-text">
             Signing in...
           </p>
         )}
-
-        <div className="register-link" style={{ marginTop: 16 }}>
-          {/* Registration is disabled; keep link out or point to info */}
-          Manual registration is disabled. Contact your administrator if you can’t sign in.
-        </div>
       </div>
     </div>
   );

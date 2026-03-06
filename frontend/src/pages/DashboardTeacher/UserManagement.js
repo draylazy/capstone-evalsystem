@@ -8,7 +8,7 @@ import './Teacher.css';
 function UserManagement() {
   const toast = useToast();
 
-  const [allowedUsers, setAllowedUsers] = useState([]);
+  const [users, setUsers] = useState([]);
   const [loading, setLoading] = useState(true);
   const [uploadFile, setUploadFile] = useState(null);
   const [uploading, setUploading] = useState(false);
@@ -17,14 +17,14 @@ function UserManagement() {
   const [filterRole, setFilterRole] = useState('ALL');
 
   useEffect(() => {
-    fetchAllowedUsers();
+    fetchUsers();
   }, []);
 
-  const fetchAllowedUsers = async () => {
+  const fetchUsers = async () => {
     setLoading(true);
     try {
-      const data = await userManagementAPI.getAllowedUsers();
-      setAllowedUsers(data);
+      const data = await userManagementAPI.getUsers();
+      setUsers(data);
     } catch (err) {
       toast.error('Failed to load users: ' + err.message);
     } finally {
@@ -33,11 +33,11 @@ function UserManagement() {
   };
 
   const handleDelete = async (id, email) => {
-    if (!window.confirm(`Remove ${email} from the allowed list?`)) return;
+    if (!window.confirm(`Remove ${email} from the system?`)) return;
     try {
-      await userManagementAPI.deleteAllowedUser(id);
+      await userManagementAPI.deleteUser(id);
       toast.success(`${email} removed`);
-      fetchAllowedUsers();
+      fetchUsers();
     } catch (err) {
       toast.error('Failed to remove: ' + err.message);
     }
@@ -51,11 +51,11 @@ function UserManagement() {
     try {
       const formData = new FormData();
       formData.append('file', uploadFile);
-      const res = await userManagementAPI.uploadRoleSheet(formData);
+      const res = await userManagementAPI.uploadUserSheet(formData);
       toast.success(res.message || 'Upload successful');
       setShowUploadModal(false);
       setUploadFile(null);
-      fetchAllowedUsers();
+      fetchUsers();
     } catch (err) {
       setUploadError('Upload failed: ' + err.message);
     } finally {
@@ -64,15 +64,14 @@ function UserManagement() {
   };
 
   const filtered = filterRole === 'ALL'
-    ? allowedUsers
-    : allowedUsers.filter(u => u.assignedRole === filterRole);
+    ? users
+    : users.filter(u => u.role === filterRole);
 
   const counts = {
-    total: allowedUsers.length,
-    teacher: allowedUsers.filter(u => u.assignedRole === 'TEACHER').length,
-    adviser: allowedUsers.filter(u => u.assignedRole === 'ADVISER').length,
-    student: allowedUsers.filter(u => u.assignedRole === 'STUDENT').length,
-    registered: allowedUsers.filter(u => u.isRegistered).length,
+    total: users.length,
+    teacher: users.filter(u => u.role === 'TEACHER').length,
+    adviser: users.filter(u => u.role === 'ADVISER').length,
+    student: users.filter(u => u.role === 'STUDENT').length,
   };
 
   return (
@@ -84,7 +83,7 @@ function UserManagement() {
 
         {/* Summary Cards */}
         <div className="summary-row">
-          <SummaryCard title="Total Allowed Users" value={loading ? '-' : String(counts.total)} />
+          <SummaryCard title="Total Users" value={loading ? '-' : String(counts.total)} />
           <SummaryCard title="Teachers" value={loading ? '-' : String(counts.teacher)} />
           <SummaryCard title="Advisers" value={loading ? '-' : String(counts.adviser)} />
           <SummaryCard title="Students" value={loading ? '-' : String(counts.student)} />
@@ -92,7 +91,7 @@ function UserManagement() {
 
         <div className="section">
           <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '16px' }}>
-            <h2>Allowed Users</h2>
+            <h2>System Users</h2>
             <div style={{ display: 'flex', gap: '8px', alignItems: 'center' }}>
               {['ALL', 'TEACHER', 'ADVISER', 'STUDENT'].map(role => (
                 <button
@@ -105,7 +104,7 @@ function UserManagement() {
                 </button>
               ))}
               <button className="btn" onClick={() => setShowUploadModal(true)}>
-                Upload Role Sheet
+                Upload Users
               </button>
             </div>
           </div>
@@ -114,10 +113,9 @@ function UserManagement() {
             <p>Loading users...</p>
           ) : filtered.length === 0 ? (
             <div style={{ textAlign: 'center', padding: '32px', color: '#666' }}>
-              <p>No users found. Upload a role sheet to get started.</p>
+              <p>No users found. Upload a user sheet to get started.</p>
               <p style={{ fontSize: '13px', color: '#999', marginTop: '8px' }}>
-                Create an Excel or CSV with columns: <strong>Email</strong>, <strong>Role</strong>
-                &nbsp;(valid roles: TEACHER, ADVISER, STUDENT)
+                Create an Excel or CSV with columns: <strong>Email, FirstName, LastName, Role, PhoneNumber (optional), Department (optional)</strong>
               </p>
             </div>
           ) : (
@@ -125,10 +123,10 @@ function UserManagement() {
               <thead>
                 <tr>
                   <th>#</th>
+                  <th>Name</th>
                   <th>Email</th>
-                  <th>Assigned Role</th>
-                  <th>Status</th>
-                  <th>Added On</th>
+                  <th>Role</th>
+                  <th>Department</th>
                   <th>Actions</th>
                 </tr>
               </thead>
@@ -136,6 +134,7 @@ function UserManagement() {
                 {filtered.map((u, idx) => (
                   <tr key={u.id}>
                     <td>{idx + 1}</td>
+                    <td>{u.firstName && u.lastName ? `${u.firstName} ${u.lastName}` : '—'}</td>
                     <td style={{ fontFamily: 'monospace', fontSize: '13px' }}>{u.email}</td>
                     <td>
                       <span style={{
@@ -143,27 +142,15 @@ function UserManagement() {
                         borderRadius: '12px',
                         fontSize: '11px',
                         fontWeight: '700',
-                        background: u.assignedRole === 'TEACHER' ? '#d4edda' : u.assignedRole === 'ADVISER' ? '#cce5ff' : '#fff3cd',
-                        color: u.assignedRole === 'TEACHER' ? '#155724' : u.assignedRole === 'ADVISER' ? '#004085' : '#856404',
+                        background: u.role === 'TEACHER' ? '#d4edda' : u.role === 'ADVISER' ? '#cce5ff' : '#fff3cd',
+                        color: u.role === 'TEACHER' ? '#155724' : u.role === 'ADVISER' ? '#004085' : '#856404',
                       }}>
-                        {u.assignedRole}
+                        {u.role}
                       </span>
                     </td>
+                    <td>{u.department || '—'}</td>
                     <td>
-                      <span style={{
-                        padding: '3px 10px',
-                        borderRadius: '12px',
-                        fontSize: '11px',
-                        fontWeight: '600',
-                        background: u.isRegistered ? '#d4edda' : '#fff3cd',
-                        color: u.isRegistered ? '#155724' : '#856404',
-                      }}>
-                        {u.isRegistered ? 'Registered' : 'Pending'}
-                      </span>
-                    </td>
-                    <td>{u.createdAt ? new Date(u.createdAt).toLocaleDateString() : '—'}</td>
-                    <td>
-                      {u.email !== 'teacher@system.com' && (
+                      {u.email !== 'authortet@gmail.com' && (
                         <button
                           className="btn-secondary"
                           style={{ padding: '5px 12px', fontSize: '12px', color: '#dc3545', borderColor: '#dc3545' }}
@@ -185,22 +172,23 @@ function UserManagement() {
       {showUploadModal && (
         <div className="modal-overlay">
           <div className="modal-content">
-            <h2>Upload Role Assignment Sheet</h2>
+            <h2>Upload User Data Sheet</h2>
             {uploadError && <div className="error-message">{uploadError}</div>}
             <p style={{ fontSize: '13px', color: '#555', marginBottom: '12px' }}>
               Upload an Excel (.xlsx / .xls) or CSV file. First row is the header, columns must be:
             </p>
             <table className="class-table" style={{ marginBottom: '16px' }}>
               <thead>
-                <tr><th>Email</th><th>Role</th></tr>
+                <tr><th>Email</th><th>FirstName</th><th>LastName</th><th>Role</th><th>PhoneNumber</th><th>Department</th></tr>
               </thead>
               <tbody>
-                <tr><td>teacher1@cit.edu</td><td>TEACHER</td></tr>
-                <tr><td>adviser1@cit.edu</td><td>ADVISER</td></tr>
-                <tr><td>student1@cit.edu</td><td>STUDENT</td></tr>
+                <tr><td>teacher1@cit.edu</td><td>John</td><td>Doe</td><td>TEACHER</td><td>123-456-7890</td><td>CS</td></tr>
+                <tr><td>adviser1@cit.edu</td><td>Jane</td><td>Smith</td><td>ADVISER</td><td></td><td>IT</td></tr>
+                <tr><td>student1@cit.edu</td><td>Bob</td><td>Lee</td><td>STUDENT</td><td></td><td></td></tr>
               </tbody>
             </table>
             <p style={{ fontSize: '12px', color: '#888', marginBottom: '16px' }}>
+              Required: <strong>Email, FirstName, LastName, Role</strong>. Optional: PhoneNumber, Department.<br/>
               Valid roles: <strong>TEACHER</strong>, <strong>ADVISER</strong>, <strong>STUDENT</strong>
             </p>
             <form onSubmit={handleUploadSubmit}>

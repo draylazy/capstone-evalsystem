@@ -1,6 +1,6 @@
 package group9.advisor_eval_system.controller;
 
-import group9.advisor_eval_system.entity.AllowedUser;
+import group9.advisor_eval_system.entity.User;
 import group9.advisor_eval_system.service.UserManagementService;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.HttpStatus;
@@ -18,23 +18,23 @@ public class UserManagementController {
     @Autowired
     private UserManagementService userManagementService;
 
-    @GetMapping("/allowed-users")
-    public ResponseEntity<List<AllowedUser>> getAllowedUsers() {
-        return ResponseEntity.ok(userManagementService.getAllAllowedUsers());
+    @GetMapping("/users")
+    public ResponseEntity<List<User>> getUsers() {
+        return ResponseEntity.ok(userManagementService.getAllUsers());
     }
 
-    @DeleteMapping("/allowed-users/{id}")
-    public ResponseEntity<?> deleteAllowedUser(@PathVariable Long id) {
+    @DeleteMapping("/users/{id}")
+    public ResponseEntity<?> deleteUser(@PathVariable Long id) {
         try {
-            userManagementService.deleteAllowedUser(id);
-            return ResponseEntity.ok(new MessageResponse("User removed from allowed list"));
+            userManagementService.deleteUser(id);
+            return ResponseEntity.ok(new MessageResponse("User removed successfully"));
         } catch (RuntimeException e) {
             return ResponseEntity.status(HttpStatus.NOT_FOUND).body(new MessageResponse(e.getMessage()));
         }
     }
 
-    @PostMapping(value = "/upload-roles", consumes = "multipart/form-data")
-    public ResponseEntity<?> uploadRoleSheet(@RequestParam("file") MultipartFile file) {
+    @PostMapping(value = "/upload-users", consumes = "multipart/form-data")
+    public ResponseEntity<?> uploadUserSheet(@RequestParam("file") MultipartFile file) {
         if (file.isEmpty()) {
             return ResponseEntity.badRequest().body(new MessageResponse("File is empty"));
         }
@@ -49,7 +49,7 @@ public class UserManagementController {
         }
 
         try {
-            UserManagementService.UploadResult result = userManagementService.uploadRoleSheet(file);
+            UserManagementService.UploadResult result = userManagementService.uploadUserSheet(file);
             String message = "Added: " + result.getAdded()
                     + ", Updated: " + result.getUpdated()
                     + ", Skipped: " + result.getSkipped();

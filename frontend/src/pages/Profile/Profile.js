@@ -146,28 +146,7 @@ const Profile = () => {
     }
   };
 
-  const handleUnlinkGoogleAccount = async () => {
-    if (!window.confirm('Are you sure you want to unlink your Google account? You will no longer be able to create Google Forms.')) {
-      return;
-    }
 
-    try {
-      const response = await fetch(`${API_BASE_URL}/api/google-auth/unlink`, {
-        method: 'DELETE',
-        headers: getHeaders(),
-      });
-      
-      if (!response.ok) {
-        throw new Error('Failed to unlink account');
-      }
-      
-      const data = await response.json();
-      setGoogleLinkStatus(data);
-      toast.success(data.message);
-    } catch (error) {
-      toast.error('Failed to unlink Google account');
-    }
-  };
 
   if (loading) {
     return <div className="profile-container">Loading...</div>;
@@ -234,12 +213,6 @@ const Profile = () => {
                     <label>Linked Account:</label>
                     <span>{googleLinkStatus.googleEmail}</span>
                   </div>
-                  <button 
-                    className="btn-unlink"
-                    onClick={handleUnlinkGoogleAccount}
-                  >
-                    Unlink Google Account
-                  </button>
                 </>
               ) : (
                 <>

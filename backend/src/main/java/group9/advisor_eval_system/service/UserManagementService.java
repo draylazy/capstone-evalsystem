@@ -1,8 +1,6 @@
 package group9.advisor_eval_system.service;
 
-import group9.advisor_eval_system.entity.AllowedUser;
 import group9.advisor_eval_system.entity.User;
-import group9.advisor_eval_system.repository.AllowedUserRepository;
 import group9.advisor_eval_system.repository.UserRepository;
 import org.apache.poi.ss.usermodel.*;
 import org.apache.poi.xssf.usermodel.XSSFWorkbook;
@@ -19,9 +17,6 @@ import java.util.List;
 
 @Service
 public class UserManagementService {
-
-    @Autowired
-    private AllowedUserRepository allowedUserRepository;
 
     @Autowired
     private UserRepository userRepository;
@@ -45,17 +40,21 @@ public class UserManagementService {
         public List<String> getErrors() { return errors; }
     }
 
-    public List<AllowedUser> getAllAllowedUsers() {
-        return allowedUserRepository.findAll();
+    public List<User> getAllUsers() {
+        return userRepository.findAll();
     }
 
-    public void deleteAllowedUser(Long id) {
-        AllowedUser au = allowedUserRepository.findById(id)
-                .orElseThrow(() -> new RuntimeException("Allowed user not found"));
-        allowedUserRepository.delete(au);
+    public void deleteUser(Long id) {
+        User user = userRepository.findById(id)
+                .orElseThrow(() -> new RuntimeException("User not found"));
+        userRepository.delete(user);
     }
 
-    public UploadResult uploadRoleSheet(MultipartFile file) throws IOException {
+    /**
+     * Upload users from CSV/Excel file
+     * Expected columns: Email, FirstName, LastName, Role, PhoneNumber(optional), Department(optional)
+     */
+    public UploadResult uploadUserSheet(MultipartFile file) throws IOException {
         String filename = file.getOriginalFilename();
         List<String[]> rows;
 
@@ -70,16 +69,21 @@ public class UserManagementService {
 
         for (int i = 0; i < rows.size(); i++) {
             String[] row = rows.get(i);
-            if (row.length < 2) {
-                errors.add("Row " + (i + 2) + ": Not enough columns (need Email, Role)");
+            if (row.length < 4) {
+                errors.add("Row " + (i + 2) + ": Not enough columns (need Email, FirstName, LastName, Role)");
                 skipped++;
                 continue;
             }
 
             String email = row[0].trim().toLowerCase();
-            String roleStr = row[1].trim().toUpperCase();
+            String firstName = row[1].trim();
+            String lastName = row[2].trim();
+            String roleStr = row[3].trim().toUpperCase();
+            String phoneNumber = row.length > 4 ? row[4].trim() : null;
+            String department = row.length > 5 ? row[5].trim() : null;
 
-            if (email.isEmpty()) {
+            if (email.isEmpty() || firstName.isEmpty() || lastName.isEmpty()) {
+                errors.add("Row " + (i + 2) + ": Email, FirstName, and LastName are required");
                 skipped++;
                 continue;
             }
@@ -87,38 +91,49 @@ public class UserManagementService {
             // Parse role
             User.UserRole role;
             try {
-                // Accept common aliases
-                if (roleStr.equals("STUDENT")) roleStr = "STUDENT"; // Keep STUDENT as STUDENT
                 role = User.UserRole.valueOf(roleStr);
             } catch (IllegalArgumentException e) {
-                errors.add("Row " + (i + 2) + ": Unknown role '" + row[1].trim() + "' for email " + email
+                errors.add("Row " + (i + 2) + ": Unknown role '" + roleStr + "' for email " + email
                         + " (valid: TEACHER, ADVISER, STUDENT)");
                 skipped++;
                 continue;
             }
 
             // Don't allow modifying the system teacher admin via upload
-            if (email.equals("teacher@system.com")) {
+            if (email.equals("authortet@gmail.com")) {
                 skipped++;
                 continue;
             }
 
-            if (allowedUserRepository.existsByEmail(email)) {
-                AllowedUser existing = allowedUserRepository.findByEmail(email).get();
-                existing.setAssignedRole(role);
-                allowedUserRepository.save(existing);
-                // Also update role on the actual user account if already registered
-                userRepository.findByEmail(email).ifPresent(u -> {
-                    u.setRole(role);
-                    userRepository.save(u);
-                });
+            if (userRepository.existsByEmail(email)) {
+                // Update existing user
+                User existing = userRepository.findByEmail(email).get();
+                existing.setFirstName(firstName);
+                existing.setLastName(lastName);
+                existing.setRole(role);
+                if (phoneNumber != null && !phoneNumber.isEmpty()) {
+                    existing.setPhoneNumber(phoneNumber);
+                }
+                if (department != null && !department.isEmpty()) {
+                    existing.setDepartment(department);
+                }
+                userRepository.save(existing);
                 updated++;
             } else {
-                AllowedUser au = new AllowedUser();
-                au.setEmail(email);
-                au.setAssignedRole(role);
-                au.setIsRegistered(userRepository.existsByEmail(email));
-                allowedUserRepository.save(au);
+                // Create new user
+                User newUser = new User();
+                newUser.setEmail(email);
+                newUser.setFirstName(firstName);
+                newUser.setLastName(lastName);
+                newUser.setRole(role);
+                newUser.setIsActive(true);
+                if (phoneNumber != null && !phoneNumber.isEmpty()) {
+                    newUser.setPhoneNumber(phoneNumber);
+                }
+                if (department != null && !department.isEmpty()) {
+                    newUser.setDepartment(department);
+                }
+                userRepository.save(newUser);
                 added++;
             }
         }
@@ -157,10 +172,16 @@ public class UserManagementService {
             for (int rowIndex = 1; rowIndex <= sheet.getLastRowNum(); rowIndex++) {
                 Row row = sheet.getRow(rowIndex);
                 if (row == null) continue;
+                
                 String email = getCellString(row.getCell(0));
-                String role = getCellString(row.getCell(1));
+                String firstName = getCellString(row.getCell(1));
+                String lastName = getCellString(row.getCell(2));
+                String role = getCellString(row.getCell(3));
+                String phoneNumber = getCellString(row.getCell(4));
+                String department = getCellString(row.getCell(5));
+                
                 if (email.isEmpty()) continue;
-                rows.add(new String[]{email, role});
+                rows.add(new String[]{email, firstName, lastName, role, phoneNumber, department});
             }
         }
         return rows;

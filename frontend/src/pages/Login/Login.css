@@ -38,7 +38,7 @@
   color: var(--dtm-maroon);
   font-size: 26px;
   margin-bottom: 8px;
-  text-align: left;
+  text-align: center;
   font-weight: 700;
   letter-spacing: -0.4px;
 }
@@ -47,7 +47,7 @@
   color: var(--dtm-muted);
   font-size: 14px;
   margin-bottom: 28px;
-  text-align: left;
+  text-align: center;
   font-weight: 500;
 }
 
@@ -146,6 +146,19 @@
 .register-link a:hover {
   color: var(--dtm-maroon-dark);
   text-decoration: underline;
+}
+
+/* Google Button Container */
+.google-button-container {
+  display: flex;
+  justify-content: center;
+  margin-top: 16px;
+}
+
+/* Loading Text */
+.loading-text {
+  text-align: center;
+  margin-top: 12px;
 }
 
 /* Responsive Design */

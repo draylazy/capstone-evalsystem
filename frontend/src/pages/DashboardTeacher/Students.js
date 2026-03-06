@@ -5,7 +5,7 @@ import { useToast } from "../../contexts/ToastContext";
 import ConfirmModal from "../../components/ConfirmModal/ConfirmModal";
 import "./Teacher.css";
 
-const Student = () => {
+const Students = () => {
   const toast = useToast();
   const [students, setStudents] = useState([]);
   const [classes, setClasses] = useState([]);
@@ -393,4 +393,4 @@ const Student = () => {
   );
 };
 
-export default Student;
+export default Students;

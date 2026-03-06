@@ -1,7 +1,6 @@
 import './App.css';
 import { BrowserRouter as Router, Routes, Route, Navigate } from 'react-router-dom';
 import Login from './pages/Login/Login';
-import Register from './pages/Register/Register';
 import ProtectedRoute from './components/ProtectedRoute';
 import { ToastProvider } from './contexts/ToastContext';
 
@@ -12,7 +11,8 @@ import Teams from './pages/DashboardTeacher/Teams';
 import Questionnaires from './pages/DashboardTeacher/Questionnaires';
 import Reports from './pages/DashboardTeacher/Reports';
 import EvaluationDetail from './pages/DashboardTeacher/EvaluationDetail';
-import Student from './pages/DashboardTeacher/Student';
+import Students from './pages/DashboardTeacher/Students';
+import Advisers from './pages/DashboardTeacher/Advisers';
 import UserManagement from './pages/DashboardTeacher/UserManagement';
 
 // Adviser Pages
@@ -74,7 +74,13 @@ function App() {
 
         <Route path="/teacher/students" element={
           <ProtectedRoute allowedRoles={['TEACHER']}>
-            <Student />
+            <Students />
+          </ProtectedRoute>
+        } />
+
+        <Route path="/teacher/advisers" element={
+          <ProtectedRoute allowedRoles={['TEACHER']}>
+            <Advisers />
           </ProtectedRoute>
         } />
 
