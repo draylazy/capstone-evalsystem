@@ -19,24 +19,14 @@ public class AuthController {
     
     @PostMapping("/register")
     public ResponseEntity<?> register(@Valid @RequestBody RegisterRequest request) {
-        try {
-            AuthResponse response = authService.register(request);
-            return ResponseEntity.ok(response);
-        } catch (RuntimeException e) {
-            return ResponseEntity.status(HttpStatus.BAD_REQUEST)
-                    .body(new ErrorResponse(e.getMessage()));
-        }
+        return ResponseEntity.status(HttpStatus.GONE)
+                .body(new ErrorResponse("Manual registration is disabled. Please sign in with Google."));
     }
     
     @PostMapping("/login")
     public ResponseEntity<?> login(@Valid @RequestBody LoginRequest request) {
-        try {
-            AuthResponse response = authService.login(request);
-            return ResponseEntity.ok(response);
-        } catch (RuntimeException e) {
-            return ResponseEntity.status(HttpStatus.UNAUTHORIZED)
-                    .body(new ErrorResponse(e.getMessage()));
-        }
+        return ResponseEntity.status(HttpStatus.GONE)
+                .body(new ErrorResponse("Manual login is disabled. Please sign in with Google."));
     }
     
     // Inner class for error responses

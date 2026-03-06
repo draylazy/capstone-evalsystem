@@ -1,5 +1,5 @@
-import React, { useState } from 'react';
-import { Link, useNavigate } from 'react-router-dom';
+import React, { useEffect, useRef, useState } from 'react';
+import { useNavigate } from 'react-router-dom';
 import { authAPI } from '../../services/api';
 import { useToast } from '../../contexts/ToastContext';
 import './Login.css';
@@ -7,40 +7,65 @@ import './Login.css';
 function Login() {
   const navigate = useNavigate();
   const toast = useToast();
-  const [email, setEmail] = useState('');
-  const [password, setPassword] = useState('');
+  const googleBtnRef = useRef(null);
   const [error, setError] = useState('');
   const [loading, setLoading] = useState(false);
 
-  const handleSubmit = async (e) => {
-    e.preventDefault();
+  // If already logged in, redirect
+  useEffect(() => {
+    const stored = authAPI.getCurrentUser();
+    if (stored?.token && stored?.role) {
+      redirectByRole(stored.role);
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+
+  useEffect(() => {
+    // Wait for Google script to load
+    const interval = setInterval(() => {
+      if (window.google && googleBtnRef.current) {
+        clearInterval(interval);
+
+        window.google.accounts.id.initialize({
+          client_id: process.env.REACT_APP_GOOGLE_CLIENT_ID,
+          callback: handleGoogleCredential,
+        });
+
+        window.google.accounts.id.renderButton(googleBtnRef.current, {
+          theme: 'outline',
+          size: 'large',
+          width: 320,
+        });
+      }
+    }, 200);
+
+    return () => clearInterval(interval);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+
+  const redirectByRole = (role) => {
+    if (role === 'TEACHER') navigate('/teacher/dashboard');
+    else if (role === 'ADVISER') navigate('/adviser/dashboard');
+    else navigate('/login');
+  };
+
+  const handleGoogleCredential = async (response) => {
     setError('');
     setLoading(true);
 
     try {
-      toast.info('Attempting login...');
-      const data = await authAPI.login(email, password);
-      
-      // Store user data in localStorage
+      toast.info('Signing in with Google...');
+
+      const data = await authAPI.googleLogin(response.credential);
+
+      // Store FULL response like you currently do (contains token + role etc.)
       localStorage.setItem('user', JSON.stringify(data));
+
       toast.success('Login successful!');
-      
-      // Redirect based on role
-      if (data.role === 'TEACHER') {
-        navigate('/teacher/dashboard');
-      } else if (data.role === 'ADVISER') {
-        navigate('/adviser/dashboard');
-      } else if (data.role === 'STUDENT') {
-        // TODO: Create student dashboard
-        toast.info('Student dashboard coming soon!');
-        navigate('/teacher/dashboard'); // Temporary redirect
-      } else {
-        toast.warning('Unknown role, redirecting to home');
-        navigate('/');
-      }
+      redirectByRole(data.role);
     } catch (err) {
-      toast.error('Login failed: ' + (err.message || 'Unable to connect to server'));
-      setError(err.message || 'Unable to connect to server. Please try again.');
+      toast.error('Google login failed: ' + (err.message || 'Unknown error'));
+      setError(err.message || 'Google login failed');
     } finally {
       setLoading(false);
     }
@@ -50,40 +75,24 @@ function Login() {
     <div className="login-container">
       <div className="login-box">
         <h1>Adviser Evaluation System</h1>
-        <h2>Login</h2>
+        <h2>Sign in</h2>
+
         {error && <div className="error-message">{error}</div>}
-        <form onSubmit={handleSubmit}>
-          <div className="form-group">
-            <label htmlFor="email">Email</label>
-            <input
-              type="email"
-              id="email"
-              value={email}
-              onChange={(e) => setEmail(e.target.value)}
-              placeholder="Enter your email"
-              required
-              disabled={loading}
-            />
-          </div>
-          <div className="form-group">
-            <label htmlFor="password">Password</label>
-            <input
-              type="password"
-              id="password"
-              value={password}
-              onChange={(e) => setPassword(e.target.value)}
-              placeholder="Enter your password"
-              required
-              disabled={loading}
-            />
-          </div>
-          <button type="submit" className="login-button" disabled={loading}>
-            {loading ? 'Logging in...' : 'Login'}
-          </button>
-          <div className="register-link">
-            Don't have an account? <Link to="/register">Register here</Link>
-          </div>
-        </form>
+
+        <div style={{ display: 'flex', justifyContent: 'center', marginTop: 16 }}>
+          <div ref={googleBtnRef} />
+        </div>
+
+        {loading && (
+          <p style={{ textAlign: 'center', marginTop: 12 }}>
+            Signing in...
+          </p>
+        )}
+
+        <div className="register-link" style={{ marginTop: 16 }}>
+          {/* Registration is disabled; keep link out or point to info */}
+          Manual registration is disabled. Contact your administrator if you can’t sign in.
+        </div>
       </div>
     </div>
   );

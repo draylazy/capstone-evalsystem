@@ -33,7 +33,7 @@ function App() {
         {/* Public */}
         <Route path="/" element={<Navigate to="/login" />} />
         <Route path="/login" element={<Login />} />
-        <Route path="/register" element={<Register />} />
+        <Route path="/register" element={<Navigate to="/login" replace />} />
 
         {/* Teacher */}
         <Route path="/teacher/dashboard" element={

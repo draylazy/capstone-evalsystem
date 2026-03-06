@@ -70,8 +70,10 @@ export const authAPI = {
   },
   
   isAuthenticated: () => {
-    const user = localStorage.getItem('user');
-    return !!user; // Check if user data exists instead of token
+    const userStr = localStorage.getItem('user');
+    if (!userStr) return false;
+    const user = JSON.parse(userStr);
+    return !!user?.token;
   },
   
   getAllUsers: async () => {
@@ -98,7 +100,23 @@ export const authAPI = {
     }
     
     return await response.json();
-  }
+  },
+
+  googleLogin: async (idToken) => {
+    const response = await fetch(`${API_BASE_URL}/auth/google/login`, {
+      method: 'POST',
+      headers: getHeaders(false),
+      body: JSON.stringify({ idToken }),
+    });
+
+    if (!response.ok) {
+      const error = await response.json().catch(() => ({ message: 'Google login failed' }));
+      throw new Error(error.message || 'Google login failed');
+    }
+
+    return await response.json();
+  },
+
 };
 
 // User API
