@@ -12,13 +12,19 @@ function Login() {
   const [loading, setLoading] = useState(false);
 
   useEffect(() => {
+    const googleClientId = process.env.REACT_APP_GOOGLE_CLIENT_ID;
+    if (!googleClientId) {
+      setError('Google sign-in is not configured. Set REACT_APP_GOOGLE_CLIENT_ID in frontend/.env and restart the dev server.');
+      return;
+    }
+
     // Wait for Google script to load
     const interval = setInterval(() => {
       if (window.google && googleBtnRef.current) {
         clearInterval(interval);
 
         window.google.accounts.id.initialize({
-          client_id: process.env.REACT_APP_GOOGLE_CLIENT_ID,
+          client_id: googleClientId,
           callback: handleGoogleCredential,
         });
 

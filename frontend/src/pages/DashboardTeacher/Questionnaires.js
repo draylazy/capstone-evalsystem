@@ -5,6 +5,8 @@ import { useToast } from "../../contexts/ToastContext";
 import ConfirmModal from "../../components/ConfirmModal/ConfirmModal";
 import "./Teacher.css";
 
+const API_BASE_URL = (process.env.REACT_APP_API_BASE_URL || 'http://localhost:8080/api').replace(/\/api\/?$/, '');
+
 const Questionnaires = () => {
   const toast = useToast();
   const [questionnaires, setQuestionnaires] = useState([]);
@@ -47,7 +49,7 @@ const Questionnaires = () => {
 
   const checkGoogleLink = async () => {
     try {
-      const response = await fetch('http://localhost:8080/api/google-auth/status', {
+      const response = await fetch(`${API_BASE_URL}/api/google-auth/status`, {
         headers: {
           'Authorization': `Bearer ${JSON.parse(localStorage.getItem('user')).token}`
         }

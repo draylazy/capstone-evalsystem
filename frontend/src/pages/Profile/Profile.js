@@ -6,7 +6,7 @@ import TeacherSidebar from '../../components/Sidebar/TeacherSidebar';
 import AdviserSidebar from '../../components/Sidebar/AdviserSidebar';
 import './Profile.css';
 
-const API_BASE_URL = 'http://localhost:8080';
+const API_BASE_URL = (process.env.REACT_APP_API_BASE_URL || 'http://localhost:8080/api').replace(/\/api\/?$/, '');
 
 const Profile = () => {
   const navigate = useNavigate();
