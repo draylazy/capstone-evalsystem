@@ -150,7 +150,7 @@ public class GoogleAuthService {
         }
 
         // Check if token is expired or about to expire
-        if (user.getGoogleTokenExpiry().isBefore(LocalDateTime.now().plusMinutes(5))) {
+        if (user.getGoogleTokenExpiry() == null || user.getGoogleTokenExpiry().isBefore(LocalDateTime.now().plusMinutes(5))) {
             refreshAccessToken(user);
         }
 
