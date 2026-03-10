@@ -36,19 +36,31 @@
 /* Headings */
 .login-box h1 {
   color: var(--dtm-maroon);
-  font-size: 26px;
-  margin-bottom: 8px;
+  font-size: 32px;
+  margin-bottom: 4px;
   text-align: center;
   font-weight: 700;
-  letter-spacing: -0.4px;
+  letter-spacing: -0.5px;
+}
+
+.login-box h3 {
+  color: var(--dtm-text);
+  font-size: 15px;
+  margin-bottom: 32px;
+  text-align: center;
+  font-weight: 400;
+  line-height: 1.4;
+  padding-bottom: 24px;
+  border-bottom: 1px solid var(--dtm-border);
 }
 
 .login-box h2 {
-  color: var(--dtm-muted);
-  font-size: 14px;
-  margin-bottom: 28px;
+  color: var(--dtm-text);
+  font-size: 16px;
+  margin-bottom: 20px;
+  margin-top: 24px;
   text-align: center;
-  font-weight: 500;
+  font-weight: 600;
 }
 
 /* Form Group */

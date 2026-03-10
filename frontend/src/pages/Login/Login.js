@@ -113,8 +113,8 @@ function Login() {
   return (
     <div className="login-container">
       <div className="login-box">
-        <h1>Adviser Evaluation System</h1>
-        <h2>Sign in with Google</h2>
+        <h1>SAES</h1>
+        <h3>Student and Adviser Evaluation System</h3>
 
         {error && <div className="error-message">{error}</div>}
 
