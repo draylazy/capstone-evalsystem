@@ -21,8 +21,7 @@ public class GlobalExceptionHandler {
         ErrorResponse error = new ErrorResponse(
                 HttpStatus.NOT_FOUND.value(),
                 ex.getMessage(),
-                LocalDateTime.now()
-        );
+                LocalDateTime.now());
         return new ResponseEntity<>(error, HttpStatus.NOT_FOUND);
     }
 
@@ -32,8 +31,7 @@ public class GlobalExceptionHandler {
         ErrorResponse error = new ErrorResponse(
                 HttpStatus.BAD_REQUEST.value(),
                 ex.getMessage(),
-                LocalDateTime.now()
-        );
+                LocalDateTime.now());
         return new ResponseEntity<>(error, HttpStatus.BAD_REQUEST);
     }
 
@@ -46,13 +44,12 @@ public class GlobalExceptionHandler {
             String errorMessage = error.getDefaultMessage();
             errors.put(fieldName, errorMessage);
         });
-        
+
         ValidationErrorResponse response = new ValidationErrorResponse(
                 HttpStatus.BAD_REQUEST.value(),
                 "Validation failed",
                 LocalDateTime.now(),
-                errors
-        );
+                errors);
         return new ResponseEntity<>(response, HttpStatus.BAD_REQUEST);
     }
 
@@ -62,8 +59,7 @@ public class GlobalExceptionHandler {
         ErrorResponse error = new ErrorResponse(
                 HttpStatus.INTERNAL_SERVER_ERROR.value(),
                 "An unexpected error occurred: " + ex.getMessage(),
-                LocalDateTime.now()
-        );
+                LocalDateTime.now());
         return new ResponseEntity<>(error, HttpStatus.INTERNAL_SERVER_ERROR);
     }
 
@@ -106,7 +102,8 @@ public class GlobalExceptionHandler {
     public static class ValidationErrorResponse extends ErrorResponse {
         private Map<String, String> errors;
 
-        public ValidationErrorResponse(int status, String message, LocalDateTime timestamp, Map<String, String> errors) {
+        public ValidationErrorResponse(int status, String message, LocalDateTime timestamp,
+                Map<String, String> errors) {
             super(status, message, timestamp);
             this.errors = errors;
         }
