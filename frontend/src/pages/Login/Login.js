@@ -1,6 +1,11 @@
-import React, { useEffect, useRef, useState } from 'react';
+import React, { useCallback, useEffect, useRef, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useToast } from '../../contexts/ToastContext';
+import TextPressure from '../../components/TextPressure/TextPressure';
+import Aurora from '../../components/Aurora/Aurora';
+import BlurText from '../../components/BlurText/BlurText';
+import '../../components/TextPressure/TextPressure.css';
+import '../../components/Aurora/Aurora.css';
 import './Login.css';
 
 const API_BASE_URL = 'http://localhost:8080';
@@ -110,11 +115,45 @@ function Login() {
     }
   };
 
+  // Spotlight effect — track mouse on the card
+  const cardRef = useRef(null);
+  const handleCardMouse = useCallback((e) => {
+    const card = cardRef.current;
+    if (!card) return;
+    const rect = card.getBoundingClientRect();
+    card.style.setProperty('--mouse-x', `${e.clientX - rect.left}px`);
+    card.style.setProperty('--mouse-y', `${e.clientY - rect.top}px`);
+  }, []);
+
   return (
-    <div className="login-container">
-      <div className="login-box">
-        <h1>SAES</h1>
-        <h3>Student and Adviser Evaluation System</h3>
+    <>
+      <Aurora
+        colorStops={['#8a151f', '#f2c94c', '#6c0f17', '#d4a843']}
+        speed={8}
+      />
+      <div className="login-container">
+        <div className="login-box" ref={cardRef} onMouseMove={handleCardMouse}>
+          <div className="text-pressure-wrapper">
+            <TextPressure
+              text="SAES"
+              flex
+              alpha={false}
+              stroke={false}
+              width
+              weight
+              italic
+              textColor="#f2c94c"
+              strokeColor="#8a151f"
+              minFontSize={42}
+            />
+          </div>
+          <h3>
+            <BlurText
+              text="Student and Adviser Evaluation System"
+              delay={60}
+              animateBy="words"
+            />
+          </h3>
 
         {error && <div className="error-message">{error}</div>}
 
@@ -136,6 +175,7 @@ function Login() {
         </div>
       </div>
     </div>
+    </>
   );
 }
 

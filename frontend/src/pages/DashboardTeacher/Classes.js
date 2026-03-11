@@ -378,11 +378,12 @@ const Classes = () => {
                       )}
                     </td>
                     <td>
-                      <span className={classItem.isActive ? "status-active" : "status-inactive"}>
+                      <span className={`status-badge ${classItem.isActive ? "status-active" : "status-inactive"}`}>
                         {classItem.isActive ? "Active" : "Inactive"}
                       </span>
                     </td>
                     <td>
+                      <div className="action-buttons">
                       <button 
                         className="btn btn-sm" 
                         onClick={() => handleManageClass(classItem)}
@@ -391,10 +392,10 @@ const Classes = () => {
                       <button 
                         className="btn btn-sm btn-danger" 
                         onClick={() => handleDeleteClass(classItem.id)}
-                        style={{ marginLeft: "5px" }}
                       >
                         Delete
                       </button>
+                      </div>
                     </td>
                   </tr>
                   );

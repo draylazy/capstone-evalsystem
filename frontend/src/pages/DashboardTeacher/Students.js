@@ -237,12 +237,14 @@ const Students = () => {
                       <td>{student.email || 'N/A'}</td>
                       <td>{student.phoneNumber || 'N/A'}</td>
                       <td>
-                        <button className="btn" onClick={() => handleEdit(student)} style={{ marginRight: '5px' }}>
+                        <div className="action-buttons">
+                        <button className="btn btn-sm" onClick={() => handleEdit(student)}>
                           Edit
                         </button>
-                        <button className="btn-secondary" onClick={() => handleDelete(student.id)}>
+                        <button className="btn-secondary btn-sm" onClick={() => handleDelete(student.id)}>
                           Delete
                         </button>
+                        </div>
                       </td>
                     </tr>
                   ))

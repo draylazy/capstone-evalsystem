@@ -63,7 +63,11 @@ const Adviser = () => {
                   <tr key={team.id}>
                     <td>{team.name}</td>
                     <td>{team.memberIds?.length || 0}</td>
-                    <td>{team.isActive ? "Active" : "Inactive"}</td>
+                    <td>
+                      <span className={`status-badge ${team.isActive ? "status-active" : "status-inactive"}`}>
+                        {team.isActive ? "Active" : "Inactive"}
+                      </span>
+                    </td>
                     <td>
                       <button
                         className="btn"
