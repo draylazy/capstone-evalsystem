@@ -83,6 +83,28 @@ const Reports = () => {
       return;
     }
 
+    const history = aiMessages.slice(-12);
+
+    const reportContext = (() => {
+      if (!selectedQuestionnaire) return '';
+      const total = evaluations.length;
+      const submitted = evaluations.filter((e) => e.status === 'SUBMITTED').length;
+      const inProgress = total - submitted;
+
+      const recentTeams = evaluations
+        .slice(0, 20)
+        .map((e) => `${e.teamName || 'Unknown team'}: ${e.status || 'UNKNOWN'}`)
+        .join('\n');
+
+      return [
+        `Selected questionnaire: ${selectedQuestionnaire.title}`,
+        selectedQuestionnaire.description ? `Description: ${selectedQuestionnaire.description}` : '',
+        `Evaluations summary: total=${total}, submitted=${submitted}, in_progress=${inProgress}`,
+        recentTeams ? `Sample teams/status (up to 20):\n${recentTeams}` : '',
+      ]
+        .filter(Boolean)
+        .join('\n');
+    })();
     setAiMessages((prev) => [...prev, { role: 'user', text: trimmed }]);
     setAiInput('');
     setAiLoading(true);
@@ -94,7 +116,12 @@ const Reports = () => {
           'Content-Type': 'application/json',
           Authorization: `Bearer ${token}`,
         },
-        body: JSON.stringify({ message: trimmed }),
+        body: JSON.stringify({
+          message: trimmed,
+          history,
+          context: reportContext,
+          contextType: selectedQuestionnaire ? 'reports' : 'reports-list',
+        }),
       });
 
       const data = await res.json().catch(() => null);

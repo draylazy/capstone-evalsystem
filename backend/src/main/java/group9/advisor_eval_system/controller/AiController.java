@@ -29,15 +29,19 @@ public class AiController {
 
         User user = getUserFromAuthentication(authentication);
 
-        log.info("AI chat request userId={} role={} messageLength={}", user.getId(), user.getRole(),
-                request.getMessage() == null ? 0 : request.getMessage().length());
+        int messageLength = request.getMessage() == null ? 0 : request.getMessage().length();
+        int historySize = request.getHistory() == null ? 0 : request.getHistory().size();
+        String contextType = request.getContextType() == null ? "" : request.getContextType();
+
+        log.info("AI chat request userId={} role={} messageLength={} historySize={} contextType={}",
+                user.getId(), user.getRole(), messageLength, historySize, contextType);
 
         if (user.getRole() != User.UserRole.TEACHER) {
             return ResponseEntity.status(HttpStatus.FORBIDDEN)
                     .body(new ErrorResponse("Only teachers can use the AI assistant"));
         }
 
-        String reply = aiChatService.chat(user, request.getMessage());
+        String reply = aiChatService.chat(user, request);
         return ResponseEntity.ok(new AiChatResponse(reply));
     }
 
