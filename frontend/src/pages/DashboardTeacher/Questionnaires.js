@@ -230,27 +230,14 @@ const Questionnaires = () => {
         </div>
 
         {!googleLinked && (
-          <div style={{ 
-            padding: '15px', 
-            backgroundColor: '#fff3cd', 
-            border: '1px solid #ffc107',
-            borderRadius: '5px',
-            marginBottom: '20px'
-          }}>
+          <div className="alert-warning">
             <strong>⚠️ Google Account Not Linked</strong>
             <p>Please link your Google account in the Profile page to create questionnaires.</p>
           </div>
         )}
 
         {error && (
-          <div style={{ 
-            padding: '15px', 
-            backgroundColor: '#f8d7da', 
-            border: '1px solid #f5c6cb',
-            borderRadius: '5px',
-            marginBottom: '20px',
-            color: '#721c24'
-          }}>
+          <div className="alert-danger">
             {error}
           </div>
         )}
@@ -287,37 +274,31 @@ const Questionnaires = () => {
                     </td>
                     <td>{formatDate(q.createdAt)}</td>
                     <td>
-                      <span style={{ 
-                        padding: '5px 10px',
-                        borderRadius: '5px',
-                        backgroundColor: q.isActive ? '#d4edda' : '#f8d7da',
-                        color: q.isActive ? '#155724' : '#721c24'
-                      }}>
+                      <span className={`status-badge ${q.isActive ? 'status-active' : 'status-inactive'}`}>
                         {q.isActive ? 'Active' : 'Inactive'}
                       </span>
                     </td>
                     <td>
-                      <button 
-                        className="btn" 
-                        onClick={() => window.open(q.googleFormUrl, '_blank')}
-                        style={{ marginRight: '5px', fontSize: '12px' }}
-                      >
-                        View Form
-                      </button>
-                      <button 
-                        className="btn btn-assign" 
-                        onClick={() => openAssignModal(q)}
-                        style={{ marginRight: '5px', fontSize: '12px' }}
-                      >
-                        Assign
-                      </button>
-                      <button 
-                        className="btn" 
-                        onClick={() => handleDeleteQuestionnaire(q.id)}
-                        style={{ backgroundColor: '#dc3545', fontSize: '12px' }}
-                      >
-                        Delete
-                      </button>
+                      <div className="action-buttons">
+                        <button 
+                          className="btn btn-sm" 
+                          onClick={() => window.open(q.googleFormUrl, '_blank')}
+                        >
+                          View Form
+                        </button>
+                        <button 
+                          className="btn btn-sm btn-assign" 
+                          onClick={() => openAssignModal(q)}
+                        >
+                          Assign
+                        </button>
+                        <button 
+                          className="btn btn-sm btn-danger" 
+                          onClick={() => handleDeleteQuestionnaire(q.id)}
+                        >
+                          Delete
+                        </button>
+                      </div>
                     </td>
                   </tr>
                 ))}
@@ -329,7 +310,7 @@ const Questionnaires = () => {
         {/* Create Questionnaire Modal */}
         {showCreateModal && (
           <div className="modal-overlay" onClick={() => setShowCreateModal(false)}>
-            <div className="modal-content" onClick={(e) => e.stopPropagation()} style={{ maxWidth: '800px', maxHeight: '90vh', overflowY: 'auto' }}>
+            <div className="modal-content modal-content-lg" onClick={(e) => e.stopPropagation()}>
               <h2>Create New Questionnaire</h2>
               <form onSubmit={handleCreateQuestionnaire}>
                 <div className="form-group">
@@ -355,23 +336,17 @@ const Questionnaires = () => {
                   <h3>Questions ({formData.questions.length} added)</h3>
                   
                   {formData.questions.length > 0 && (
-                    <div style={{ marginBottom: '15px', padding: '10px', backgroundColor: '#e8f5e8', borderRadius: '5px' }}>
-                      <small style={{ color: '#155724' }}>
+                    <div className="questions-success-hint">
+                      <small>
                         ✅ Questions added below. Click "Create Questionnaire" when done adding all questions.
                       </small>
                     </div>
                   )}
                   
                   {formData.questions.map((q, index) => (
-                    <div key={index} style={{ 
-                      padding: '10px', 
-                      border: '1px solid #ddd', 
-                      borderRadius: '5px',
-                      marginBottom: '10px',
-                      backgroundColor: '#f9f9f9'
-                    }}>
-                      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'start' }}>
-                        <div style={{ flex: 1 }}>
+                    <div key={index} className="question-card">
+                      <div className="question-card-inner">
+                        <div className="question-card-text">
                           <strong>Q{index + 1}:</strong> {q.questionText}
                           <br />
                           <small>Type: {q.questionType}</small>
@@ -386,15 +361,8 @@ const Questionnaires = () => {
                         </div>
                         <button 
                           type="button"
+                          className="btn btn-sm btn-danger"
                           onClick={() => handleRemoveQuestion(index)}
-                          style={{ 
-                            backgroundColor: '#dc3545', 
-                            color: 'white',
-                            border: 'none',
-                            padding: '5px 10px',
-                            borderRadius: '3px',
-                            cursor: 'pointer'
-                          }}
                         >
                           Remove
                         </button>
@@ -402,12 +370,7 @@ const Questionnaires = () => {
                     </div>
                   ))}
 
-                  <div style={{ 
-                    padding: '15px', 
-                    border: '2px dashed #ddd', 
-                    borderRadius: '5px',
-                    marginTop: '10px'
-                  }}>
+                  <div className="add-question-box">
                     <h4>Add New Question</h4>
                     <div className="form-group">
                       <label>Question Text *</label>
@@ -432,7 +395,7 @@ const Questionnaires = () => {
                     </div>
 
                     {(newQuestion.questionType === 'NUMERIC_SCALE' || newQuestion.questionType === 'RATING') && (
-                      <div style={{ display: 'flex', gap: '10px' }}>
+                      <div className="score-range-row">
                         <div className="form-group" style={{ flex: 1 }}>
                           <label>Min Score</label>
                           <input
@@ -458,17 +421,8 @@ const Questionnaires = () => {
                       <div className="form-group">
                         <label>Choices</label>
                         {newQuestion.choices.map((choice, index) => (
-                          <div key={index} style={{ 
-                            display: 'flex', 
-                            gap: '10px', 
-                            marginBottom: '10px',
-                            alignItems: 'center'
-                          }}>
-                            <span style={{ 
-                              minWidth: '30px', 
-                              fontWeight: 'bold',
-                              color: '#666'
-                            }}>
+                          <div key={index} className="choice-row">
+                            <span className="choice-label">
                               {String.fromCharCode(65 + index)}.
                             </span>
                             <input
@@ -480,29 +434,15 @@ const Questionnaires = () => {
                                 setNewQuestion({ ...newQuestion, choices: updatedChoices });
                               }}
                               placeholder={`Choice ${index + 1}`}
-                              style={{ 
-                                flex: 1,
-                                padding: '8px 12px',
-                                border: '1px solid #ddd',
-                                borderRadius: '4px',
-                                fontSize: '14px'
-                              }}
+                              className="choice-input"
                             />
                             {newQuestion.choices.length > 2 && (
                               <button
                                 type="button"
+                                className="btn btn-sm btn-danger"
                                 onClick={() => {
                                   const updatedChoices = newQuestion.choices.filter((_, i) => i !== index);
                                   setNewQuestion({ ...newQuestion, choices: updatedChoices });
-                                }}
-                                style={{
-                                  backgroundColor: '#dc3545',
-                                  color: 'white',
-                                  border: 'none',
-                                  padding: '6px 10px',
-                                  borderRadius: '4px',
-                                  cursor: 'pointer',
-                                  fontSize: '12px'
                                 }}
                                 title="Remove choice"
                               >
@@ -514,45 +454,33 @@ const Questionnaires = () => {
                         
                         <button
                           type="button"
+                          className="btn btn-sm btn-assign"
                           onClick={() => {
                             setNewQuestion({ 
                               ...newQuestion, 
                               choices: [...newQuestion.choices, ''] 
                             });
                           }}
-                          style={{
-                            backgroundColor: '#28a745',
-                            color: 'white',
-                            border: 'none',
-                            padding: '8px 16px',
-                            borderRadius: '4px',
-                            cursor: 'pointer',
-                            fontSize: '14px',
-                            marginTop: '5px'
-                          }}
+                          style={{ marginTop: '5px' }}
                         >
                           + Add Choice
                         </button>
                         
-                        <small style={{ 
-                          color: '#666', 
-                          display: 'block',
-                          marginTop: '8px'
-                        }}>
+                        <small className="choice-hint">
                           Minimum 2 choices required. Click "+ Add Choice" for more options.
                         </small>
                       </div>
                     )}
 
-                    <button type="button" onClick={handleAddQuestion} className="btn" style={{ marginTop: '10px' }}>
+                    <button type="button" onClick={handleAddQuestion} className="btn" style={{ marginTop: '12px' }}>
                       + Add Question
                     </button>
                   </div>
                 </div>
 
-                <div className="form-actions" style={{ marginTop: '20px' }}>
-                  <button type="submit" className="btn">Create Questionnaire</button>
-                  <button type="button" onClick={() => { setShowCreateModal(false); resetForm(); }} className="btn" style={{ marginLeft: '10px', backgroundColor: '#6c757d' }}>
+                <div className="form-actions">
+                  <button type="submit" className="btn btn-primary">Create Questionnaire</button>
+                  <button type="button" onClick={() => { setShowCreateModal(false); resetForm(); }} className="btn btn-secondary">
                     Cancel
                   </button>
                 </div>
@@ -573,10 +501,10 @@ const Questionnaires = () => {
                 {classes.length === 0 ? (
                   <p>No classes available. Please create classes first.</p>
                 ) : (
-                  <div style={{ maxHeight: '300px', overflowY: 'auto', border: '1px solid #ddd', padding: '10px', borderRadius: '5px' }}>
+                  <div className="class-checklist">
                     {classes.map((cls) => (
-                      <div key={cls.id} style={{ marginBottom: '10px' }}>
-                        <label style={{ display: 'flex', alignItems: 'center', cursor: 'pointer' }}>
+                      <div key={cls.id} className="class-check-item">
+                        <label className="class-check-label">
                           <input
                             type="checkbox"
                             checked={selectedClasses.includes(cls.id)}
@@ -587,7 +515,7 @@ const Questionnaires = () => {
                                 setSelectedClasses(selectedClasses.filter(id => id !== cls.id));
                               }
                             }}
-                            style={{ marginRight: '10px' }}
+                            className="class-checkbox"
                           />
                           <span>{cls.name} {cls.section ? `- ${cls.section}` : ''} ({cls.schoolYear})</span>
                         </label>
@@ -597,9 +525,9 @@ const Questionnaires = () => {
                 )}
               </div>
 
-              <div className="form-actions" style={{ marginTop: '20px' }}>
-                <button onClick={handleAssignToClasses} className="btn">Assign to Selected Classes</button>
-                <button onClick={() => { setShowAssignModal(false); setSelectedClasses([]); }} className="btn" style={{ marginLeft: '10px', backgroundColor: '#6c757d' }}>
+              <div className="form-actions">
+                <button onClick={handleAssignToClasses} className="btn btn-primary">Assign to Selected Classes</button>
+                <button onClick={() => { setShowAssignModal(false); setSelectedClasses([]); }} className="btn btn-secondary">
                   Cancel
                 </button>
               </div>
@@ -618,53 +546,7 @@ const Questionnaires = () => {
         />
       </div>
 
-      <style dangerouslySetInnerHTML={{__html: `
-        .modal-overlay {
-          position: fixed;
-          top: 0;
-          left: 0;
-          right: 0;
-          bottom: 0;
-          background-color: rgba(0, 0, 0, 0.5);
-          display: flex;
-          justify-content: center;
-          align-items: center;
-          z-index: 1000;
-        }
 
-        .modal-content {
-          background: white;
-          padding: 30px;
-          border-radius: 10px;
-          width: 90%;
-          max-width: 600px;
-        }
-
-        .form-group {
-          margin-bottom: 15px;
-        }
-
-        .form-group label {
-          display: block;
-          margin-bottom: 5px;
-          font-weight: bold;
-        }
-
-        .form-group input,
-        .form-group textarea,
-        .form-group select {
-          width: 100%;
-          padding: 8px;
-          border: 1px solid #ddd;
-          border-radius: 5px;
-          font-size: 14px;
-        }
-
-        .form-actions {
-          display: flex;
-          gap: 10px;
-        }
-      `}} />
     </div>
   );
 };

@@ -52,7 +52,7 @@ const Completed = () => {
                   <tr key={e.id}>
                     <td>{e.team?.name}</td>
                     <td>
-                      <span className="status-active">Submitted</span>
+                      <span className="status-badge status-active">Submitted</span>
                     </td>
                     <td>
                       {e.submittedAt

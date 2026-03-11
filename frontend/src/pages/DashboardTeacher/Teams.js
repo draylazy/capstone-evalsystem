@@ -288,11 +288,12 @@ const Teams = () => {
                     <td>{team.memberIds?.length || 0} Members</td>
                     <td>{team.adviserIds?.length || 0} Advisers</td>
                     <td>
-                      <span className={team.isActive ? "status-active" : "status-inactive"}>
+                      <span className={`status-badge ${team.isActive ? "status-active" : "status-inactive"}`}>
                         {team.isActive ? "Active" : "Inactive"}
                       </span>
                     </td>
                     <td>
+                      <div className="action-buttons">
                       <button 
                         className="btn btn-sm" 
                         onClick={() => handleManageTeam(team)}
@@ -302,10 +303,10 @@ const Teams = () => {
                       <button 
                         className="btn btn-sm btn-danger" 
                         onClick={() => handleDeleteTeam(team.id)}
-                        style={{ marginLeft: "5px" }}
                       >
                         Delete
                       </button>
+                      </div>
                     </td>
                   </tr>
                 ))}
