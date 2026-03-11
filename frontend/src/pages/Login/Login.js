@@ -119,7 +119,7 @@ function Login() {
         {error && <div className="error-message">{error}</div>}
 
         <div className="google-button-container">
-          <button 
+          <button
             onClick={handleGoogleLogin}
             disabled={loading}
             className="google-login-btn"

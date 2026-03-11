@@ -57,8 +57,7 @@ public class QuestionnaireController {
                     user.getId(),
                     request.getTitle(),
                     request.getDescription(),
-                    questions
-            );
+                    questions);
 
             QuestionnaireResponse response = QuestionnaireResponse.fromEntity(questionnaire);
             // Set the actual question count from database
@@ -84,7 +83,7 @@ public class QuestionnaireController {
     public ResponseEntity<?> getQuestionnaires(@RequestHeader("Authorization") String authHeader) {
         try {
             User user = getUserFromToken(authHeader);
-            
+
             log.info("Fetching questionnaires for user {} with role {}", user.getId(), user.getRole());
 
             List<Questionnaire> questionnaires;
@@ -93,7 +92,7 @@ public class QuestionnaireController {
             } else {
                 questionnaires = questionnaireService.getQuestionnairesForAdviser(user.getId());
             }
-            
+
             List<QuestionnaireResponse> responses = questionnaires.stream()
                     .map(q -> {
                         QuestionnaireResponse response = QuestionnaireResponse.fromEntity(q);
@@ -181,8 +180,7 @@ public class QuestionnaireController {
             Questionnaire questionnaire = questionnaireService.assignToClasses(
                     id,
                     request.getClassIds(),
-                    user.getId()
-            );
+                    user.getId());
 
             return ResponseEntity.ok(QuestionnaireResponse.fromEntity(questionnaire));
 
@@ -212,8 +210,7 @@ public class QuestionnaireController {
             Questionnaire questionnaire = questionnaireService.removeFromClasses(
                     id,
                     request.getClassIds(),
-                    user.getId()
-            );
+                    user.getId());
 
             return ResponseEntity.ok(QuestionnaireResponse.fromEntity(questionnaire));
 
@@ -244,8 +241,7 @@ public class QuestionnaireController {
                     id,
                     request.getTitle(),
                     request.getDescription(),
-                    user.getId()
-            );
+                    user.getId());
 
             return ResponseEntity.ok(QuestionnaireResponse.fromEntity(questionnaire));
 
@@ -290,17 +286,16 @@ public class QuestionnaireController {
         try {
             Questionnaire questionnaire = questionnaireService.getQuestionnaireById(id);
             long itemCount = questionnaireItemRepository.countByQuestionnaireId(id);
-            
+
             return ResponseEntity.ok(Map.of(
-                "questionnaireId", id,
-                "title", questionnaire.getTitle(),
-                "itemCount", itemCount,
-                "items", questionnaire.getItems() != null ? questionnaire.getItems().size() : 0
-            ));
+                    "questionnaireId", id,
+                    "title", questionnaire.getTitle(),
+                    "itemCount", itemCount,
+                    "items", questionnaire.getItems() != null ? questionnaire.getItems().size() : 0));
         } catch (Exception e) {
             log.error("Error getting questionnaire items", e);
             return ResponseEntity.status(HttpStatus.BAD_REQUEST)
-                .body(Map.of("error", e.getMessage()));
+                    .body(Map.of("error", e.getMessage()));
         }
     }
 

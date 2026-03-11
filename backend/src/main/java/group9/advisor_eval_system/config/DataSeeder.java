@@ -12,7 +12,8 @@ public class DataSeeder implements CommandLineRunner {
     @Autowired
     private UserRepository userRepository;
 
-    private static final String TEACHER_ADMIN_EMAIL = "authortet@gmail.com";
+    private static final String TEACHER_ADMIN_EMAIL = "rivera.nicon2020@gmail.com";
+
 
     @Override
     public void run(String... args) throws Exception {
