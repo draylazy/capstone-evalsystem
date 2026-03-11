@@ -9,12 +9,12 @@ import group9.advisor_eval_system.entity.User;
 import group9.advisor_eval_system.repository.QuestionnaireItemRepository;
 import group9.advisor_eval_system.repository.UserRepository;
 import group9.advisor_eval_system.service.QuestionnaireService;
-import group9.advisor_eval_system.util.JwtUtil;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
+import org.springframework.security.core.Authentication;
 import org.springframework.web.bind.annotation.*;
 
 import java.util.List;
@@ -29,7 +29,6 @@ public class QuestionnaireController {
 
     private final QuestionnaireService questionnaireService;
     private final UserRepository userRepository;
-    private final JwtUtil jwtUtil;
     private final QuestionnaireItemRepository questionnaireItemRepository;
 
     /**
@@ -38,9 +37,9 @@ public class QuestionnaireController {
     @PostMapping
     public ResponseEntity<?> createQuestionnaire(
             @Valid @RequestBody CreateQuestionnaireRequest request,
-            @RequestHeader("Authorization") String authHeader) {
+            Authentication authentication) {
         try {
-            User user = getUserFromToken(authHeader);
+            User user = getUserFromAuthentication(authentication);
 
             if (user.getRole() != User.UserRole.TEACHER) {
                 return ResponseEntity.status(HttpStatus.FORBIDDEN)
@@ -80,9 +79,9 @@ public class QuestionnaireController {
      * - Advisers: Get questionnaires assigned to their teams' classes
      */
     @GetMapping
-    public ResponseEntity<?> getQuestionnaires(@RequestHeader("Authorization") String authHeader) {
+    public ResponseEntity<?> getQuestionnaires(Authentication authentication) {
         try {
-            User user = getUserFromToken(authHeader);
+            User user = getUserFromAuthentication(authentication);
 
             log.info("Fetching questionnaires for user {} with role {}", user.getId(), user.getRole());
 
@@ -117,9 +116,9 @@ public class QuestionnaireController {
     @GetMapping("/{id}")
     public ResponseEntity<?> getQuestionnaireById(
             @PathVariable Long id,
-            @RequestHeader("Authorization") String authHeader) {
+            Authentication authentication) {
         try {
-            getUserFromToken(authHeader);
+            getUserFromAuthentication(authentication);
 
             Questionnaire questionnaire = questionnaireService.getQuestionnaireById(id);
             return ResponseEntity.ok(QuestionnaireResponse.fromEntity(questionnaire));
@@ -137,9 +136,9 @@ public class QuestionnaireController {
     @GetMapping("/class/{classId}")
     public ResponseEntity<?> getQuestionnairesByClass(
             @PathVariable Long classId,
-            @RequestHeader("Authorization") String authHeader) {
+            Authentication authentication) {
         try {
-            getUserFromToken(authHeader);
+            getUserFromAuthentication(authentication);
 
             List<Questionnaire> questionnaires = questionnaireService.getQuestionnairesByClass(classId);
             List<QuestionnaireResponse> responses = questionnaires.stream()
@@ -168,9 +167,9 @@ public class QuestionnaireController {
     public ResponseEntity<?> assignToClasses(
             @PathVariable Long id,
             @Valid @RequestBody AssignQuestionnaireRequest request,
-            @RequestHeader("Authorization") String authHeader) {
+            Authentication authentication) {
         try {
-            User user = getUserFromToken(authHeader);
+            User user = getUserFromAuthentication(authentication);
 
             if (user.getRole() != User.UserRole.TEACHER) {
                 return ResponseEntity.status(HttpStatus.FORBIDDEN)
@@ -198,9 +197,9 @@ public class QuestionnaireController {
     public ResponseEntity<?> removeFromClasses(
             @PathVariable Long id,
             @Valid @RequestBody AssignQuestionnaireRequest request,
-            @RequestHeader("Authorization") String authHeader) {
+            Authentication authentication) {
         try {
-            User user = getUserFromToken(authHeader);
+            User user = getUserFromAuthentication(authentication);
 
             if (user.getRole() != User.UserRole.TEACHER) {
                 return ResponseEntity.status(HttpStatus.FORBIDDEN)
@@ -228,9 +227,9 @@ public class QuestionnaireController {
     public ResponseEntity<?> updateQuestionnaire(
             @PathVariable Long id,
             @Valid @RequestBody CreateQuestionnaireRequest request,
-            @RequestHeader("Authorization") String authHeader) {
+            Authentication authentication) {
         try {
-            User user = getUserFromToken(authHeader);
+            User user = getUserFromAuthentication(authentication);
 
             if (user.getRole() != User.UserRole.TEACHER) {
                 return ResponseEntity.status(HttpStatus.FORBIDDEN)
@@ -258,9 +257,9 @@ public class QuestionnaireController {
     @DeleteMapping("/{id}")
     public ResponseEntity<?> deleteQuestionnaire(
             @PathVariable Long id,
-            @RequestHeader("Authorization") String authHeader) {
+            Authentication authentication) {
         try {
-            User user = getUserFromToken(authHeader);
+            User user = getUserFromAuthentication(authentication);
 
             if (user.getRole() != User.UserRole.TEACHER) {
                 return ResponseEntity.status(HttpStatus.FORBIDDEN)
@@ -299,15 +298,24 @@ public class QuestionnaireController {
         }
     }
 
-    private User getUserFromToken(String authHeader) {
-        Long userId = getUserIdFromToken(authHeader);
+    private User getUserFromAuthentication(Authentication authentication) {
+        if (authentication == null || authentication.getPrincipal() == null) {
+            throw new RuntimeException("Unauthenticated");
+        }
+
+        Object principal = authentication.getPrincipal();
+        Long userId;
+
+        if (principal instanceof Long) {
+            userId = (Long) principal;
+        } else if (principal instanceof Integer) {
+            userId = ((Integer) principal).longValue();
+        } else {
+            userId = Long.parseLong(principal.toString());
+        }
+
         return userRepository.findById(userId)
                 .orElseThrow(() -> new RuntimeException("User not found"));
-    }
-
-    private Long getUserIdFromToken(String authHeader) {
-        String token = authHeader.substring(7);
-        return jwtUtil.extractUserId(token);
     }
 
     public static class ErrorResponse {

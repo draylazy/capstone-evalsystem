@@ -49,15 +49,25 @@ const Questionnaires = () => {
 
   const checkGoogleLink = async () => {
     try {
+      const userStr = localStorage.getItem('user');
+      const token = userStr ? JSON.parse(userStr)?.token : null;
+      if (!token) {
+        setGoogleLinked(false);
+        return false;
+      }
+
       const response = await fetch(`${API_BASE_URL}/api/google-auth/status`, {
         headers: {
-          'Authorization': `Bearer ${JSON.parse(localStorage.getItem('user')).token}`
+          'Authorization': `Bearer ${token}`
         }
       });
       const data = await response.json();
       setGoogleLinked(data.isLinked);
+      return !!data.isLinked;
     } catch (err) {
       toast.error('Error checking Google link status');
+      setGoogleLinked(false);
+      return false;
     }
   };
 
@@ -94,8 +104,11 @@ const Questionnaires = () => {
     e.preventDefault();
     
     if (!googleLinked) {
-      alert('Please link your Google account in the Profile page first!');
-      return;
+      const linkedNow = await checkGoogleLink();
+      if (!linkedNow) {
+        toast.error('Please link your Google account in the Profile page first.');
+        return;
+      }
     }
 
     try {
