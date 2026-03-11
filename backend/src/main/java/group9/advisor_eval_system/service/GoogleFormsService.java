@@ -1,6 +1,7 @@
 package group9.advisor_eval_system.service;
 
 import com.google.api.client.googleapis.javanet.GoogleNetHttpTransport;
+import com.google.api.client.googleapis.json.GoogleJsonResponseException;
 import com.google.api.client.http.HttpRequestInitializer;
 import com.google.api.client.http.HttpTransport;
 import com.google.api.client.json.JsonFactory;
@@ -18,6 +19,8 @@ import org.springframework.stereotype.Service;
 import java.util.ArrayList;
 import java.util.Date;
 import java.util.List;
+import java.util.regex.Matcher;
+import java.util.regex.Pattern;
 
 @Service
 @RequiredArgsConstructor
@@ -26,6 +29,10 @@ public class GoogleFormsService {
 
     private static final JsonFactory JSON_FACTORY = GsonFactory.getDefaultInstance();
     private static final String APPLICATION_NAME = "Adviser Evaluation System";
+
+    private static final Pattern ACTIVATION_URL_PATTERN = Pattern.compile(
+            "https://console\\.developers\\.google\\.com/apis/api/forms\\.googleapis\\.com/overview\\?project=\\d+",
+            Pattern.CASE_INSENSITIVE);
 
     private final GoogleAuthService googleAuthService;
 
@@ -60,11 +67,59 @@ public class GoogleFormsService {
 
             // Retrieve the updated form with responder URI
             Form updatedForm = formsService.forms().get(createdForm.getFormId()).execute();
-            
+
             return updatedForm;
 
         } catch (Exception e) {
             log.error("Error creating Google Form", e);
+
+            if (e instanceof GoogleJsonResponseException gjre) {
+                var details = gjre.getDetails();
+                int status = gjre.getStatusCode();
+                String message = details != null ? details.getMessage() : gjre.getMessage();
+
+                // Most common setup issue: API not enabled in the Google Cloud project for this
+                // OAuth client.
+                if (status == 403 && message != null
+                        && (message.contains("SERVICE_DISABLED") || message.contains("accessNotConfigured")
+                                || message.contains("disabled") || message.contains("Enable it"))) {
+                    String activationUrl = null;
+                    try {
+                        // Best-effort: try to extract the console activation URL from any error detail
+                        // string.
+                        if (details != null && details.getDetails() != null) {
+                            for (Object d : details.getDetails()) {
+                                String s = String.valueOf(d);
+                                Matcher m = ACTIVATION_URL_PATTERN.matcher(s);
+                                if (m.find()) {
+                                    activationUrl = m.group(0);
+                                    break;
+                                }
+                            }
+                        }
+                    } catch (Exception ignored) {
+                        // ignore
+                    }
+
+                    if (activationUrl == null) {
+                        Matcher m = ACTIVATION_URL_PATTERN.matcher(message);
+                        if (m.find()) {
+                            activationUrl = m.group(0);
+                        }
+                    }
+
+                    String extra = activationUrl != null ? (" Enable it here: " + activationUrl) : "";
+                    throw new RuntimeException(
+                            "Google Forms API is disabled for your Google Cloud project." +
+                                    extra +
+                                    " After enabling, wait a few minutes for it to propagate, then retry.",
+                            e);
+                }
+
+                throw new RuntimeException("Failed to create Google Form (HTTP " + status + "): "
+                        + (message != null ? message : "Unknown error"), e);
+            }
+
             throw new RuntimeException("Failed to create Google Form: " + e.getMessage(), e);
         }
     }
@@ -131,7 +186,7 @@ public class GoogleFormsService {
                 ChoiceQuestion choiceQuestion = new ChoiceQuestion();
                 choiceQuestion.setType("RADIO");
                 List<Option> options = new ArrayList<>();
-                
+
                 // Parse choices from JSON or comma-separated string
                 java.util.Set<String> uniqueChoices = new java.util.LinkedHashSet<>();
                 if (item.getChoices() != null && !item.getChoices().isEmpty()) {
@@ -154,19 +209,19 @@ public class GoogleFormsService {
                         }
                     }
                 }
-                
+
                 // Convert unique choices to options
                 for (String choice : uniqueChoices) {
                     Option option = new Option();
                     option.setValue(choice);
                     options.add(option);
                 }
-                
+
                 log.info("Parsed {} options for multiple choice", options.size());
                 for (int i = 0; i < options.size(); i++) {
                     log.info("Option {}: {}", i + 1, options.get(i).getValue());
                 }
-                
+
                 // If no valid choices found, create default options
                 if (options.isEmpty()) {
                     log.warn("No valid choices found, creating default options");
@@ -176,7 +231,7 @@ public class GoogleFormsService {
                         options.add(option);
                     }
                 }
-                
+
                 choiceQuestion.setOptions(options);
                 question.setChoiceQuestion(choiceQuestion);
                 break;
@@ -226,11 +281,12 @@ public class GoogleFormsService {
     public void deleteGoogleForm(Long teacherId, String formId) {
         try {
             String accessToken = googleAuthService.getValidAccessToken(teacherId);
-            Forms formsService = getFormsService(accessToken);
+            getFormsService(accessToken);
 
             // Note: Google Forms API doesn't have a direct delete method
             // We would need to use Drive API to move to trash
-            log.warn("Google Forms API doesn't support direct deletion. Form {} should be deleted via Drive API", formId);
+            log.warn("Google Forms API doesn't support direct deletion. Form {} should be deleted via Drive API",
+                    formId);
 
         } catch (Exception e) {
             log.error("Error deleting Google Form", e);
@@ -243,11 +299,10 @@ public class GoogleFormsService {
      */
     private Forms getFormsService(String accessToken) throws Exception {
         HttpTransport httpTransport = GoogleNetHttpTransport.newTrustedTransport();
-        
+
         GoogleCredentials credentials = GoogleCredentials.create(
-                new AccessToken(accessToken, new Date(System.currentTimeMillis() + 3600000))
-        );
-        
+                new AccessToken(accessToken, new Date(System.currentTimeMillis() + 3600000)));
+
         HttpRequestInitializer requestInitializer = new HttpCredentialsAdapter(credentials);
 
         return new Forms.Builder(httpTransport, JSON_FACTORY, requestInitializer)

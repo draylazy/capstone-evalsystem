@@ -2,6 +2,23 @@
 // Create React App exposes only REACT_APP_* env vars at build time.
 const API_BASE_URL = process.env.REACT_APP_API_BASE_URL || 'http://localhost:8080/api';
 
+const readApiErrorMessage = async (response) => {
+  const contentType = response.headers?.get?.('content-type') || '';
+  if (contentType.includes('application/json')) {
+    const data = await response.json().catch(() => null);
+    return data?.message || data?.error || null;
+  }
+
+  const text = await response.text().catch(() => null);
+  if (!text) return null;
+  return text.length > 300 ? text.slice(0, 300) + '…' : text;
+};
+
+const throwApiError = async (response, fallbackMessage) => {
+  const msg = await readApiErrorMessage(response);
+  throw new Error(msg || `${fallbackMessage} (HTTP ${response.status})`);
+};
+
 // Helper function to get auth token
 const getAuthToken = () => {
   const userStr = localStorage.getItem('user');
@@ -358,7 +375,7 @@ export const questionnaireAPI = {
     });
     
     if (!response.ok) {
-      throw new Error('Failed to fetch questionnaires');
+      await throwApiError(response, 'Failed to fetch questionnaires');
     }
     
     return await response.json();
@@ -723,7 +740,7 @@ export const teacherReportAPI = {
     });
 
     if (!response.ok) {
-      throw new Error('Failed to fetch questionnaires');
+      await throwApiError(response, 'Failed to fetch questionnaires');
     }
 
     return await response.json();
@@ -739,7 +756,7 @@ export const teacherReportAPI = {
     );
 
     if (!response.ok) {
-      throw new Error('Failed to fetch evaluations');
+      await throwApiError(response, 'Failed to fetch evaluations');
     }
 
     return await response.json();
@@ -755,7 +772,7 @@ export const teacherReportAPI = {
     );
 
     if (!response.ok) {
-      throw new Error('Failed to fetch evaluation details');
+      await throwApiError(response, 'Failed to fetch evaluation details');
     }
 
     return await response.json();
