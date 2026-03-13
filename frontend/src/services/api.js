@@ -406,6 +406,19 @@ export const questionnaireAPI = {
     
     return await response.json();
   },
+
+  getQuestionnairesByClassForTeacher: async (classId) => {
+    const response = await fetch(`${API_BASE_URL}/questionnaires/class/${classId}/teacher`, {
+      method: 'GET',
+      headers: getHeaders(),
+    });
+
+    if (!response.ok) {
+      throw new Error('Failed to fetch questionnaires for teacher class');
+    }
+
+    return await response.json();
+  },
   
   createQuestionnaire: async (questionnaireData) => {
     const response = await fetch(`${API_BASE_URL}/questionnaires`, {

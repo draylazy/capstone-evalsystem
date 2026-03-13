@@ -186,6 +186,20 @@ public class QuestionnaireService {
     }
 
     /**
+     * Get questionnaires for a specific class for teachers (includes inactive)
+     */
+    public List<Questionnaire> getQuestionnairesByClassForTeacher(Long classId, Long teacherId) {
+        SchoolClass schoolClass = schoolClassRepository.findById(classId)
+                .orElseThrow(() -> new RuntimeException("Class not found"));
+
+        if (!schoolClass.getTeacher().getId().equals(teacherId)) {
+            throw new RuntimeException("You can only view questionnaires for your own classes");
+        }
+
+        return questionnaireRepository.findByAssignedClassesContaining(schoolClass);
+    }
+
+    /**
      * Soft delete questionnaire
      */
     @Transactional

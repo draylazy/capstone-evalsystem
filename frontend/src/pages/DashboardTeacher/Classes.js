@@ -100,7 +100,7 @@ const Classes = () => {
 
   const loadClassQuestionnaires = async (classId) => {
     try {
-      const data = await questionnaireAPI.getQuestionnairesByClass(classId);
+      const data = await questionnaireAPI.getQuestionnairesByClassForTeacher(classId);
       return data;
     } catch (err) {
       return [];
@@ -406,6 +406,7 @@ const Classes = () => {
                       <th>Title</th>
                       <th>Description</th>
                       <th>Questions</th>
+                      <th>Status</th>
                       <th>Created Date</th>
                     </tr>
                   </thead>
@@ -415,6 +416,7 @@ const Classes = () => {
                         <td>{questionnaire.title}</td>
                         <td>{questionnaire.description || "N/A"}</td>
                         <td>{questionnaire.questionCount}</td>
+                        <td>{questionnaire.isActive ? "Active" : "Inactive"}</td>
                         <td>{new Date(questionnaire.createdAt).toLocaleDateString()}</td>
                       </tr>
                     ))}

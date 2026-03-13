@@ -599,6 +599,11 @@
 
   .status-toggle {
     cursor: pointer;
+    width: 104px;
+    min-width: 104px;
+    max-width: 104px;
+    height: 40px;
+    box-sizing: border-box;
   }
 
   .status-active {
@@ -705,34 +710,110 @@
   .class-checklist {
     max-height: 300px;
     overflow-y: auto;
-    border: 1px solid rgba(255, 255, 255, 0.1);
+    border: 1px solid rgba(255, 255, 255, 0.12);
     padding: 12px;
     border-radius: 10px;
     background: rgba(255, 255, 255, 0.03);
+    display: grid;
+    gap: 10px;
   }
 
   .class-check-item {
-    margin-bottom: 10px;
+    margin-bottom: 0;
   }
 
   .class-check-label {
     display: flex;
-    align-items: center;
+    align-items: flex-start;
+    gap: 12px;
     cursor: pointer;
     color: var(--dtm-text);
     font-size: 14px;
-    transition: color 0.2s;
+    transition: all 0.2s;
+    padding: 10px 12px;
+    border-radius: 10px;
+    border: 1px solid rgba(255, 255, 255, 0.06);
+    background: rgba(255, 255, 255, 0.02);
   }
 
   .class-check-label:hover {
     color: var(--dtm-gold);
+    border-color: rgba(242, 201, 76, 0.25);
+    background: rgba(242, 201, 76, 0.08);
   }
 
   .class-checkbox {
-    margin-right: 10px;
+    margin-top: 2px;
     accent-color: var(--dtm-gold);
     width: 16px;
     height: 16px;
+    flex-shrink: 0;
+  }
+
+  .class-check-text {
+    display: flex;
+    flex-direction: column;
+    gap: 2px;
+  }
+
+  .class-check-name {
+    font-weight: 600;
+    color: var(--dtm-text);
+  }
+
+  .class-check-meta {
+    font-size: 12px;
+    color: var(--dtm-muted);
+  }
+
+  .assign-modal-title {
+    margin-bottom: 6px;
+  }
+
+  .assign-modal-subtitle {
+    margin: 0 0 14px;
+    color: var(--dtm-muted);
+    font-size: 14px;
+  }
+
+  .assign-toolbar {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    gap: 10px;
+    margin-bottom: 10px;
+  }
+
+  .assign-toolbar-actions {
+    display: inline-flex;
+    align-items: center;
+    gap: 10px;
+    flex-wrap: wrap;
+    justify-content: flex-end;
+  }
+
+  .selection-count {
+    font-size: 12px;
+    color: var(--dtm-gold);
+    background: rgba(242, 201, 76, 0.12);
+    border: 1px solid rgba(242, 201, 76, 0.3);
+    padding: 4px 8px;
+    border-radius: 999px;
+  }
+
+  .link-btn {
+    border: none;
+    background: transparent;
+    color: var(--dtm-gold);
+    font-size: 12px;
+    font-weight: 600;
+    cursor: pointer;
+    padding: 2px 0;
+    text-decoration: underline;
+  }
+
+  .link-btn:hover {
+    color: #ffe066;
   }
 
   /* =============================================

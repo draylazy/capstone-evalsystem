@@ -272,7 +272,6 @@ const Teams = () => {
                   <th>Class</th>
                   <th>Members</th>
                   <th>Advisers</th>
-                  <th>Status</th>
                   <th>Actions</th>
                 </tr>
               </thead>
@@ -283,11 +282,6 @@ const Teams = () => {
                     <td>{getClassName(team.classId)}</td>
                     <td>{team.memberIds?.length || 0} Members</td>
                     <td>{team.adviserIds?.length || 0} Advisers</td>
-                    <td>
-                      <span className={`status-badge ${team.isActive ? "status-active" : "status-inactive"}`}>
-                        {team.isActive ? "Active" : "Inactive"}
-                      </span>
-                    </td>
                     <td>
                       <div className="action-buttons">
                       <button 

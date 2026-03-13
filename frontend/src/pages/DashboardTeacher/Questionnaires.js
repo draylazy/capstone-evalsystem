@@ -197,19 +197,25 @@ const Questionnaires = () => {
   };
 
   const handleAssignToClasses = async () => {
-    if (selectedClasses.length === 0) {
-      alert('Please select at least one class');
-      return;
-    }
-
     try {
-      await questionnaireAPI.assignToClasses(selectedQuestionnaire.id, selectedClasses);
-      alert('Questionnaire assigned to classes successfully!');
+      const existingClassIds = selectedQuestionnaire?.assignedClassIds || [];
+      const toAdd = selectedClasses.filter(id => !existingClassIds.includes(id));
+      const toRemove = existingClassIds.filter(id => !selectedClasses.includes(id));
+
+      if (toAdd.length > 0) {
+        await questionnaireAPI.assignToClasses(selectedQuestionnaire.id, toAdd);
+      }
+
+      if (toRemove.length > 0) {
+        await questionnaireAPI.unassignFromClasses(selectedQuestionnaire.id, toRemove);
+      }
+
+      toast.success('Class assignments updated successfully!');
       setShowAssignModal(false);
       setSelectedClasses([]);
-      fetchQuestionnaires();
+      await fetchQuestionnaires();
     } catch (err) {
-      alert('Error assigning questionnaire: ' + err.message);
+      toast.error('Error updating class assignments: ' + err.message);
     }
   };
 
@@ -520,11 +526,30 @@ const Questionnaires = () => {
         {showAssignModal && selectedQuestionnaire && (
           <div className="modal-overlay" onClick={() => setShowAssignModal(false)}>
             <div className="modal-content" onClick={(e) => e.stopPropagation()}>
-              <h2>Assign Questionnaire to Classes</h2>
-              <p><strong>{selectedQuestionnaire.title}</strong></p>
+              <h2 className="assign-modal-title">Assign Questionnaire to Classes</h2>
+              <p className="assign-modal-subtitle"><strong>{selectedQuestionnaire.title}</strong></p>
               
               <div className="form-group">
-                <label>Select Classes:</label>
+                <div className="assign-toolbar">
+                  <label>Select Classes</label>
+                  <div className="assign-toolbar-actions">
+                    <span className="selection-count">{selectedClasses.length} selected</span>
+                    <button
+                      type="button"
+                      className="link-btn"
+                      onClick={() => setSelectedClasses(classes.map((c) => c.id))}
+                    >
+                      Select all
+                    </button>
+                    <button
+                      type="button"
+                      className="link-btn"
+                      onClick={() => setSelectedClasses([])}
+                    >
+                      Clear
+                    </button>
+                  </div>
+                </div>
                 {classes.length === 0 ? (
                   <p>No classes available. Please create classes first.</p>
                 ) : (
@@ -544,7 +569,10 @@ const Questionnaires = () => {
                             }}
                             className="class-checkbox"
                           />
-                          <span>{cls.name} {cls.section ? `- ${cls.section}` : ''} ({cls.schoolYear})</span>
+                          <span className="class-check-text">
+                            <span className="class-check-name">{cls.name} {cls.section ? `- ${cls.section}` : ''}</span>
+                            <span className="class-check-meta">School Year: {cls.schoolYear}</span>
+                          </span>
                         </label>
                       </div>
                     ))}
@@ -553,7 +581,7 @@ const Questionnaires = () => {
               </div>
 
               <div className="form-actions">
-                <button onClick={handleAssignToClasses} className="btn btn-primary">Assign to Selected Classes</button>
+                <button onClick={handleAssignToClasses} className="btn btn-primary">Save Class Assignments</button>
                 <button onClick={() => { setShowAssignModal(false); setSelectedClasses([]); }} className="btn btn-secondary">
                   Cancel
                 </button>

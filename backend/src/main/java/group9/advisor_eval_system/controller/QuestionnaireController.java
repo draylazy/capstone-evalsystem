@@ -162,6 +162,40 @@ public class QuestionnaireController {
     }
 
     /**
+     * Get questionnaires for a specific class for teachers (includes inactive)
+     */
+    @GetMapping("/class/{classId}/teacher")
+    public ResponseEntity<?> getQuestionnairesByClassForTeacher(
+            @PathVariable Long classId,
+            Authentication authentication) {
+        try {
+            User user = getUserFromAuthentication(authentication);
+
+            if (user.getRole() != User.UserRole.TEACHER) {
+                return ResponseEntity.status(HttpStatus.FORBIDDEN)
+                        .body(new ErrorResponse("Only teachers can access this endpoint"));
+            }
+
+            List<Questionnaire> questionnaires = questionnaireService.getQuestionnairesByClassForTeacher(classId, user.getId());
+            List<QuestionnaireResponse> responses = questionnaires.stream()
+                    .map(q -> {
+                        QuestionnaireResponse response = QuestionnaireResponse.fromEntity(q);
+                        long count = questionnaireItemRepository.countByQuestionnaireId(q.getId());
+                        response.setQuestionCount((int) count);
+                        return response;
+                    })
+                    .collect(Collectors.toList());
+
+            return ResponseEntity.ok(responses);
+
+        } catch (Exception e) {
+            log.error("Error fetching questionnaires for teacher class", e);
+            return ResponseEntity.status(HttpStatus.BAD_REQUEST)
+                    .body(new ErrorResponse(e.getMessage()));
+        }
+    }
+
+    /**
      * Assign questionnaire to classes (Teacher only)
      */
     @PostMapping("/{id}/assign")
