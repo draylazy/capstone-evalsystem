@@ -3,6 +3,7 @@ package group9.advisor_eval_system.controller;
 import group9.advisor_eval_system.dto.AssignQuestionnaireRequest;
 import group9.advisor_eval_system.dto.CreateQuestionnaireRequest;
 import group9.advisor_eval_system.dto.QuestionnaireResponse;
+import group9.advisor_eval_system.dto.UpdateQuestionnaireStatusRequest;
 import group9.advisor_eval_system.entity.Questionnaire;
 import group9.advisor_eval_system.entity.QuestionnaireItem;
 import group9.advisor_eval_system.entity.User;
@@ -215,6 +216,36 @@ public class QuestionnaireController {
 
         } catch (Exception e) {
             log.error("Error removing questionnaire from classes", e);
+            return ResponseEntity.status(HttpStatus.BAD_REQUEST)
+                    .body(new ErrorResponse(e.getMessage()));
+        }
+    }
+
+    /**
+     * Activate/deactivate questionnaire (Teacher only)
+     */
+    @PutMapping("/{id}/status")
+    public ResponseEntity<?> updateQuestionnaireStatus(
+            @PathVariable Long id,
+            @Valid @RequestBody UpdateQuestionnaireStatusRequest request,
+            Authentication authentication) {
+        try {
+            User user = getUserFromAuthentication(authentication);
+
+            if (user.getRole() != User.UserRole.TEACHER) {
+                return ResponseEntity.status(HttpStatus.FORBIDDEN)
+                        .body(new ErrorResponse("Only teachers can update questionnaire status"));
+            }
+
+            Questionnaire questionnaire = questionnaireService.updateQuestionnaireStatus(
+                    id,
+                    request.getIsActive(),
+                    user.getId());
+
+            return ResponseEntity.ok(QuestionnaireResponse.fromEntity(questionnaire));
+
+        } catch (Exception e) {
+            log.error("Error updating questionnaire status", e);
             return ResponseEntity.status(HttpStatus.BAD_REQUEST)
                     .body(new ErrorResponse(e.getMessage()));
         }

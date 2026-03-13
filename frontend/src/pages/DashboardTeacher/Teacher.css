@@ -597,6 +597,10 @@
     cursor: default;
   }
 
+  .status-toggle {
+    cursor: pointer;
+  }
+
   .status-active {
     background: linear-gradient(135deg, rgba(39, 174, 96, 0.6), rgba(39, 174, 96, 0.35));
     color: var(--dtm-text);

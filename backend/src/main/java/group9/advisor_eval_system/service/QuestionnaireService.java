@@ -79,7 +79,7 @@ public class QuestionnaireService {
             throw new RuntimeException("Only teachers can access questionnaires");
         }
 
-        return questionnaireRepository.findByCreatedByTeacherIdAndIsActiveTrue(teacherId);
+        return questionnaireRepository.findByCreatedByTeacherId(teacherId);
     }
 
     /**
@@ -228,6 +228,25 @@ public class QuestionnaireService {
 
         log.info("Updated questionnaire {}", questionnaireId);
 
+        return saved;
+    }
+
+    /**
+     * Activate/deactivate questionnaire without changing assignments
+     */
+    @Transactional
+    public Questionnaire updateQuestionnaireStatus(Long questionnaireId, Boolean isActive, Long teacherId) {
+        Questionnaire questionnaire = questionnaireRepository.findById(questionnaireId)
+                .orElseThrow(() -> new RuntimeException("Questionnaire not found"));
+
+        if (!questionnaire.getCreatedByTeacher().getId().equals(teacherId)) {
+            throw new RuntimeException("You can only update your own questionnaires");
+        }
+
+        questionnaire.setIsActive(isActive);
+        Questionnaire saved = questionnaireRepository.save(questionnaire);
+
+        log.info("Updated questionnaire {} status to {}", questionnaireId, isActive);
         return saved;
     }
 }

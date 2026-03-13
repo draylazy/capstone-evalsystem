@@ -18,6 +18,8 @@ public interface QuestionnaireRepository extends JpaRepository<Questionnaire, Lo
     
     List<Questionnaire> findByIsActiveTrue();
     
+    List<Questionnaire> findByCreatedByTeacherId(Long teacherId);
+
     List<Questionnaire> findByCreatedByTeacherIdAndIsActiveTrue(Long teacherId);
     
     @Query("SELECT q FROM Questionnaire q JOIN q.assignedClasses c WHERE c.id IN :classIds AND q.isActive = true")

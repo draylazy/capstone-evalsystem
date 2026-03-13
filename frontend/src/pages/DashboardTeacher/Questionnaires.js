@@ -141,6 +141,27 @@ const Questionnaires = () => {
     });
   };
 
+  const handleToggleQuestionnaireStatus = (questionnaire) => {
+    const nextActive = !questionnaire.isActive;
+    setConfirmModal({
+      isOpen: true,
+      title: nextActive ? "Activate Questionnaire" : "Deactivate Questionnaire",
+      message: nextActive
+        ? "Activate this questionnaire? It will become available to advisers again."
+        : "Deactivate this questionnaire? It will stay assigned to classes but advisers will no longer be able to use it.",
+      onConfirm: async () => {
+        setConfirmModal({ ...confirmModal, isOpen: false });
+        try {
+          await questionnaireAPI.updateQuestionnaireStatus(questionnaire.id, nextActive);
+          await fetchQuestionnaires();
+          toast.success(nextActive ? 'Questionnaire activated successfully!' : 'Questionnaire deactivated successfully!');
+        } catch (err) {
+          toast.error('Error updating questionnaire status: ' + err.message);
+        }
+      }
+    });
+  };
+
   const handleAddQuestion = () => {
     if (!newQuestion.questionText.trim()) {
       alert('Please enter a question text');
@@ -274,9 +295,14 @@ const Questionnaires = () => {
                     </td>
                     <td>{formatDate(q.createdAt)}</td>
                     <td>
-                      <span className={`status-badge ${q.isActive ? 'status-active' : 'status-inactive'}`}>
+                      <button
+                        type="button"
+                        className={`status-badge status-toggle ${q.isActive ? 'status-active' : 'status-inactive'}`}
+                        onClick={() => handleToggleQuestionnaireStatus(q)}
+                        title={q.isActive ? 'Click to deactivate' : 'Click to activate'}
+                      >
                         {q.isActive ? 'Active' : 'Inactive'}
-                      </span>
+                      </button>
                     </td>
                     <td>
                       <div className="action-buttons">
@@ -289,6 +315,7 @@ const Questionnaires = () => {
                         <button 
                           className="btn btn-sm btn-assign" 
                           onClick={() => openAssignModal(q)}
+                          title="Assign to classes"
                         >
                           Assign
                         </button>

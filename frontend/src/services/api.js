@@ -436,6 +436,21 @@ export const questionnaireAPI = {
     
     return await response.json();
   },
+
+  updateQuestionnaireStatus: async (id, isActive) => {
+    const response = await fetch(`${API_BASE_URL}/questionnaires/${id}/status`, {
+      method: 'PUT',
+      headers: getHeaders(),
+      body: JSON.stringify({ isActive }),
+    });
+
+    if (!response.ok) {
+      const error = await response.json().catch(() => ({ message: 'Failed to update questionnaire status' }));
+      throw new Error(error.message || 'Failed to update questionnaire status');
+    }
+
+    return await response.json();
+  },
   
   deleteQuestionnaire: async (id) => {
     const response = await fetch(`${API_BASE_URL}/questionnaires/${id}`, {
