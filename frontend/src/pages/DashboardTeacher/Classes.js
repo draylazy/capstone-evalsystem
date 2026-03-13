@@ -315,18 +315,6 @@ const Classes = () => {
     });
   };
 
-  if (loading) {
-    return (
-      <div className="teacher-container">
-        <TeacherSidebar />
-        <div className="teacher-content">
-          <h1>Classes</h1>
-          <p>Loading classes...</p>
-        </div>
-      </div>
-    );
-  }
-
   return (
     <div className="teacher-container">
       <TeacherSidebar />
@@ -340,7 +328,9 @@ const Classes = () => {
             <h2>Your Classes</h2>
             <button className="btn" onClick={() => setShowCreateModal(true)}>Create New Class</button>
           </div>
-          {classes.length === 0 ? (
+          {loading ? (
+            <p>Loading classes...</p>
+          ) : classes.length === 0 ? (
             <p>No classes found. Create your first class to get started.</p>
           ) : (
             <table className="class-table">

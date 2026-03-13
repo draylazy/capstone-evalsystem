@@ -81,7 +81,8 @@
     letter-spacing: 1px;
   }
 
-  .sidebar:hover ~ .adviser-content {
+  .sidebar:hover ~ .adviser-content,
+  .sidebar.sidebar-force-open ~ .adviser-content {
     margin-left: 280px;
   }
   

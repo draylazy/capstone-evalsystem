@@ -81,7 +81,8 @@
     letter-spacing: 1px;
   }
 
-  .sidebar:hover ~ .teacher-content {
+  .sidebar:hover ~ .teacher-content,
+  .sidebar.sidebar-force-open ~ .teacher-content {
     margin-left: 280px;
   }
   
