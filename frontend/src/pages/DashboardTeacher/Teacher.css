@@ -484,6 +484,23 @@
     margin-bottom: 8px;
   }
 
+  .class-overview-panel {
+    padding: 16px;
+    background: rgba(255, 255, 255, 0.04);
+    border: 1px solid rgba(255, 255, 255, 0.08);
+    border-radius: 12px;
+  }
+
+  .class-overview-panel p {
+    margin: 0 0 8px;
+    color: var(--dtm-text);
+    line-height: 1.5;
+  }
+
+  .class-overview-panel p:last-child {
+    margin-bottom: 0;
+  }
+
   .member-list {
     list-style: none;
     padding: 0;

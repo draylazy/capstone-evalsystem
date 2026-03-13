@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from "react";
+import { createPortal } from "react-dom";
 import TeacherSidebar from "../../components/Sidebar/TeacherSidebar";
-import { classAPI, studentAPI, questionnaireAPI } from "../../services/api";
+import { classAPI, studentAPI, questionnaireAPI, teamAPI } from "../../services/api";
 import { useToast } from "../../contexts/ToastContext";
 import ConfirmModal from "../../components/ConfirmModal/ConfirmModal";
 import "./Teacher.css";
@@ -9,6 +10,7 @@ const Classes = () => {
   const toast = useToast();
   const [classes, setClasses] = useState([]);
   const [students, setStudents] = useState([]);
+  const [teams, setTeams] = useState([]);
   const [classQuestionnaires, setClassQuestionnaires] = useState({});
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
@@ -16,10 +18,9 @@ const Classes = () => {
   // Modal states
   const [showCreateModal, setShowCreateModal] = useState(false);
   const [showManageModal, setShowManageModal] = useState(false);
-  const [showAddStudentModal, setShowAddStudentModal] = useState(false);
-  const [showAddQuestionnaireModal, setShowAddQuestionnaireModal] = useState(false);
   const [selectedClass, setSelectedClass] = useState(null);
   const [classStudents, setClassStudents] = useState([]);
+  const [classTeams, setClassTeams] = useState([]);
   const [classQuestionnairesList, setClassQuestionnairesList] = useState([]);
   
   // Form states
@@ -27,15 +28,8 @@ const Classes = () => {
     name: "",
     section: "",
     schoolYear: "",
-    description: "",
-    isActive: true
+    description: ""
   });
-  
-  const [selectedStudentId, setSelectedStudentId] = useState("");
-  const [availableStudents, setAvailableStudents] = useState([]);
-  const [allQuestionnaires, setAllQuestionnaires] = useState([]);
-  const [availableQuestionnaires, setAvailableQuestionnaires] = useState([]);
-  const [selectedQuestionnaireId, setSelectedQuestionnaireId] = useState("");
   
   // Confirm modal states
   const [confirmModal, setConfirmModal] = useState({
@@ -49,7 +43,7 @@ const Classes = () => {
   useEffect(() => {
     loadClasses();
     loadStudents();
-    loadQuestionnaires();
+    loadTeams();
   }, []);
 
   const loadClasses = async () => {
@@ -95,12 +89,12 @@ const Classes = () => {
     }
   };
 
-  const loadQuestionnaires = async () => {
+  const loadTeams = async () => {
     try {
-      const data = await questionnaireAPI.getAllQuestionnaires();
-      setAllQuestionnaires(data);
+      const data = await teamAPI.getAllTeams();
+      setTeams(data);
     } catch (err) {
-      toast.error("Failed to load questionnaires");
+      toast.error("Failed to load teams");
     }
   };
 
@@ -131,8 +125,7 @@ const Classes = () => {
         name: "",
         section: "",
         schoolYear: "",
-        description: "",
-        isActive: true
+        description: ""
       });
       loadClasses();
       toast.success("Class created successfully!");
@@ -150,7 +143,10 @@ const Classes = () => {
         setConfirmModal({ ...confirmModal, isOpen: false });
         try {
           await classAPI.deleteClass(classId);
+          setShowManageModal(false);
+          setSelectedClass(null);
           loadClasses();
+          loadTeams();
           toast.success("Class deleted successfully!");
         } catch (err) {
           toast.error("Failed to delete class: " + err.message);
@@ -161,158 +157,29 @@ const Classes = () => {
 
   const handleManageClass = (classItem) => {
     setSelectedClass(classItem);
-    // Filter students belonging to this class
     const filteredStudents = students.filter(s => s.classIds && s.classIds.includes(classItem.id));
-    setClassStudents(filteredStudents);
-    // Load questionnaires for this class
+    const filteredTeams = teams.filter(team => team.classId === classItem.id);
     const classQuestionnairesData = classQuestionnaires[classItem.id] || [];
+    setClassStudents(filteredStudents);
+    setClassTeams(filteredTeams);
     setClassQuestionnairesList(classQuestionnairesData);
     setShowManageModal(true);
   };
 
-  const handleAddStudent = async (e) => {
-    e.preventDefault();
-    if (!selectedStudentId) {
-      toast.warning("Please select a student");
-      return;
+  const getTeamNameForStudent = (student) => {
+    if (!student?.teamIds || student.teamIds.length === 0) {
+      return "No Team";
     }
-    try {
-      // Get the selected student
-      const student = students.find(s => s.id === parseInt(selectedStudentId));
-      if (!student) {
-        toast.error("Student not found");
-        return;
-      }
-      
-      // Update the student to assign them to this class
-      const currentClassIds = student.classIds || [];
-      const updatedStudent = {
-        ...student,
-        classIds: [...currentClassIds, selectedClass.id]
-      };
-      await studentAPI.updateStudent(student.id, updatedStudent);
-      
-      setShowAddStudentModal(false);
-      setSelectedStudentId("");
-      
-      // Reload students and update class students
-      await loadStudents();
-      const updatedStudents = await studentAPI.getAllStudents();
-      const filteredStudents = updatedStudents.filter(s => s.classIds && s.classIds.includes(selectedClass.id));
-      setClassStudents(filteredStudents);
-      toast.success("Student added successfully!");
-    } catch (err) {
-      toast.error("Failed to add student: " + err.message);
+
+    const matchingTeams = classTeams.filter(team =>
+      student.teamIds.includes(team.id)
+    );
+
+    if (matchingTeams.length === 0) {
+      return "No Team";
     }
-  };
 
-  const handleRemoveStudent = (studentId) => {
-    setConfirmModal({
-      isOpen: true,
-      title: "Remove Student",
-      message: "Are you sure you want to remove this student from this class?",
-      onConfirm: async () => {
-        setConfirmModal({ ...confirmModal, isOpen: false });
-        try {
-          // Get the student
-          const student = students.find(s => s.id === studentId);
-          if (!student) {
-            toast.error("Student not found");
-            return;
-          }
-          
-          // Remove this class from the student's classIds array
-          const updatedClassIds = (student.classIds || []).filter(id => id !== selectedClass.id);
-          const updatedStudent = {
-            ...student,
-            classIds: updatedClassIds
-          };
-          
-          await studentAPI.updateStudent(studentId, updatedStudent);
-          
-          // Update local state
-          const updatedStudents = classStudents.filter(s => s.id !== studentId);
-          setClassStudents(updatedStudents);
-          await loadStudents();
-          toast.success("Student removed from class successfully!");
-        } catch (err) {
-          toast.error("Failed to remove student: " + err.message);
-        }
-      }
-    });
-  };
-
-  const openAddStudentModal = () => {
-    // Filter students that are not already in this class
-    const availableForClass = students.filter(s => !s.classIds || !s.classIds.includes(selectedClass.id));
-    setAvailableStudents(availableForClass);
-    setSelectedStudentId("");
-    setShowAddStudentModal(true);
-  };
-
-  const openAddQuestionnaireModal = () => {
-    // Filter questionnaires that are not already assigned to this class
-    const assignedQuestionnaireIds = classQuestionnairesList.map(q => q.id);
-    const availableForClass = allQuestionnaires.filter(q => !assignedQuestionnaireIds.includes(q.id));
-    setAvailableQuestionnaires(availableForClass);
-    setSelectedQuestionnaireId("");
-    setShowAddQuestionnaireModal(true);
-  };
-
-  const handleAddQuestionnaire = async (e) => {
-    e.preventDefault();
-    if (!selectedQuestionnaireId) {
-      toast.warning("Please select a questionnaire");
-      return;
-    }
-    try {
-      await questionnaireAPI.assignToClasses(parseInt(selectedQuestionnaireId), [selectedClass.id]);
-      
-      setShowAddQuestionnaireModal(false);
-      setSelectedQuestionnaireId("");
-      
-      // Reload class questionnaires
-      const updatedQuestionnaires = await loadClassQuestionnaires(selectedClass.id);
-      setClassQuestionnairesList(updatedQuestionnaires);
-      
-      // Update the class questionnaires map
-      setClassQuestionnaires({
-        ...classQuestionnaires,
-        [selectedClass.id]: updatedQuestionnaires
-      });
-      
-      toast.success("Questionnaire added successfully!");
-    } catch (err) {
-      toast.error("Failed to add questionnaire: " + err.message);
-    }
-  };
-
-  const handleRemoveQuestionnaire = (questionnaireId) => {
-    setConfirmModal({
-      isOpen: true,
-      title: "Remove Questionnaire",
-      message: "Are you sure you want to remove this questionnaire from this class?",
-      onConfirm: async () => {
-        setConfirmModal({ ...confirmModal, isOpen: false });
-        try {
-          await questionnaireAPI.unassignFromClasses(questionnaireId, [selectedClass.id]);
-          
-          // Update local state
-          const updatedQuestionnaires = classQuestionnairesList.filter(q => q.id !== questionnaireId);
-          setClassQuestionnairesList(updatedQuestionnaires);
-          
-          // Update the class questionnaires map
-          setClassQuestionnaires({
-            ...classQuestionnaires,
-            [selectedClass.id]: updatedQuestionnaires
-          });
-          
-          toast.success("Questionnaire removed from class successfully!");
-        } catch (err) {
-          toast.error("Failed to remove questionnaire: " + err.message);
-        }
-      }
-    });
+    return matchingTeams.map(team => team.name).join(", ");
   };
 
   return (
@@ -342,7 +209,6 @@ const Classes = () => {
                   <th>Students</th>
                   <th>Teams</th>
                   <th>Questionnaires</th>
-                  <th>Status</th>
                   <th>Actions</th>
                 </tr>
               </thead>
@@ -366,11 +232,6 @@ const Classes = () => {
                           {attachedQuestionnaires.length} {attachedQuestionnaires.length === 1 ? 'Questionnaire' : 'Questionnaires'}
                         </span>
                       )}
-                    </td>
-                    <td>
-                      <span className={`status-badge ${classItem.isActive ? "status-active" : "status-inactive"}`}>
-                        {classItem.isActive ? "Active" : "Inactive"}
-                      </span>
                     </td>
                     <td>
                       <div className="action-buttons">
@@ -397,7 +258,7 @@ const Classes = () => {
       </div>
 
       {/* Create Class Modal */}
-      {showCreateModal && (
+      {showCreateModal && createPortal((
         <div className="modal-overlay" onClick={() => setShowCreateModal(false)}>
           <div className="modal-content" onClick={(e) => e.stopPropagation()}>
             <h2>Create New Class</h2>
@@ -440,16 +301,6 @@ const Classes = () => {
                   rows="3"
                 />
               </div>
-              <div className="form-group">
-                <label>
-                  <input
-                    type="checkbox"
-                    checked={newClass.isActive}
-                    onChange={(e) => setNewClass({ ...newClass, isActive: e.target.checked })}
-                  />
-                  {" "}Active
-                </label>
-              </div>
               <div className="modal-actions">
                 <button type="button" className="btn btn-secondary" onClick={() => setShowCreateModal(false)}>
                   Cancel
@@ -461,22 +312,56 @@ const Classes = () => {
             </form>
           </div>
         </div>
-      )}
+      ), document.body)}
 
       {/* Manage Class Modal */}
-      {showManageModal && selectedClass && (
+      {showManageModal && selectedClass && createPortal((
         <div className="modal-overlay" onClick={() => setShowManageModal(false)}>
           <div className="modal-content modal-large" onClick={(e) => e.stopPropagation()}>
             <h2>Manage Class: {selectedClass.name} {selectedClass.section}</h2>
-            <p><strong>School Year:</strong> {selectedClass.schoolYear}</p>
-            {selectedClass.description && <p><strong>Description:</strong> {selectedClass.description}</p>}
+            <div className="class-overview-panel">
+              <p><strong>Name:</strong> {selectedClass.name}</p>
+              <p><strong>Section:</strong> {selectedClass.section || "N/A"}</p>
+              <p><strong>School Year:</strong> {selectedClass.schoolYear}</p>
+              <p><strong>Students:</strong> {classStudents.length}</p>
+              <p><strong>Teams:</strong> {classTeams.length}</p>
+              <p><strong>Description:</strong> {selectedClass.description || "No description provided."}</p>
+            </div>
+
+            <div className="team-section" style={{ marginTop: "24px" }}>
+              <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
+                <h3>Teams ({classTeams.length})</h3>
+              </div>
+
+              {classTeams.length === 0 ? (
+                <p>No teams in this class yet.</p>
+              ) : (
+                <table className="class-table" style={{ marginTop: "10px" }}>
+                  <thead>
+                    <tr>
+                      <th>Team Name</th>
+                      <th>Description</th>
+                      <th>Members</th>
+                      <th>Advisers</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {classTeams.map((team) => (
+                      <tr key={team.id}>
+                        <td>{team.name}</td>
+                        <td>{team.description || "N/A"}</td>
+                        <td>{team.memberIds?.length || 0}</td>
+                        <td>{team.adviserIds?.length || 0}</td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              )}
+            </div>
             
-            <div style={{ marginTop: "20px" }}>
+            <div className="team-section" style={{ marginTop: "20px" }}>
               <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
                 <h3>Students ({classStudents.length})</h3>
-                <button className="btn btn-primary btn-sm" onClick={openAddStudentModal}>
-                  + Add Student
-                </button>
               </div>
               
               {classStudents.length === 0 ? (
@@ -490,7 +375,6 @@ const Classes = () => {
                       <th>Email</th>
                       <th>Phone</th>
                       <th>Team</th>
-                      <th>Actions</th>
                     </tr>
                   </thead>
                   <tbody>
@@ -500,15 +384,7 @@ const Classes = () => {
                         <td>{student.firstName} {student.lastName}</td>
                         <td>{student.email || "N/A"}</td>
                         <td>{student.phoneNumber || "N/A"}</td>
-                        <td>{student.team?.name || "No Team"}</td>
-                        <td>
-                          <button 
-                            className="btn btn-sm btn-danger"
-                            onClick={() => handleRemoveStudent(student.id)}
-                          >
-                            Remove
-                          </button>
-                        </td>
+                        <td>{getTeamNameForStudent(student)}</td>
                       </tr>
                     ))}
                   </tbody>
@@ -516,14 +392,11 @@ const Classes = () => {
               )}
             </div>
 
-            <div style={{ marginTop: "30px" }}>
+            <div className="team-section" style={{ marginTop: "20px" }}>
               <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
                 <h3>Questionnaires ({classQuestionnairesList.length})</h3>
-                <button className="btn btn-primary btn-sm" onClick={openAddQuestionnaireModal}>
-                  + Add Questionnaire
-                </button>
               </div>
-              
+
               {classQuestionnairesList.length === 0 ? (
                 <p>No questionnaires assigned to this class yet.</p>
               ) : (
@@ -534,7 +407,6 @@ const Classes = () => {
                       <th>Description</th>
                       <th>Questions</th>
                       <th>Created Date</th>
-                      <th>Actions</th>
                     </tr>
                   </thead>
                   <tbody>
@@ -544,14 +416,6 @@ const Classes = () => {
                         <td>{questionnaire.description || "N/A"}</td>
                         <td>{questionnaire.questionCount}</td>
                         <td>{new Date(questionnaire.createdAt).toLocaleDateString()}</td>
-                        <td>
-                          <button 
-                            className="btn btn-sm btn-danger"
-                            onClick={() => handleRemoveQuestionnaire(questionnaire.id)}
-                          >
-                            Remove
-                          </button>
-                        </td>
                       </tr>
                     ))}
                   </tbody>
@@ -566,85 +430,7 @@ const Classes = () => {
             </div>
           </div>
         </div>
-      )}
-
-      {/* Add Student Modal */}
-      {showAddStudentModal && (
-        <div className="modal-overlay" onClick={() => setShowAddStudentModal(false)}>
-          <div className="modal-content" onClick={(e) => e.stopPropagation()}>
-            <h2>Add New Student</h2>
-            <form onSubmit={handleAddStudent}>
-              <div className="form-group">
-                <label>Select Student *</label>
-                <select
-                  value={selectedStudentId}
-                  onChange={(e) => setSelectedStudentId(e.target.value)}
-                  required
-                >
-                  <option value="">-- Select a student --</option>
-                  {availableStudents.map((student) => (
-                    <option key={student.id} value={student.id}>
-                      {student.studentId} - {student.firstName} {student.lastName}
-                    </option>
-                  ))}
-                </select>
-              </div>
-              {availableStudents.length === 0 && (
-                <p style={{ color: '#666', fontSize: '13px' }}>
-                  No unassigned students available. All students are already assigned to classes.
-                </p>
-              )}
-              <div className="modal-actions">
-                <button type="button" className="btn btn-secondary" onClick={() => setShowAddStudentModal(false)}>
-                  Cancel
-                </button>
-                <button type="submit" className="btn btn-primary" disabled={!selectedStudentId}>
-                  Add Student
-                </button>
-              </div>
-            </form>
-          </div>
-        </div>
-      )}
-
-      {/* Add Questionnaire Modal */}
-      {showAddQuestionnaireModal && (
-        <div className="modal-overlay" onClick={() => setShowAddQuestionnaireModal(false)}>
-          <div className="modal-content" onClick={(e) => e.stopPropagation()}>
-            <h2>Add Questionnaire to Class</h2>
-            <form onSubmit={handleAddQuestionnaire}>
-              <div className="form-group">
-                <label>Select Questionnaire *</label>
-                <select
-                  value={selectedQuestionnaireId}
-                  onChange={(e) => setSelectedQuestionnaireId(e.target.value)}
-                  required
-                >
-                  <option value="">-- Select a questionnaire --</option>
-                  {availableQuestionnaires.map((questionnaire) => (
-                    <option key={questionnaire.id} value={questionnaire.id}>
-                      {questionnaire.title} - {questionnaire.questionCount} questions
-                    </option>
-                  ))}
-                </select>
-              </div>
-              {availableQuestionnaires.length === 0 && (
-                <p style={{ color: '#666', fontSize: '13px' }}>
-                  No available questionnaires. All questionnaires are already assigned to this class or no questionnaires exist.
-                </p>
-              )}
-              <div className="modal-actions">
-                <button type="button" className="btn btn-secondary" onClick={() => setShowAddQuestionnaireModal(false)}>
-                  Cancel
-                </button>
-                <button type="submit" className="btn btn-primary" disabled={!selectedQuestionnaireId}>
-                  Add Questionnaire
-                </button>
-              </div>
-            </form>
-          </div>
-        </div>
-      )}
+      ), document.body)}
 
       {/* Confirm Modal */}
       <ConfirmModal
