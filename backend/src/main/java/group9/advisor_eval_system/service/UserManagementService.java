@@ -6,12 +6,16 @@ import group9.advisor_eval_system.entity.Team;
 import group9.advisor_eval_system.entity.Evaluation;
 import group9.advisor_eval_system.entity.Questionnaire;
 import group9.advisor_eval_system.entity.Report;
+import group9.advisor_eval_system.entity.Student;
+import group9.advisor_eval_system.entity.TeamStudent;
 import group9.advisor_eval_system.repository.UserRepository;
 import group9.advisor_eval_system.repository.SchoolClassRepository;
 import group9.advisor_eval_system.repository.TeamRepository;
 import group9.advisor_eval_system.repository.EvaluationRepository;
 import group9.advisor_eval_system.repository.QuestionnaireRepository;
 import group9.advisor_eval_system.repository.ReportRepository;
+import group9.advisor_eval_system.repository.StudentRepository;
+import group9.advisor_eval_system.repository.TeamStudentRepository;
 import org.apache.poi.ss.usermodel.*;
 import org.apache.poi.xssf.usermodel.XSSFWorkbook;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -56,6 +60,12 @@ public class UserManagementService {
 
     @Autowired
     private ReportRepository reportRepository;
+
+    @Autowired
+    private StudentRepository studentRepository;
+
+    @Autowired
+    private TeamStudentRepository teamStudentRepository;
 
     public static class UploadResult {
         private int added;
@@ -158,6 +168,23 @@ public class UserManagementService {
                 
                 // Delete classes
                 entityManager.createNativeQuery("DELETE FROM classes WHERE teacher_id = ?1")
+                        .setParameter(1, id)
+                        .executeUpdate();
+            }
+            
+            if (role == User.UserRole.STUDENT) {
+                // Delete student from teams
+                entityManager.createNativeQuery("DELETE FROM student_teams WHERE student_id IN (SELECT id FROM students WHERE created_by = ?1 OR email = (SELECT email FROM users WHERE id = ?1))")
+                        .setParameter(1, id)
+                        .executeUpdate();
+                
+                // Delete student from classes
+                entityManager.createNativeQuery("DELETE FROM student_classes WHERE student_id IN (SELECT id FROM students WHERE created_by = ?1 OR email = (SELECT email FROM users WHERE id = ?1))")
+                        .setParameter(1, id)
+                        .executeUpdate();
+                
+                // Delete the Student entity
+                entityManager.createNativeQuery("DELETE FROM students WHERE created_by = ?1 OR email = (SELECT email FROM users WHERE id = ?1)")
                         .setParameter(1, id)
                         .executeUpdate();
             }
@@ -272,7 +299,7 @@ public class UserManagementService {
 
     /**
      * Upload advisers from CSV/Excel file
-     * Expected columns: ADVISERID, LASTNAME, FIRSTNAME, EMAIL
+     * Expected columns: EMAIL, LASTNAME, FIRSTNAME (in any order)
      */
     public UploadResult uploadAdviserSheet(MultipartFile file) throws IOException {
         String filename = file.getOriginalFilename();
@@ -287,21 +314,47 @@ public class UserManagementService {
         int added = 0, updated = 0, skipped = 0;
         List<String> errors = new ArrayList<>();
 
-        for (int i = 0; i < rows.size(); i++) {
+        if (rows.isEmpty()) {
+            errors.add("File is empty");
+            return new UploadResult(added, updated, skipped, errors);
+        }
+
+        // Find column indices from header row
+        String[] headers = rows.get(0);
+        int emailIdx = -1, lastNameIdx = -1, firstNameIdx = -1;
+        
+        for (int i = 0; i < headers.length; i++) {
+            String header = headers[i].trim().toUpperCase();
+            if (header.contains("EMAIL")) emailIdx = i;
+            else if (header.contains("LASTNAME") || header.contains("LAST")) lastNameIdx = i;
+            else if (header.contains("FIRSTNAME") || header.contains("FIRST")) firstNameIdx = i;
+        }
+
+        if (emailIdx == -1 || lastNameIdx == -1 || firstNameIdx == -1) {
+            errors.add("Header row must contain EMAIL, LASTNAME, and FIRSTNAME columns");
+            return new UploadResult(0, 0, 0, errors);
+        }
+
+        // Process data rows (skip header row at index 0)
+        for (int i = 1; i < rows.size(); i++) {
             String[] row = rows.get(i);
-            if (row.length < 4) {
-                errors.add("Row " + (i + 2) + ": Not enough columns (need ADVISERID, LASTNAME, FIRSTNAME, EMAIL)");
-                skipped++;
-                continue;
+            
+            // Skip completely empty rows
+            boolean isEmpty = true;
+            for (String cell : row) {
+                if (!cell.trim().isEmpty()) {
+                    isEmpty = false;
+                    break;
+                }
             }
+            if (isEmpty) continue;
 
-            String adviserId = row[0].trim();
-            String lastName = row[1].trim();
-            String firstName = row[2].trim();
-            String email = row[3].trim().toLowerCase();
+            String email = (emailIdx < row.length) ? row[emailIdx].trim().toLowerCase() : "";
+            String lastName = (lastNameIdx < row.length) ? row[lastNameIdx].trim() : "";
+            String firstName = (firstNameIdx < row.length) ? row[firstNameIdx].trim() : "";
 
-            if (adviserId.isEmpty() || lastName.isEmpty() || firstName.isEmpty() || email.isEmpty()) {
-                errors.add("Row " + (i + 2) + ": ADVISERID, LASTNAME, FIRSTNAME, and EMAIL are required");
+            if (lastName.isEmpty() || firstName.isEmpty() || email.isEmpty()) {
+                errors.add("Row " + (i + 1) + ": EMAIL, LASTNAME, and FIRSTNAME are required");
                 skipped++;
                 continue;
             }
@@ -338,7 +391,7 @@ public class UserManagementService {
 
     /**
      * Upload students from CSV/Excel file
-     * Expected columns: CLASS, TEAMCODE, MEMBER#, STUDENTID, LASTNAME, FIRSTNAME, EMAIL, ADVISERID
+     * Expected columns: CLASS, TEAMCODE, MEMBER#, STUDENTID, LASTNAME, FIRSTNAME, EMAIL, ADVISOREMAIL (in any order)
      */
     public UploadResult uploadStudentSheet(MultipartFile file) throws IOException {
         String filename = file.getOriginalFilename();
@@ -353,42 +406,67 @@ public class UserManagementService {
         int added = 0, updated = 0, skipped = 0;
         List<String> errors = new ArrayList<>();
 
-        for (int i = 0; i < rows.size(); i++) {
+        if (rows.isEmpty()) {
+            errors.add("File is empty");
+            return new UploadResult(added, updated, skipped, errors);
+        }
+
+        // Find column indices from header row
+        String[] headers = rows.get(0);
+        int classIdx = -1, teamIdx = -1, memberIdx = -1, studentIdIdx = -1, 
+            lastNameIdx = -1, firstNameIdx = -1, emailIdx = -1, adviserEmailIdx = -1;
+        
+        for (int i = 0; i < headers.length; i++) {
+            String header = headers[i].trim().toUpperCase();
+            if (header.contains("CLASS")) classIdx = i;
+            else if (header.contains("TEAMCODE") || header.contains("TEAM")) teamIdx = i;
+            else if (header.contains("MEMBER")) memberIdx = i;
+            else if (header.contains("STUDENTID") || header.contains("STUDENT")) studentIdIdx = i;
+            else if (header.contains("LASTNAME") || header.contains("LAST")) lastNameIdx = i;
+            else if (header.contains("FIRSTNAME") || header.contains("FIRST")) firstNameIdx = i;
+            else if (header.contains("ADVISOREMAIL") || header.contains("ADVISER.*EMAIL")) adviserEmailIdx = i;
+            else if (header.contains("EMAIL")) emailIdx = i;
+        }
+
+        if (classIdx == -1 || teamIdx == -1 || studentIdIdx == -1 || lastNameIdx == -1 || 
+            firstNameIdx == -1 || emailIdx == -1 || adviserEmailIdx == -1) {
+            errors.add("Header row must contain CLASS, TEAMCODE, STUDENTID, LASTNAME, FIRSTNAME, EMAIL, and ADVISOREMAIL columns");
+            return new UploadResult(0, 0, 0, errors);
+        }
+
+        // Process data rows (skip header row at index 0)
+        for (int i = 1; i < rows.size(); i++) {
             String[] row = rows.get(i);
-            if (row.length < 8) {
-                errors.add("Row " + (i + 2) + ": Not enough columns (need CLASS, TEAMCODE, MEMBER#, STUDENTID, LASTNAME, FIRSTNAME, EMAIL, ADVISERID)");
+            
+            // Skip completely empty rows
+            boolean isEmpty = true;
+            for (String cell : row) {
+                if (!cell.trim().isEmpty()) {
+                    isEmpty = false;
+                    break;
+                }
+            }
+            if (isEmpty) continue;
+
+            String className = (classIdx < row.length) ? row[classIdx].trim() : "";
+            String teamCode = (teamIdx < row.length) ? row[teamIdx].trim() : "";
+            String memberNum = (memberIdx < row.length) ? row[memberIdx].trim() : "";
+            String studentId = (studentIdIdx < row.length) ? row[studentIdIdx].trim() : "";
+            String lastName = (lastNameIdx < row.length) ? row[lastNameIdx].trim() : "";
+            String firstName = (firstNameIdx < row.length) ? row[firstNameIdx].trim() : "";
+            String email = (emailIdx < row.length) ? row[emailIdx].trim().toLowerCase() : "";
+            String adviserEmail = (adviserEmailIdx < row.length) ? row[adviserEmailIdx].trim().toLowerCase() : "";
+
+            if (className.isEmpty() || studentId.isEmpty() || lastName.isEmpty() || firstName.isEmpty() || email.isEmpty() || adviserEmail.isEmpty()) {
+                errors.add("Row " + (i + 1) + ": CLASS, STUDENTID, LASTNAME, FIRSTNAME, EMAIL, and ADVISOREMAIL are required");
                 skipped++;
                 continue;
             }
 
-            String className = row[0].trim();
-            String teamCode = row[1].trim();
-            String memberNum = row[2].trim();
-            String studentId = row[3].trim();
-            String lastName = row[4].trim();
-            String firstName = row[5].trim();
-            String email = row[6].trim().toLowerCase();
-            String adviserIdStr = row[7].trim();
-
-            if (className.isEmpty() || studentId.isEmpty() || lastName.isEmpty() || firstName.isEmpty() || email.isEmpty() || adviserIdStr.isEmpty()) {
-                errors.add("Row " + (i + 2) + ": CLASS, STUDENTID, LASTNAME, FIRSTNAME, EMAIL, and ADVISERID are required");
-                skipped++;
-                continue;
-            }
-
-            // Validate adviser exists (by ID)
-            Long adviserId;
-            try {
-                adviserId = Long.parseLong(adviserIdStr);
-            } catch (NumberFormatException e) {
-                errors.add("Row " + (i + 2) + ": ADVISERID must be a number, got '" + adviserIdStr + "'");
-                skipped++;
-                continue;
-            }
-
-            Optional<User> adviserOpt = userRepository.findById(adviserId);
+            // Validate adviser exists (by email)
+            Optional<User> adviserOpt = userRepository.findByEmail(adviserEmail);
             if (!adviserOpt.isPresent()) {
-                errors.add("Row " + (i + 2) + ": Adviser with ID " + adviserIdStr + " not found in system");
+                errors.add("Row " + (i + 1) + ": Adviser with email '" + adviserEmail + "' not found in system");
                 skipped++;
                 continue;
             }
@@ -407,24 +485,93 @@ public class UserManagementService {
                     teamRepository.save(team);
                 }
 
-                // Create or update student user
+                // Create or update student user AND student entity
+                User studentUser;
                 if (userRepository.existsByEmail(email)) {
-                    User existing = userRepository.findByEmail(email).get();
-                    existing.setFirstName(firstName);
-                    existing.setLastName(lastName);
-                    existing.setRole(User.UserRole.STUDENT);
-                    userRepository.save(existing);
+                    studentUser = userRepository.findByEmail(email).get();
+                    studentUser.setFirstName(firstName);
+                    studentUser.setLastName(lastName);
+                    studentUser.setRole(User.UserRole.STUDENT);
+                    userRepository.save(studentUser);
                     updated++;
                 } else {
-                    User newStudent = new User();
-                    newStudent.setEmail(email);
-                    newStudent.setFirstName(firstName);
-                    newStudent.setLastName(lastName);
-                    newStudent.setRole(User.UserRole.STUDENT);
-                    newStudent.setIsActive(true);
-                    userRepository.save(newStudent);
+                    studentUser = new User();
+                    studentUser.setEmail(email);
+                    studentUser.setFirstName(firstName);
+                    studentUser.setLastName(lastName);
+                    studentUser.setRole(User.UserRole.STUDENT);
+                    studentUser.setIsActive(true);
+                    userRepository.save(studentUser);
                     added++;
                 }
+                
+                // Check if Student entity already exists by studentId (preferred)
+                // or fallback to email search
+                Student student = null;
+                
+                // First try to find by studentId
+                java.util.Optional<Student> existingByStudentId = studentRepository.findByStudentId(studentId);
+                if (existingByStudentId.isPresent()) {
+                    student = existingByStudentId.get();
+                } else {
+                    // Fallback: search by email for any orphaned records
+                    java.util.List<Student> existingByEmail = studentRepository.findAll().stream()
+                            .filter(s -> email.equalsIgnoreCase(s.getEmail() != null ? s.getEmail() : ""))
+                            .toList();
+                    if (!existingByEmail.isEmpty()) {
+                        student = existingByEmail.get(0);
+                        // Delete any other orphaned duplicates with same email
+                        for (int j = 1; j < existingByEmail.size(); j++) {
+                            studentRepository.delete(existingByEmail.get(j));
+                        }
+                    }
+                }
+                
+                // Parse position/member number
+                Integer position = null;
+                try {
+                    if (!memberNum.isEmpty()) {
+                        position = Integer.parseInt(memberNum);
+                    }
+                } catch (NumberFormatException e) {
+                    errors.add("Row " + (i + 2) + ": MEMBER# must be a number, got '" + memberNum + "'");
+                    skipped++;
+                    continue;
+                }
+                
+                if (student != null) {
+                    // Update existing Student entity
+                    student.setStudentId(studentId);
+                    student.setFirstName(firstName);
+                    student.setLastName(lastName);
+                    student.setEmail(email);
+                    student.setCreatedBy(studentUser.getId());
+                } else {
+                    // Create new Student entity
+                    student = new Student();
+                    student.setStudentId(studentId);
+                    student.setFirstName(firstName);
+                    student.setLastName(lastName);
+                    student.setEmail(email);
+                    student.setCreatedBy(studentUser.getId());
+                }
+                studentRepository.save(student);
+                
+                // Clear and re-add classes
+                student.getClasses().clear();
+                student.getClasses().add(schoolClass);
+                studentRepository.save(student);
+                
+                // Handle team membership with position via TeamStudent join entity
+                // Delete old TeamStudent records for this student and team
+                teamStudentRepository.deleteByStudentIdAndTeamId(student.getId(), team.getId());
+                
+                // Create new TeamStudent with position
+                TeamStudent teamStudent = new TeamStudent();
+                teamStudent.setStudent(student);
+                teamStudent.setTeam(team);
+                teamStudent.setPosition(position);
+                teamStudentRepository.save(teamStudent);
             } catch (Exception e) {
                 errors.add("Row " + (i + 2) + ": Error processing student: " + e.getMessage());
                 skipped++;
@@ -508,19 +655,28 @@ public class UserManagementService {
         List<String[]> rows = new ArrayList<>();
         try (Workbook workbook = new XSSFWorkbook(file.getInputStream())) {
             Sheet sheet = workbook.getSheetAt(0);
-            for (int rowIndex = 1; rowIndex <= sheet.getLastRowNum(); rowIndex++) {
+            for (int rowIndex = 0; rowIndex <= sheet.getLastRowNum(); rowIndex++) {
                 Row row = sheet.getRow(rowIndex);
                 if (row == null) continue;
                 
-                String email = getCellString(row.getCell(0));
-                String firstName = getCellString(row.getCell(1));
-                String lastName = getCellString(row.getCell(2));
-                String role = getCellString(row.getCell(3));
-                String phoneNumber = getCellString(row.getCell(4));
-                String department = getCellString(row.getCell(5));
+                // Dynamically read all columns in the row
+                int lastCellNum = row.getLastCellNum();
+                String[] cols = new String[lastCellNum];
+                for (int cellIndex = 0; cellIndex < lastCellNum; cellIndex++) {
+                    cols[cellIndex] = getCellString(row.getCell(cellIndex));
+                }
                 
-                if (email.isEmpty()) continue;
-                rows.add(new String[]{email, firstName, lastName, role, phoneNumber, department});
+                // Skip empty rows
+                boolean isEmpty = true;
+                for (String col : cols) {
+                    if (!col.isEmpty()) {
+                        isEmpty = false;
+                        break;
+                    }
+                }
+                if (isEmpty) continue;
+                
+                rows.add(cols);
             }
         }
         return rows;
