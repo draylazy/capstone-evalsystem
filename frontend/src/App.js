@@ -6,8 +6,6 @@ import { ToastProvider } from './contexts/ToastContext';
 
 // Teacher Pages
 import Teacher from './pages/DashboardTeacher/Teacher';
-import Classes from './pages/DashboardTeacher/Classes';
-import Teams from './pages/DashboardTeacher/Teams';
 import Questionnaires from './pages/DashboardTeacher/Questionnaires';
 import Reports from './pages/DashboardTeacher/Reports';
 import EvaluationDetail from './pages/DashboardTeacher/EvaluationDetail';
@@ -39,18 +37,6 @@ function App() {
         <Route path="/teacher/dashboard" element={
           <ProtectedRoute allowedRoles={['TEACHER']}>
             <Teacher />
-          </ProtectedRoute>
-        } />
-
-        <Route path="/teacher/classes" element={
-          <ProtectedRoute allowedRoles={['TEACHER']}>
-            <Classes />
-          </ProtectedRoute>
-        } />
-
-        <Route path="/teacher/teams" element={
-          <ProtectedRoute allowedRoles={['TEACHER']}>
-            <Teams />
           </ProtectedRoute>
         } />
 

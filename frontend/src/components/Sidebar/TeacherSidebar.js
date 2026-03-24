@@ -60,8 +60,6 @@ const TeacherSidebar = () => {
       <h2>Teacher Panel</h2>
       <ul>
         <li onClick={() => handleNavigate('/teacher/dashboard')}>Dashboard</li>
-        <li onClick={() => handleNavigate('/teacher/classes')}>Classes</li>
-        <li onClick={() => handleNavigate('/teacher/teams')}>Teams</li>
         <li onClick={() => handleNavigate('/teacher/students')}>Students</li>
         <li onClick={() => handleNavigate('/teacher/advisers')}>Advisers</li>
         <li onClick={() => handleNavigate('/teacher/questionnaires')}>Questionnaires</li>
