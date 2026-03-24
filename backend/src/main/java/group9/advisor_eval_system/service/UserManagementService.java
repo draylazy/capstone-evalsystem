@@ -222,7 +222,7 @@ public class UserManagementService {
      * Upload students from CSV/Excel file
      * Expected columns: CLASS, TEAMCODE, MEMBER#, STUDENTID, LASTNAME, FIRSTNAME, EMAIL, ADVISERID
      */
-    public UploadResult uploadStudentSheet(MultipartFile file, Long teacherId) throws IOException {
+    public UploadResult uploadStudentSheet(MultipartFile file) throws IOException {
         String filename = file.getOriginalFilename();
         List<String[]> rows;
 
@@ -234,14 +234,6 @@ public class UserManagementService {
 
         int added = 0, updated = 0, skipped = 0;
         List<String> errors = new ArrayList<>();
-
-        // Get or verify teacher exists
-        Optional<User> teacherOpt = userRepository.findById(teacherId);
-        if (!teacherOpt.isPresent()) {
-            errors.add("Teacher not found");
-            return new UploadResult(0, 0, rows.size(), errors);
-        }
-        User teacher = teacherOpt.get();
 
         for (int i = 0; i < rows.size(); i++) {
             String[] row = rows.get(i);
@@ -285,8 +277,8 @@ public class UserManagementService {
             User adviser = adviserOpt.get();
 
             try {
-                // Get or create class
-                SchoolClass schoolClass = getOrCreateClass(className, teacher);
+                // Get or create class (available to all teachers)
+                SchoolClass schoolClass = getOrCreateClass(className);
 
                 // Get or create team
                 Team team = getOrCreateTeam(teamCode, schoolClass);
@@ -325,12 +317,13 @@ public class UserManagementService {
     }
 
     /**
-     * Get existing class or create new one
+     * Get existing class or create new one (available to all teachers)
      */
-    private SchoolClass getOrCreateClass(String className, User teacher) {
-        // Try to find class with this name and teacher
-        List<SchoolClass> classes = schoolClassRepository.findByTeacherId(teacher.getId());
-        for (SchoolClass c : classes) {
+    private SchoolClass getOrCreateClass(String className) {
+        // Try to find class by name (not restricted by teacher)
+        // Get all classes and search by name
+        List<SchoolClass> allClasses = schoolClassRepository.findAll();
+        for (SchoolClass c : allClasses) {
             if (c.getName().equalsIgnoreCase(className)) {
                 return c;
             }
@@ -339,7 +332,11 @@ public class UserManagementService {
         // Create new class if not found
         SchoolClass newClass = new SchoolClass();
         newClass.setName(className);
-        newClass.setTeacher(teacher);
+        // Use first available teacher or create without specific teacher assignment
+        List<User> teachers = userRepository.findByRole(User.UserRole.TEACHER);
+        if (!teachers.isEmpty()) {
+            newClass.setTeacher(teachers.get(0));
+        }
         newClass.setSchoolYear("2024-2025"); // Default school year
         newClass.setIsActive(true);
         return schoolClassRepository.save(newClass);
