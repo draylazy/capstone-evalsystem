@@ -41,7 +41,8 @@ public class EvaluationService {
         Team team = teamRepository.findById(teamId)
                 .orElseThrow(() -> new RuntimeException("Team not found"));
 
-        if (team.getAdvisers().stream().noneMatch(a -> a.getId().equals(adviserId))) {
+        // Check if adviser is assigned - use new ArrayList to avoid concurrent modification
+        if (new ArrayList<>(team.getAdvisers()).stream().noneMatch(a -> a.getId().equals(adviserId))) {
             throw new RuntimeException("Adviser not assigned to this team");
         }
 
@@ -57,9 +58,20 @@ public class EvaluationService {
                     eval.setQuestionnaire(questionnaire);
                     eval.setStatus(Evaluation.EvaluationStatus.IN_PROGRESS);
                     eval.setAllowEdit(true);
+                    log.info("Creating new evaluation with allowEdit = true");
                     return evaluationRepository.save(eval);
                 });
 
+        // Always ensure allowEdit is true for IN_PROGRESS evaluations
+        if (evaluation.getStatus() == Evaluation.EvaluationStatus.IN_PROGRESS) {
+            if (evaluation.getAllowEdit() == null || !evaluation.getAllowEdit()) {
+                log.warn("Resetting allowEdit to true for IN_PROGRESS evaluation {}", evaluation.getId());
+                evaluation.setAllowEdit(true);
+                evaluation = evaluationRepository.save(evaluation);
+            }
+        }
+
+        log.info("Evaluation {} status: {}, allowEdit: {}", evaluation.getId(), evaluation.getStatus(), evaluation.getAllowEdit());
         return evaluation;
     }
 
@@ -80,7 +92,15 @@ public class EvaluationService {
             throw new RuntimeException("Unauthorized evaluation access");
         }
 
-        if (!evaluation.getAllowEdit()) {
+        // Only prevent editing if SUBMITTED or REVIEWED - if IN_PROGRESS, always allow
+        if (evaluation.getStatus() == Evaluation.EvaluationStatus.IN_PROGRESS) {
+            // Auto-correct allowEdit for IN_PROGRESS evaluations
+            if (evaluation.getAllowEdit() == null || !evaluation.getAllowEdit()) {
+                log.warn("Auto-correcting allowEdit for IN_PROGRESS evaluation {}", evaluationId);
+                evaluation.setAllowEdit(true);
+                evaluation = evaluationRepository.save(evaluation);
+            }
+        } else if (!evaluation.getAllowEdit()) {
             throw new RuntimeException("Evaluation editing is locked");
         }
 
@@ -110,7 +130,9 @@ public class EvaluationService {
         }
 
         evaluation.setGeneralComments(generalComments);
-        return evaluationRepository.save(evaluation);
+        Evaluation saved = evaluationRepository.save(evaluation);
+        log.info("Successfully saved evaluation {} with allowEdit = {}", saved.getId(), saved.getAllowEdit());
+        return saved;
     }
 
     /**

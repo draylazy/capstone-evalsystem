@@ -1,4 +1,5 @@
 import React, { useState, useEffect } from 'react';
+import { createPortal } from 'react-dom';
 import { userManagementAPI } from '../../services/api';
 import { useToast } from '../../contexts/ToastContext';
 import TeacherSidebar from '../../components/Sidebar/TeacherSidebar';
@@ -13,7 +14,8 @@ function UserManagement() {
   const [uploadFile, setUploadFile] = useState(null);
   const [uploading, setUploading] = useState(false);
   const [uploadError, setUploadError] = useState('');
-  const [showUploadModal, setShowUploadModal] = useState(false);
+  const [showStudentModal, setShowStudentModal] = useState(false);
+  const [showAdviserModal, setShowAdviserModal] = useState(false);
   const [filterRole, setFilterRole] = useState('ALL');
 
   useEffect(() => {
@@ -43,7 +45,7 @@ function UserManagement() {
     }
   };
 
-  const handleUploadSubmit = async (e) => {
+  const handleStudentUpload = async (e) => {
     e.preventDefault();
     if (!uploadFile) { setUploadError('Please select a file'); return; }
     setUploading(true);
@@ -51,9 +53,29 @@ function UserManagement() {
     try {
       const formData = new FormData();
       formData.append('file', uploadFile);
-      const res = await userManagementAPI.uploadUserSheet(formData);
-      toast.success(res.message || 'Upload successful');
-      setShowUploadModal(false);
+      const res = await userManagementAPI.uploadStudentSheet(formData);
+      toast.success(res.message || 'Student upload successful');
+      setShowStudentModal(false);
+      setUploadFile(null);
+      fetchUsers();
+    } catch (err) {
+      setUploadError('Upload failed: ' + err.message);
+    } finally {
+      setUploading(false);
+    }
+  };
+
+  const handleAdviserUpload = async (e) => {
+    e.preventDefault();
+    if (!uploadFile) { setUploadError('Please select a file'); return; }
+    setUploading(true);
+    setUploadError('');
+    try {
+      const formData = new FormData();
+      formData.append('file', uploadFile);
+      const res = await userManagementAPI.uploadAdviserSheet(formData);
+      toast.success(res.message || 'Adviser upload successful');
+      setShowAdviserModal(false);
       setUploadFile(null);
       fetchUsers();
     } catch (err) {
@@ -103,8 +125,11 @@ function UserManagement() {
                   {role}
                 </button>
               ))}
-              <button className="btn" onClick={() => setShowUploadModal(true)}>
-                Upload Users
+              <button className="btn" onClick={() => setShowStudentModal(true)}>
+                Upload Students
+              </button>
+              <button className="btn" onClick={() => setShowAdviserModal(true)}>
+                Upload Advisers
               </button>
             </div>
           </div>
@@ -113,10 +138,7 @@ function UserManagement() {
             <p>Loading users...</p>
           ) : filtered.length === 0 ? (
             <div style={{ textAlign: 'center', padding: '32px', color: '#666' }}>
-              <p>No users found. Upload a user sheet to get started.</p>
-              <p style={{ fontSize: '13px', color: '#999', marginTop: '8px' }}>
-                Create an Excel or CSV with columns: <strong>Email, FirstName, LastName, Role, PhoneNumber (optional), Department (optional)</strong>
-              </p>
+              <p>No users found. Upload student or adviser sheets to get started.</p>
             </div>
           ) : (
             <table className="class-table">
@@ -168,30 +190,28 @@ function UserManagement() {
         </div>
       </div>
 
-      {/* Upload Modal */}
-      {showUploadModal && (
-        <div className="modal-overlay">
-          <div className="modal-content">
-            <h2>Upload User Data Sheet</h2>
+      {/* Student Upload Modal */}
+      {showStudentModal && createPortal((
+        <div className="modal-overlay" onClick={() => setShowStudentModal(false)}>
+          <div className="modal-content" onClick={(e) => e.stopPropagation()}>
+            <h2>Upload Student Data Sheet</h2>
             {uploadError && <div className="error-message">{uploadError}</div>}
             <p style={{ fontSize: '13px', color: '#555', marginBottom: '12px' }}>
-              Upload an Excel (.xlsx / .xls) or CSV file. First row is the header, columns must be:
+              Upload an Excel (.xlsx / .xls) or CSV file. First row is the header, columns must be (in order):
             </p>
             <table className="class-table" style={{ marginBottom: '16px' }}>
               <thead>
-                <tr><th>Email</th><th>FirstName</th><th>LastName</th><th>Role</th><th>PhoneNumber</th><th>Department</th></tr>
+                <tr><th>CLASS</th><th>TEAMCODE</th><th>MEMBER#</th><th>STUDENTID</th><th>LASTNAME</th><th>FIRSTNAME</th><th>EMAIL</th><th>ADVISERID</th></tr>
               </thead>
               <tbody>
-                <tr><td>teacher1@cit.edu</td><td>John</td><td>Doe</td><td>TEACHER</td><td>123-456-7890</td><td>CS</td></tr>
-                <tr><td>adviser1@cit.edu</td><td>Jane</td><td>Smith</td><td>ADVISER</td><td></td><td>IT</td></tr>
-                <tr><td>student1@cit.edu</td><td>Bob</td><td>Lee</td><td>STUDENT</td><td></td><td></td></tr>
+                <tr><td>2B</td><td>T001</td><td>1</td><td>202301</td><td>Doe</td><td>John</td><td>john.doe@cit.edu</td><td>ADV001</td></tr>
+                <tr><td>2B</td><td>T001</td><td>2</td><td>202302</td><td>Smith</td><td>Jane</td><td>jane.smith@cit.edu</td><td>ADV001</td></tr>
               </tbody>
             </table>
             <p style={{ fontSize: '12px', color: '#888', marginBottom: '16px' }}>
-              Required: <strong>Email, FirstName, LastName, Role</strong>. Optional: PhoneNumber, Department.<br/>
-              Valid roles: <strong>TEACHER</strong>, <strong>ADVISER</strong>, <strong>STUDENT</strong>
+              Required: <strong>CLASS, TEAMCODE, MEMBER#, STUDENTID, LASTNAME, FIRSTNAME, EMAIL, ADVISERID</strong>
             </p>
-            <form onSubmit={handleUploadSubmit}>
+            <form onSubmit={handleStudentUpload}>
               <div className="form-group">
                 <label>Select File (.xlsx, .xls, or .csv) *</label>
                 <input
@@ -206,23 +226,77 @@ function UserManagement() {
                   </p>
                 )}
               </div>
-              <div style={{ display: 'flex', gap: '10px', marginTop: '20px' }}>
-                <button type="submit" className="btn" disabled={uploading}>
-                  {uploading ? 'Uploading...' : 'Upload & Save'}
-                </button>
+              <div className="modal-actions">
                 <button
                   type="button"
                   className="btn-secondary"
-                  onClick={() => { setShowUploadModal(false); setUploadFile(null); setUploadError(''); }}
+                  onClick={() => { setShowStudentModal(false); setUploadFile(null); setUploadError(''); }}
                   disabled={uploading}
                 >
                   Cancel
+                </button>
+                <button type="submit" className="btn" disabled={uploading}>
+                  {uploading ? 'Uploading...' : 'Upload & Save'}
                 </button>
               </div>
             </form>
           </div>
         </div>
-      )}
+      ), document.body)}
+
+      {/* Adviser Upload Modal */}
+      {showAdviserModal && createPortal((
+        <div className="modal-overlay" onClick={() => setShowAdviserModal(false)}>
+          <div className="modal-content" onClick={(e) => e.stopPropagation()}>
+            <h2>Upload Adviser Data Sheet</h2>
+            {uploadError && <div className="error-message">{uploadError}</div>}
+            <p style={{ fontSize: '13px', color: '#555', marginBottom: '12px' }}>
+              Upload an Excel (.xlsx / .xls) or CSV file. First row is the header, columns must be (in order):
+            </p>
+            <table className="class-table" style={{ marginBottom: '16px' }}>
+              <thead>
+                <tr><th>ADVISERID</th><th>LASTNAME</th><th>FIRSTNAME</th><th>EMAIL</th></tr>
+              </thead>
+              <tbody>
+                <tr><td>ADV001</td><td>Johnson</td><td>Robert</td><td>robert.johnson@cit.edu</td></tr>
+                <tr><td>ADV002</td><td>Williams</td><td>Sarah</td><td>sarah.williams@cit.edu</td></tr>
+              </tbody>
+            </table>
+            <p style={{ fontSize: '12px', color: '#888', marginBottom: '16px' }}>
+              Required: <strong>ADVISERID, LASTNAME, FIRSTNAME, EMAIL</strong>
+            </p>
+            <form onSubmit={handleAdviserUpload}>
+              <div className="form-group">
+                <label>Select File (.xlsx, .xls, or .csv) *</label>
+                <input
+                  type="file"
+                  accept=".xlsx,.xls,.csv"
+                  onChange={(e) => { setUploadFile(e.target.files[0]); setUploadError(''); }}
+                  required
+                />
+                {uploadFile && (
+                  <p style={{ fontSize: '12px', color: '#28a745', marginTop: '6px' }}>
+                    Selected: {uploadFile.name}
+                  </p>
+                )}
+              </div>
+              <div className="modal-actions">
+                <button
+                  type="button"
+                  className="btn-secondary"
+                  onClick={() => { setShowAdviserModal(false); setUploadFile(null); setUploadError(''); }}
+                  disabled={uploading}
+                >
+                  Cancel
+                </button>
+                <button type="submit" className="btn" disabled={uploading}>
+                  {uploading ? 'Uploading...' : 'Upload & Save'}
+                </button>
+              </div>
+            </form>
+          </div>
+        </div>
+      ), document.body)}
     </div>
   );
 }

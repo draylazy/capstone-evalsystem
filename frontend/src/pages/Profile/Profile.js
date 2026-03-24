@@ -204,15 +204,8 @@ const Profile = () => {
         {user?.role === 'TEACHER' && (
           <div className="profile-section google-section">
             <h2>Google Account</h2>
-            <p className="section-description">
-              Link your Google account to create questionnaires (Google Forms).
-            </p>
 
             <div className="google-link-status">
-              <div className={`status-badge ${googleStatus.isLinked ? 'linked' : 'not-linked'}`}>
-                {googleStatus.isLinked ? 'Linked' : 'Not linked'}
-              </div>
-
               {googleStatus.googleEmail && (
                 <div className="linked-email">
                   <label>Google email</label>
@@ -226,9 +219,7 @@ const Profile = () => {
                 <button className="btn-link-google" onClick={startGoogleLink} disabled={googleStatus.loading}>
                   Link Google Account
                 </button>
-              ) : (
-                <p className="info-text">Google account unlinking is disabled.</p>
-              )}
+              ) : null}
             </div>
           </div>
         )}

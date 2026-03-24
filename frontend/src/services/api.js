@@ -673,7 +673,7 @@ export const adviserAPI = {
     });
 
     if (!response.ok) {
-      throw new Error('Failed to fetch adviser teams');
+      await throwApiError(response, 'Failed to fetch adviser teams');
     }
 
     return await response.json();
@@ -687,7 +687,7 @@ export const adviserAPI = {
     });
 
     if (!response.ok) {
-      throw new Error('Failed to fetch team questionnaires');
+      await throwApiError(response, 'Failed to fetch team questionnaires');
     }
 
     return await response.json();
@@ -704,7 +704,7 @@ export const adviserAPI = {
     );
 
     if (!response.ok) {
-      throw new Error('Failed to get evaluation');
+      await throwApiError(response, 'Failed to get evaluation');
     }
 
     return await response.json();
@@ -719,7 +719,7 @@ export const adviserAPI = {
     });
 
     if (!response.ok) {
-      throw new Error('Failed to save evaluation');
+      await throwApiError(response, 'Failed to save evaluation');
     }
 
     return await response.json();
@@ -736,7 +736,7 @@ export const adviserAPI = {
     );
 
     if (!response.ok) {
-      throw new Error('Failed to submit evaluation');
+      await throwApiError(response, 'Failed to submit evaluation');
     }
 
     return await response.json();
@@ -752,7 +752,7 @@ export const adviserAPI = {
     );
 
     if (!response.ok) {
-      throw new Error("Failed to fetch completed evaluations");
+      await throwApiError(response, 'Failed to fetch completed evaluations');
     }
 
     return await response.json();
@@ -839,6 +839,38 @@ export const userManagementAPI = {
     const headers = {};
     if (token) headers['Authorization'] = `Bearer ${token}`;
     const response = await fetch(`${API_BASE_URL}/user-management/upload-users`, {
+      method: 'POST',
+      headers: headers,
+      body: formData,
+    });
+    if (!response.ok) {
+      const err = await response.json().catch(() => null);
+      throw new Error(err?.message || 'Upload failed');
+    }
+    return await response.json();
+  },
+
+  uploadStudentSheet: async (formData) => {
+    const token = getAuthToken();
+    const headers = {};
+    if (token) headers['Authorization'] = `Bearer ${token}`;
+    const response = await fetch(`${API_BASE_URL}/user-management/upload-students`, {
+      method: 'POST',
+      headers: headers,
+      body: formData,
+    });
+    if (!response.ok) {
+      const err = await response.json().catch(() => null);
+      throw new Error(err?.message || 'Upload failed');
+    }
+    return await response.json();
+  },
+
+  uploadAdviserSheet: async (formData) => {
+    const token = getAuthToken();
+    const headers = {};
+    if (token) headers['Authorization'] = `Bearer ${token}`;
+    const response = await fetch(`${API_BASE_URL}/user-management/upload-advisers`, {
       method: 'POST',
       headers: headers,
       body: formData,

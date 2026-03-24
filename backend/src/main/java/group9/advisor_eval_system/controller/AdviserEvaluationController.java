@@ -5,10 +5,12 @@ import group9.advisor_eval_system.dto.EvaluationScoreDto;
 import group9.advisor_eval_system.dto.QuestionnaireItemDto;
 import group9.advisor_eval_system.dto.QuestionnaireWithItemsDto;
 import group9.advisor_eval_system.entity.Evaluation;
+import group9.advisor_eval_system.entity.EvaluationScore;
 import group9.advisor_eval_system.entity.Questionnaire;
 import group9.advisor_eval_system.entity.QuestionnaireItem;
 import group9.advisor_eval_system.entity.Team;
 import group9.advisor_eval_system.repository.EvaluationRepository;
+import group9.advisor_eval_system.repository.EvaluationScoreRepository;
 import group9.advisor_eval_system.repository.QuestionnaireItemRepository;
 import group9.advisor_eval_system.service.EvaluationService;
 import group9.advisor_eval_system.service.QuestionnaireService;
@@ -21,6 +23,7 @@ import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
+import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
 import java.util.stream.Collectors;
@@ -36,6 +39,7 @@ public class AdviserEvaluationController {
     private final QuestionnaireService questionnaireService;
     private final JwtUtil jwtUtil;
     private final EvaluationRepository evaluationRepository;
+    private final EvaluationScoreRepository evaluationScoreRepository;
     private final QuestionnaireItemRepository questionnaireItemRepository;
 
     private Long getAdviserId(HttpServletRequest request) {
@@ -47,27 +51,51 @@ public class AdviserEvaluationController {
         return jwtUtil.extractUserId(token);
     }
 
+    private String getErrorMessage(Exception e) {
+        if (e.getMessage() != null && !e.getMessage().isEmpty()) {
+            return e.getMessage();
+        }
+        if (e.getCause() != null && e.getCause().getMessage() != null) {
+            return e.getCause().getMessage();
+        }
+        return e.getClass().getSimpleName() + " occurred";
+    }
+
     @GetMapping("/teams")
-    public List<Team> getMyTeams(HttpServletRequest request) {
-        Long adviserId = getAdviserId(request);
-        return teamService.getAllTeams().stream()
-                .filter(t -> t.getAdvisers().stream().anyMatch(a -> a.getId().equals(adviserId)))
-                .toList();
+    public ResponseEntity<?> getMyTeams(HttpServletRequest request) {
+        try {
+            Long adviserId = getAdviserId(request);
+            List<Team> teams = teamService.getAllTeams().stream()
+                    .filter(t -> new ArrayList<>(t.getAdvisers()).stream().anyMatch(a -> a.getId().equals(adviserId)))
+                    .collect(Collectors.toList());
+            return ResponseEntity.ok(teams);
+        } catch (Exception e) {
+            log.error("Error fetching adviser teams: {}", e.getMessage(), e);
+            return ResponseEntity.status(HttpStatus.BAD_REQUEST)
+                .body(Map.of("error", getErrorMessage(e)));
+        }
     }
 
     @GetMapping("/teams/{teamId}/questionnaires")
-    public List<Questionnaire> getTeamQuestionnaires(
+    public ResponseEntity<?> getTeamQuestionnaires(
             @PathVariable Long teamId,
             HttpServletRequest request
     ) {
-        Long adviserId = getAdviserId(request);
-        Team team = teamService.getTeamById(teamId);
+        try {
+            Long adviserId = getAdviserId(request);
+            Team team = teamService.getTeamById(teamId);
 
-        if (team.getAdvisers().stream().noneMatch(a -> a.getId().equals(adviserId))) {
-            throw new RuntimeException("Unauthorized");
+            if (new ArrayList<>(team.getAdvisers()).stream().noneMatch(a -> a.getId().equals(adviserId))) {
+                throw new RuntimeException("Unauthorized: Adviser not assigned to this team");
+            }
+
+            List<Questionnaire> questionnaires = questionnaireService.getQuestionnairesByClass(team.getSchoolClass().getId());
+            return ResponseEntity.ok(questionnaires);
+        } catch (Exception e) {
+            log.error("Error fetching team questionnaires: {}", e.getMessage(), e);
+            return ResponseEntity.status(HttpStatus.BAD_REQUEST)
+                .body(Map.of("error", getErrorMessage(e)));
         }
-
-        return questionnaireService.getQuestionnairesByClass(team.getSchoolClass().getId());
     }
 
     @GetMapping("/evaluation/{teamId}/{questionnaireId}")
@@ -78,7 +106,34 @@ public class AdviserEvaluationController {
     ) {
         try {
             Long adviserId = getAdviserId(request);
+            log.info("Getting or creating evaluation for adviser: {}, team: {}, questionnaire: {}", adviserId, teamId, questionnaireId);
+            
             Evaluation evaluation = evaluationService.getOrCreateEvaluation(adviserId, teamId, questionnaireId);
+            
+            if (evaluation == null) {
+                log.error("Evaluation returned null from service");
+                return ResponseEntity.status(HttpStatus.BAD_REQUEST)
+                    .body(Map.of("error", "Failed to create or retrieve evaluation"));
+            }
+            
+            // Ensure relationships are loaded
+            if (evaluation.getAdviser() == null) {
+                log.error("Adviser is null on evaluation");
+                return ResponseEntity.status(HttpStatus.BAD_REQUEST)
+                    .body(Map.of("error", "Adviser data is missing from evaluation"));
+            }
+            
+            if (evaluation.getTeam() == null) {
+                log.error("Team is null on evaluation");
+                return ResponseEntity.status(HttpStatus.BAD_REQUEST)
+                    .body(Map.of("error", "Team data is missing from evaluation"));
+            }
+            
+            if (evaluation.getQuestionnaire() == null) {
+                log.error("Questionnaire is null on evaluation");
+                return ResponseEntity.status(HttpStatus.BAD_REQUEST)
+                    .body(Map.of("error", "Questionnaire data is missing from evaluation"));
+            }
             
             // Manually build response with items fetched directly from repository
             EvaluationResponse response = new EvaluationResponse();
@@ -86,13 +141,18 @@ public class AdviserEvaluationController {
             response.setTeamId(evaluation.getTeam().getId());
             response.setTeamName(evaluation.getTeam().getName());
             response.setAdviserId(evaluation.getAdviser().getId());
-            response.setAdviserName(evaluation.getAdviser().getFirstName() + " " + evaluation.getAdviser().getLastName());
-            response.setStatus(evaluation.getStatus().name());
-            response.setAllowEdit(evaluation.getAllowEdit());
+            
+            String adviserName = (evaluation.getAdviser().getFirstName() != null ? evaluation.getAdviser().getFirstName() : "") 
+                    + " " + (evaluation.getAdviser().getLastName() != null ? evaluation.getAdviser().getLastName() : "");
+            response.setAdviserName(adviserName.trim());
+            response.setStatus(evaluation.getStatus() != null ? evaluation.getStatus().name() : "UNKNOWN");
+            response.setAllowEdit(evaluation.getAllowEdit() != null ? evaluation.getAllowEdit() : false);
             response.setGeneralComments(evaluation.getGeneralComments());
             response.setSubmittedAt(evaluation.getSubmittedAt());
             response.setCreatedAt(evaluation.getCreatedAt());
             response.setUpdatedAt(evaluation.getUpdatedAt());
+            
+            log.info("Response allowEdit={}, status={}", response.getAllowEdit(), response.getStatus());
             
             // Fetch questionnaire with items directly
             Questionnaire q = evaluation.getQuestionnaire();
@@ -103,16 +163,21 @@ public class AdviserEvaluationController {
             qDto.setTitle(q.getTitle());
             qDto.setDescription(q.getDescription());
             qDto.setGoogleFormUrl(q.getGoogleFormUrl());
-            qDto.setItems(items.stream().map(QuestionnaireItemDto::fromEntity).collect(Collectors.toList()));
+            qDto.setItems(new ArrayList<>(items).stream().map(QuestionnaireItemDto::fromEntity).collect(Collectors.toList()));
             
             response.setQuestionnaire(qDto);
-            response.setScores(evaluation.getScores().stream().map(EvaluationScoreDto::fromEntity).collect(Collectors.toList()));
             
+            // Fetch scores directly to avoid lazy loading issues
+            List<EvaluationScore> scores = evaluationScoreRepository.findByEvaluationId(evaluation.getId());
+            response.setScores(new ArrayList<>(scores).stream().map(EvaluationScoreDto::fromEntity).collect(Collectors.toList()));
+            
+            log.info("Successfully retrieved evaluation with {} items", items.size());
             return ResponseEntity.ok(response);
         } catch (Exception e) {
-            log.error("Error: {}", e.getMessage(), e);
+            log.error("Error getting evaluation: {}", e.getMessage(), e);
+            String errorMsg = getErrorMessage(e);
             return ResponseEntity.status(HttpStatus.BAD_REQUEST)
-                .body(Map.of("error", e.getMessage()));
+                .body(Map.of("error", errorMsg));
         }
     }
 
@@ -148,12 +213,19 @@ public class AdviserEvaluationController {
     }
 
     @GetMapping("/evaluations/completed")
-    public List<EvaluationResponse> getCompletedEvaluations(HttpServletRequest request) {
-        Long adviserId = getAdviserId(request);
+    public ResponseEntity<?> getCompletedEvaluations(HttpServletRequest request) {
+        try {
+            Long adviserId = getAdviserId(request);
 
-        return evaluationRepository.findByAdviserId(adviserId).stream()
-                .filter(e -> e.getStatus() == Evaluation.EvaluationStatus.SUBMITTED)
-                .map(EvaluationResponse::fromEntity)
-                .collect(Collectors.toList());
+            List<EvaluationResponse> evaluations = new ArrayList<>(evaluationRepository.findByAdviserId(adviserId)).stream()
+                    .filter(e -> e.getStatus() == Evaluation.EvaluationStatus.SUBMITTED)
+                    .map(EvaluationResponse::fromEntity)
+                    .collect(Collectors.toList());
+            return ResponseEntity.ok(evaluations);
+        } catch (Exception e) {
+            log.error("Error fetching completed evaluations: {}", e.getMessage(), e);
+            return ResponseEntity.status(HttpStatus.BAD_REQUEST)
+                .body(Map.of("error", getErrorMessage(e)));
+        }
     }
 }

@@ -33,8 +33,8 @@ public class UserManagementController {
         }
     }
 
-    @PostMapping(value = "/upload-users", consumes = "multipart/form-data")
-    public ResponseEntity<?> uploadUserSheet(@RequestParam("file") MultipartFile file) {
+    @PostMapping(value = "/upload-students", consumes = "multipart/form-data")
+    public ResponseEntity<?> uploadStudentSheet(@RequestParam("file") MultipartFile file) {
         if (file.isEmpty()) {
             return ResponseEntity.badRequest().body(new MessageResponse("File is empty"));
         }
@@ -49,7 +49,37 @@ public class UserManagementController {
         }
 
         try {
-            UserManagementService.UploadResult result = userManagementService.uploadUserSheet(file);
+            UserManagementService.UploadResult result = userManagementService.uploadStudentSheet(file);
+            String message = "Added: " + result.getAdded()
+                    + ", Updated: " + result.getUpdated()
+                    + ", Skipped: " + result.getSkipped();
+            if (!result.getErrors().isEmpty()) {
+                message += ". Errors: " + String.join("; ", result.getErrors());
+            }
+            return ResponseEntity.ok(new UploadResponse(message, result));
+        } catch (IOException e) {
+            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
+                    .body(new MessageResponse("Error reading file: " + e.getMessage()));
+        }
+    }
+
+    @PostMapping(value = "/upload-advisers", consumes = "multipart/form-data")
+    public ResponseEntity<?> uploadAdviserSheet(@RequestParam("file") MultipartFile file) {
+        if (file.isEmpty()) {
+            return ResponseEntity.badRequest().body(new MessageResponse("File is empty"));
+        }
+
+        String filename = file.getOriginalFilename();
+        if (filename == null ||
+                (!filename.toLowerCase().endsWith(".xlsx") &&
+                 !filename.toLowerCase().endsWith(".xls") &&
+                 !filename.toLowerCase().endsWith(".csv"))) {
+            return ResponseEntity.badRequest()
+                    .body(new MessageResponse("File must be .xlsx, .xls, or .csv"));
+        }
+
+        try {
+            UserManagementService.UploadResult result = userManagementService.uploadAdviserSheet(file);
             String message = "Added: " + result.getAdded()
                     + ", Updated: " + result.getUpdated()
                     + ", Skipped: " + result.getSkipped();

@@ -66,6 +66,7 @@ const TeacherSidebar = () => {
         <li onClick={() => handleNavigate('/teacher/advisers')}>Advisers</li>
         <li onClick={() => handleNavigate('/teacher/questionnaires')}>Questionnaires</li>
         <li onClick={() => handleNavigate('/teacher/reports')}>Reports</li>
+        <li onClick={() => handleNavigate('/teacher/user-management')}>User Management</li>
       </ul>
 
       <div className="sidebar-profile" ref={menuRef}>
@@ -78,11 +79,6 @@ const TeacherSidebar = () => {
             <div className="profile-dropdown-header">
               <span className="dropdown-email">{user?.email}</span>
             </div>
-            {user?.role === 'TEACHER' && (
-              <div className="profile-dropdown-item" onClick={() => { handleNavigate('/teacher/user-management'); setShowProfileMenu(false); }}>
-                User Management
-              </div>
-            )}
             <div className="profile-dropdown-item" onClick={() => { handleNavigate('/profile'); setShowProfileMenu(false); }}>
               Profile
             </div>

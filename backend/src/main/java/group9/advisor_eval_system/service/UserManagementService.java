@@ -141,6 +141,136 @@ public class UserManagementService {
         return new UploadResult(added, updated, skipped, errors);
     }
 
+    /**
+     * Upload advisers from CSV/Excel file
+     * Expected columns: ADVISERID, LASTNAME, FIRSTNAME, EMAIL
+     */
+    public UploadResult uploadAdviserSheet(MultipartFile file) throws IOException {
+        String filename = file.getOriginalFilename();
+        List<String[]> rows;
+
+        if (filename != null && filename.toLowerCase().endsWith(".csv")) {
+            rows = parseCsv(file);
+        } else {
+            rows = parseExcel(file);
+        }
+
+        int added = 0, updated = 0, skipped = 0;
+        List<String> errors = new ArrayList<>();
+
+        for (int i = 0; i < rows.size(); i++) {
+            String[] row = rows.get(i);
+            if (row.length < 4) {
+                errors.add("Row " + (i + 2) + ": Not enough columns (need ADVISERID, LASTNAME, FIRSTNAME, EMAIL)");
+                skipped++;
+                continue;
+            }
+
+            String adviserId = row[0].trim();
+            String lastName = row[1].trim();
+            String firstName = row[2].trim();
+            String email = row[3].trim().toLowerCase();
+
+            if (adviserId.isEmpty() || lastName.isEmpty() || firstName.isEmpty() || email.isEmpty()) {
+                errors.add("Row " + (i + 2) + ": ADVISERID, LASTNAME, FIRSTNAME, and EMAIL are required");
+                skipped++;
+                continue;
+            }
+
+            // Don't allow modifying the system teacher admin via upload
+            if (email.equals("authortet@gmail.com")) {
+                skipped++;
+                continue;
+            }
+
+            if (userRepository.existsByEmail(email)) {
+                // Update existing adviser
+                User existing = userRepository.findByEmail(email).get();
+                existing.setFirstName(firstName);
+                existing.setLastName(lastName);
+                existing.setRole(User.UserRole.ADVISER);
+                userRepository.save(existing);
+                updated++;
+            } else {
+                // Create new adviser
+                User newAdviser = new User();
+                newAdviser.setEmail(email);
+                newAdviser.setFirstName(firstName);
+                newAdviser.setLastName(lastName);
+                newAdviser.setRole(User.UserRole.ADVISER);
+                newAdviser.setIsActive(true);
+                userRepository.save(newAdviser);
+                added++;
+            }
+        }
+
+        return new UploadResult(added, updated, skipped, errors);
+    }
+
+    /**
+     * Upload students from CSV/Excel file
+     * Expected columns: CLASS, TEAMCODE, MEMBER#, STUDENTID, LASTNAME, FIRSTNAME, EMAIL, ADVISERID
+     */
+    public UploadResult uploadStudentSheet(MultipartFile file) throws IOException {
+        String filename = file.getOriginalFilename();
+        List<String[]> rows;
+
+        if (filename != null && filename.toLowerCase().endsWith(".csv")) {
+            rows = parseCsv(file);
+        } else {
+            rows = parseExcel(file);
+        }
+
+        int added = 0, updated = 0, skipped = 0;
+        List<String> errors = new ArrayList<>();
+
+        for (int i = 0; i < rows.size(); i++) {
+            String[] row = rows.get(i);
+            if (row.length < 8) {
+                errors.add("Row " + (i + 2) + ": Not enough columns (need CLASS, TEAMCODE, MEMBER#, STUDENTID, LASTNAME, FIRSTNAME, EMAIL, ADVISERID)");
+                skipped++;
+                continue;
+            }
+
+            String className = row[0].trim();
+            String teamCode = row[1].trim();
+            String memberNum = row[2].trim();
+            String studentId = row[3].trim();
+            String lastName = row[4].trim();
+            String firstName = row[5].trim();
+            String email = row[6].trim().toLowerCase();
+            String adviserId = row[7].trim();
+
+            if (className.isEmpty() || studentId.isEmpty() || lastName.isEmpty() || firstName.isEmpty() || email.isEmpty() || adviserId.isEmpty()) {
+                errors.add("Row " + (i + 2) + ": CLASS, STUDENTID, LASTNAME, FIRSTNAME, EMAIL, and ADVISERID are required");
+                skipped++;
+                continue;
+            }
+
+            if (userRepository.existsByEmail(email)) {
+                // Update existing student
+                User existing = userRepository.findByEmail(email).get();
+                existing.setFirstName(firstName);
+                existing.setLastName(lastName);
+                existing.setRole(User.UserRole.STUDENT);
+                userRepository.save(existing);
+                updated++;
+            } else {
+                // Create new student
+                User newStudent = new User();
+                newStudent.setEmail(email);
+                newStudent.setFirstName(firstName);
+                newStudent.setLastName(lastName);
+                newStudent.setRole(User.UserRole.STUDENT);
+                newStudent.setIsActive(true);
+                userRepository.save(newStudent);
+                added++;
+            }
+        }
+
+        return new UploadResult(added, updated, skipped, errors);
+    }
+
     private List<String[]> parseCsv(MultipartFile file) throws IOException {
         List<String[]> rows = new ArrayList<>();
         try (BufferedReader reader = new BufferedReader(
