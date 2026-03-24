@@ -186,18 +186,6 @@ const Profile = () => {
               <label>Role:</label>
               <span>{user?.role}</span>
             </div>
-            {user?.department && (
-              <div className="info-row">
-                <label>Department:</label>
-                <span>{user.department}</span>
-              </div>
-            )}
-            {user?.phoneNumber && (
-              <div className="info-row">
-                <label>Phone:</label>
-                <span>{user.phoneNumber}</span>
-              </div>
-            )}
           </div>
         </div>
 

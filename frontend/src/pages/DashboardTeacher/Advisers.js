@@ -26,9 +26,7 @@ const Advisers = () => {
     id: null,
     firstName: '',
     lastName: '',
-    email: '',
-    phoneNumber: '',
-    department: ''
+    email: ''
   });
 
   useEffect(() => {
@@ -65,9 +63,7 @@ const Advisers = () => {
       id: null,
       firstName: '',
       lastName: '',
-      email: '',
-      phoneNumber: '',
-      department: ''
+      email: ''
     });
     setShowModal(true);
   };
@@ -176,8 +172,6 @@ const Advisers = () => {
                 <tr>
                   <th>Name</th>
                   <th>Email</th>
-                  <th>Phone Number</th>
-                  <th>Department</th>
                   <th>Actions</th>
                 </tr>
               </thead>
@@ -191,8 +185,6 @@ const Advisers = () => {
                     <tr key={adviser.id}>
                       <td>{adviser.firstName && adviser.lastName ? `${adviser.firstName} ${adviser.lastName}` : '—'}</td>
                       <td>{adviser.email}</td>
-                      <td>{adviser.phoneNumber || 'N/A'}</td>
-                      <td>{adviser.department || 'N/A'}</td>
                       <td>
                         <button className="btn-secondary" onClick={() => handleDelete(adviser.id, adviser.email)}>
                           Delete

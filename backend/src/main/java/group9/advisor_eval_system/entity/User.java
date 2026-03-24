@@ -39,12 +39,6 @@ public class User {
     @Column(nullable = false)
     private UserRole role; // TEACHER or ADVISER
     
-    @Column(nullable = true)
-    private String phoneNumber;
-    
-    @Column(nullable = true)
-    private String department;
-    
     @Column(nullable = false)
     private Boolean isActive = true;
     

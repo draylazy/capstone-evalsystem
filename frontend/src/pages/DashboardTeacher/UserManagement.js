@@ -148,7 +148,6 @@ function UserManagement() {
                   <th>Name</th>
                   <th>Email</th>
                   <th>Role</th>
-                  <th>Department</th>
                   <th>Actions</th>
                 </tr>
               </thead>
@@ -170,7 +169,6 @@ function UserManagement() {
                         {u.role}
                       </span>
                     </td>
-                    <td>{u.department || '—'}</td>
                     <td>
                       {u.email !== 'authortet@gmail.com' && (
                         <button

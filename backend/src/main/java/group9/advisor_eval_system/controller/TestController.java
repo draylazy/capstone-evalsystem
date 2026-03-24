@@ -27,7 +27,6 @@ public class TestController {
         user.setLastName("Doe");
         user.setEmail("john.doe@example.com");
         user.setRole(User.UserRole.TEACHER);
-        user.setDepartment("Computer Science");
         user.setIsActive(true);
         
         User savedUser = userRepository.save(user);

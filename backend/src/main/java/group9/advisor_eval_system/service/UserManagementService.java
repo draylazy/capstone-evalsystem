@@ -235,8 +235,6 @@ public class UserManagementService {
             String firstName = row[1].trim();
             String lastName = row[2].trim();
             String roleStr = row[3].trim().toUpperCase();
-            String phoneNumber = row.length > 4 ? row[4].trim() : null;
-            String department = row.length > 5 ? row[5].trim() : null;
 
             if (email.isEmpty() || firstName.isEmpty() || lastName.isEmpty()) {
                 errors.add("Row " + (i + 2) + ": Email, FirstName, and LastName are required");
@@ -267,12 +265,6 @@ public class UserManagementService {
                 existing.setFirstName(firstName);
                 existing.setLastName(lastName);
                 existing.setRole(role);
-                if (phoneNumber != null && !phoneNumber.isEmpty()) {
-                    existing.setPhoneNumber(phoneNumber);
-                }
-                if (department != null && !department.isEmpty()) {
-                    existing.setDepartment(department);
-                }
                 userRepository.save(existing);
                 updated++;
             } else {
@@ -283,12 +275,6 @@ public class UserManagementService {
                 newUser.setLastName(lastName);
                 newUser.setRole(role);
                 newUser.setIsActive(true);
-                if (phoneNumber != null && !phoneNumber.isEmpty()) {
-                    newUser.setPhoneNumber(phoneNumber);
-                }
-                if (department != null && !department.isEmpty()) {
-                    newUser.setDepartment(department);
-                }
                 userRepository.save(newUser);
                 added++;
             }

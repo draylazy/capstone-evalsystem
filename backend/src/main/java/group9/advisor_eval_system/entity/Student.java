@@ -41,9 +41,6 @@ public class Student {
     @Column(nullable = true)
     private String email;
     
-    @Column(nullable = true)
-    private String phoneNumber;
-    
     @CreationTimestamp
     @Column(updatable = false)
     private LocalDateTime createdAt;
