@@ -62,7 +62,7 @@ public class Team {
     
     // Expose member IDs without exposing full member objects  
     @Transient
-    @JsonIgnore
+    @JsonProperty("memberIds")
     public List<Long> getMemberIds() {
         return teamStudents != null ? teamStudents.stream()
                 .map(ts -> ts.getStudent().getId())
@@ -96,7 +96,7 @@ public class Team {
     
     // Expose adviser IDs without exposing full adviser objects
     @Transient
-    @JsonIgnore
+    @JsonProperty("adviserIds")
     public List<Long> getAdviserIds() {
         return advisers != null ? advisers.stream()
                 .map(User::getId)

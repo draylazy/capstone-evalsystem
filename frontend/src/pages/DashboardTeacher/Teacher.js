@@ -14,6 +14,8 @@ const Teacher = () => {
   const [questionnaires, setQuestionnaires] = useState([]);
   const [showTeamsModal, setShowTeamsModal] = useState(false);
   const [selectedClass, setSelectedClass] = useState(null);
+  const [showTeamMembersModal, setShowTeamMembersModal] = useState(false);
+  const [selectedTeam, setSelectedTeam] = useState(null);
 
   const currentUser = useMemo(() => {
     const raw = localStorage.getItem("user");
@@ -100,6 +102,18 @@ const Teacher = () => {
 
   const getQuestionnairesForClass = (classId) => {
     return questionnaires[classId] || [];
+  };
+
+  const getStudentsForTeam = (team) => {
+    if (!team || !team.memberIds || team.memberIds.length === 0) return [];
+    // Convert memberIds to strings for comparison since IDs can be stored as different types
+    const memberIdStrings = team.memberIds.map(id => String(id));
+    return students.filter(s => s && memberIdStrings.includes(String(s.id)));
+  };
+
+  const handleViewTeamMembers = (team) => {
+    setSelectedTeam(team);
+    setShowTeamMembersModal(true);
   };
 
   return (
@@ -204,6 +218,7 @@ const Teacher = () => {
                       <th>Members</th>
                       <th>Advisers</th>
                       <th>Status</th>
+                      <th>Action</th>
                     </tr>
                   </thead>
                   <tbody>
@@ -221,49 +236,18 @@ const Teacher = () => {
                             {team.isActive ? 'Active' : 'Inactive'}
                           </span>
                         </td>
+                        <td>
+                          <button 
+                            className="btn btn-sm" 
+                            onClick={() => handleViewTeamMembers(team)}
+                          >
+                            View Members
+                          </button>
+                        </td>
                       </tr>
                     ))}
                   </tbody>
                 </table>
-              )}
-            </div>
-
-            {/* Students Section - Scrollable */}
-            <div className="team-section" style={{ marginTop: "20px" }}>
-              <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
-                <h3>Students ({getStudentsForClass(selectedClass.id).length})</h3>
-              </div>
-              {getStudentsForClass(selectedClass.id).length === 0 ? (
-                <p>No students in this class yet.</p>
-              ) : (
-                <div style={{
-                  maxHeight: "300px",
-                  overflowY: "auto",
-                  border: "1px solid #e0e0e0",
-                  borderRadius: "4px",
-                  marginTop: "10px"
-                }}>
-                  <table className="class-table">
-                    <thead>
-                      <tr>
-                        <th>Student ID</th>
-                        <th>Name</th>
-                        <th>Email</th>
-                        <th>Phone</th>
-                      </tr>
-                    </thead>
-                    <tbody>
-                      {getStudentsForClass(selectedClass.id).map((student) => (
-                        <tr key={student.id}>
-                          <td>{student.studentId}</td>
-                          <td>{student.firstName} {student.lastName}</td>
-                          <td>{student.email || "N/A"}</td>
-                          <td>{student.phoneNumber || "N/A"}</td>
-                        </tr>
-                      ))}
-                    </tbody>
-                  </table>
-                </div>
               )}
             </div>
 
@@ -302,6 +286,63 @@ const Teacher = () => {
 
             <div className="modal-actions" style={{ marginTop: "20px" }}>
               <button className="btn btn-secondary" onClick={() => setShowTeamsModal(false)}>
+                Close
+              </button>
+            </div>
+          </div>
+        </div>
+      ), document.body)}
+
+      {/* Team Members Modal */}
+      {showTeamMembersModal && selectedTeam && createPortal((
+        <div className="modal-overlay" onClick={() => setShowTeamMembersModal(false)}>
+          <div className="modal-content modal-large" onClick={(e) => e.stopPropagation()}>
+            <h2>Team Members: {selectedTeam.name}</h2>
+            
+            <div className="class-overview-panel">
+              <p><strong>Team:</strong> {selectedTeam.name}</p>
+              <p><strong>Description:</strong> {selectedTeam.description || "N/A"}</p>
+              <p><strong>Total Members:</strong> {selectedTeam.memberIds?.length || 0}</p>
+            </div>
+
+            <div className="team-section" style={{ marginTop: "24px" }}>
+              {getStudentsForTeam(selectedTeam).length === 0 ? (
+                <div style={{ padding: "20px", textAlign: "center", color: "#6c757d" }}>
+                  <p>No students assigned to this team yet.</p>
+                </div>
+              ) : (
+                <div style={{
+                  maxHeight: "400px",
+                  overflowY: "auto",
+                  border: "1px solid #e0e0e0",
+                  borderRadius: "4px"
+                }}>
+                  <table className="class-table">
+                    <thead>
+                      <tr>
+                        <th>Student ID</th>
+                        <th>Name</th>
+                        <th>Email</th>
+                        <th>Phone</th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {getStudentsForTeam(selectedTeam).map((student) => (
+                        <tr key={student.id}>
+                          <td>{student.studentId}</td>
+                          <td>{student.firstName} {student.lastName}</td>
+                          <td>{student.email || "N/A"}</td>
+                          <td>{student.phoneNumber || "N/A"}</td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                </div>
+              )}
+            </div>
+
+            <div className="modal-actions" style={{ marginTop: "20px" }}>
+              <button className="btn btn-secondary" onClick={() => setShowTeamMembersModal(false)}>
                 Close
               </button>
             </div>
