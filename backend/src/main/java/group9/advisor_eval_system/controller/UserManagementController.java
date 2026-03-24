@@ -5,6 +5,8 @@ import group9.advisor_eval_system.service.UserManagementService;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
+import org.springframework.security.core.Authentication;
+import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.web.bind.annotation.*;
 import org.springframework.web.multipart.MultipartFile;
 
@@ -49,7 +51,24 @@ public class UserManagementController {
         }
 
         try {
-            UserManagementService.UploadResult result = userManagementService.uploadStudentSheet(file);
+            // Get authenticated user
+            Authentication authentication = SecurityContextHolder.getContext().getAuthentication();
+            if (authentication == null || authentication.getPrincipal() == null) {
+                return ResponseEntity.status(HttpStatus.UNAUTHORIZED)
+                        .body(new MessageResponse("User not authenticated"));
+            }
+
+            Object principal = authentication.getPrincipal();
+            Long userId;
+            if (principal instanceof Long) {
+                userId = (Long) principal;
+            } else if (principal instanceof Integer) {
+                userId = ((Integer) principal).longValue();
+            } else {
+                userId = Long.parseLong(principal.toString());
+            }
+
+            UserManagementService.UploadResult result = userManagementService.uploadStudentSheet(file, userId);
             String message = "Added: " + result.getAdded()
                     + ", Updated: " + result.getUpdated()
                     + ", Skipped: " + result.getSkipped();

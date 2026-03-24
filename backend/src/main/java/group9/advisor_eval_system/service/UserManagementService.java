@@ -1,7 +1,11 @@
 package group9.advisor_eval_system.service;
 
 import group9.advisor_eval_system.entity.User;
+import group9.advisor_eval_system.entity.SchoolClass;
+import group9.advisor_eval_system.entity.Team;
 import group9.advisor_eval_system.repository.UserRepository;
+import group9.advisor_eval_system.repository.SchoolClassRepository;
+import group9.advisor_eval_system.repository.TeamRepository;
 import org.apache.poi.ss.usermodel.*;
 import org.apache.poi.xssf.usermodel.XSSFWorkbook;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -14,12 +18,19 @@ import java.io.InputStreamReader;
 import java.nio.charset.StandardCharsets;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Optional;
 
 @Service
 public class UserManagementService {
 
     @Autowired
     private UserRepository userRepository;
+
+    @Autowired
+    private SchoolClassRepository schoolClassRepository;
+
+    @Autowired
+    private TeamRepository teamRepository;
 
     public static class UploadResult {
         private int added;
@@ -211,7 +222,7 @@ public class UserManagementService {
      * Upload students from CSV/Excel file
      * Expected columns: CLASS, TEAMCODE, MEMBER#, STUDENTID, LASTNAME, FIRSTNAME, EMAIL, ADVISERID
      */
-    public UploadResult uploadStudentSheet(MultipartFile file) throws IOException {
+    public UploadResult uploadStudentSheet(MultipartFile file, Long teacherId) throws IOException {
         String filename = file.getOriginalFilename();
         List<String[]> rows;
 
@@ -223,6 +234,14 @@ public class UserManagementService {
 
         int added = 0, updated = 0, skipped = 0;
         List<String> errors = new ArrayList<>();
+
+        // Get or verify teacher exists
+        Optional<User> teacherOpt = userRepository.findById(teacherId);
+        if (!teacherOpt.isPresent()) {
+            errors.add("Teacher not found");
+            return new UploadResult(0, 0, rows.size(), errors);
+        }
+        User teacher = teacherOpt.get();
 
         for (int i = 0; i < rows.size(); i++) {
             String[] row = rows.get(i);
@@ -239,36 +258,111 @@ public class UserManagementService {
             String lastName = row[4].trim();
             String firstName = row[5].trim();
             String email = row[6].trim().toLowerCase();
-            String adviserId = row[7].trim();
+            String adviserIdStr = row[7].trim();
 
-            if (className.isEmpty() || studentId.isEmpty() || lastName.isEmpty() || firstName.isEmpty() || email.isEmpty() || adviserId.isEmpty()) {
+            if (className.isEmpty() || studentId.isEmpty() || lastName.isEmpty() || firstName.isEmpty() || email.isEmpty() || adviserIdStr.isEmpty()) {
                 errors.add("Row " + (i + 2) + ": CLASS, STUDENTID, LASTNAME, FIRSTNAME, EMAIL, and ADVISERID are required");
                 skipped++;
                 continue;
             }
 
-            if (userRepository.existsByEmail(email)) {
-                // Update existing student
-                User existing = userRepository.findByEmail(email).get();
-                existing.setFirstName(firstName);
-                existing.setLastName(lastName);
-                existing.setRole(User.UserRole.STUDENT);
-                userRepository.save(existing);
-                updated++;
-            } else {
-                // Create new student
-                User newStudent = new User();
-                newStudent.setEmail(email);
-                newStudent.setFirstName(firstName);
-                newStudent.setLastName(lastName);
-                newStudent.setRole(User.UserRole.STUDENT);
-                newStudent.setIsActive(true);
-                userRepository.save(newStudent);
-                added++;
+            // Validate adviser exists (by ID)
+            Long adviserId;
+            try {
+                adviserId = Long.parseLong(adviserIdStr);
+            } catch (NumberFormatException e) {
+                errors.add("Row " + (i + 2) + ": ADVISERID must be a number, got '" + adviserIdStr + "'");
+                skipped++;
+                continue;
+            }
+
+            Optional<User> adviserOpt = userRepository.findById(adviserId);
+            if (!adviserOpt.isPresent()) {
+                errors.add("Row " + (i + 2) + ": Adviser with ID " + adviserIdStr + " not found in system");
+                skipped++;
+                continue;
+            }
+            User adviser = adviserOpt.get();
+
+            try {
+                // Get or create class
+                SchoolClass schoolClass = getOrCreateClass(className, teacher);
+
+                // Get or create team
+                Team team = getOrCreateTeam(teamCode, schoolClass);
+
+                // Add adviser to team if not already assigned
+                if (!team.getAdvisers().contains(adviser)) {
+                    team.getAdvisers().add(adviser);
+                    teamRepository.save(team);
+                }
+
+                // Create or update student user
+                if (userRepository.existsByEmail(email)) {
+                    User existing = userRepository.findByEmail(email).get();
+                    existing.setFirstName(firstName);
+                    existing.setLastName(lastName);
+                    existing.setRole(User.UserRole.STUDENT);
+                    userRepository.save(existing);
+                    updated++;
+                } else {
+                    User newStudent = new User();
+                    newStudent.setEmail(email);
+                    newStudent.setFirstName(firstName);
+                    newStudent.setLastName(lastName);
+                    newStudent.setRole(User.UserRole.STUDENT);
+                    newStudent.setIsActive(true);
+                    userRepository.save(newStudent);
+                    added++;
+                }
+            } catch (Exception e) {
+                errors.add("Row " + (i + 2) + ": Error processing student: " + e.getMessage());
+                skipped++;
             }
         }
 
         return new UploadResult(added, updated, skipped, errors);
+    }
+
+    /**
+     * Get existing class or create new one
+     */
+    private SchoolClass getOrCreateClass(String className, User teacher) {
+        // Try to find class with this name and teacher
+        List<SchoolClass> classes = schoolClassRepository.findByTeacherId(teacher.getId());
+        for (SchoolClass c : classes) {
+            if (c.getName().equalsIgnoreCase(className)) {
+                return c;
+            }
+        }
+
+        // Create new class if not found
+        SchoolClass newClass = new SchoolClass();
+        newClass.setName(className);
+        newClass.setTeacher(teacher);
+        newClass.setSchoolYear("2024-2025"); // Default school year
+        newClass.setIsActive(true);
+        return schoolClassRepository.save(newClass);
+    }
+
+    /**
+     * Get existing team or create new one
+     */
+    private Team getOrCreateTeam(String teamCode, SchoolClass schoolClass) {
+        // Try to find team with this code in the class
+        List<Team> teams = teamRepository.findBySchoolClassId(schoolClass.getId());
+        for (Team t : teams) {
+            if (t.getName().equalsIgnoreCase(teamCode)) {
+                return t;
+            }
+        }
+
+        // Create new team if not found
+        Team newTeam = new Team();
+        newTeam.setName(teamCode);
+        newTeam.setSchoolClass(schoolClass);
+        newTeam.setIsActive(true);
+        return teamRepository.save(newTeam);
     }
 
     private List<String[]> parseCsv(MultipartFile file) throws IOException {
