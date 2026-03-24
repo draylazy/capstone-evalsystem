@@ -29,7 +29,11 @@ public class UserManagementController {
             userManagementService.deleteUser(id);
             return ResponseEntity.ok(new MessageResponse("User removed successfully"));
         } catch (RuntimeException e) {
-            return ResponseEntity.status(HttpStatus.NOT_FOUND).body(new MessageResponse(e.getMessage()));
+            String errorMsg = e.getMessage() != null ? e.getMessage() : "Unknown error occurred";
+            return ResponseEntity.status(HttpStatus.BAD_REQUEST).body(new MessageResponse(errorMsg));
+        } catch (Exception e) {
+            String errorMsg = e.getMessage() != null ? e.getMessage() : e.getClass().getSimpleName();
+            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body(new MessageResponse("Error: " + errorMsg));
         }
     }
 

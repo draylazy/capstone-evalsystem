@@ -3,14 +3,25 @@ package group9.advisor_eval_system.service;
 import group9.advisor_eval_system.entity.User;
 import group9.advisor_eval_system.entity.SchoolClass;
 import group9.advisor_eval_system.entity.Team;
+import group9.advisor_eval_system.entity.Evaluation;
+import group9.advisor_eval_system.entity.Questionnaire;
+import group9.advisor_eval_system.entity.Report;
 import group9.advisor_eval_system.repository.UserRepository;
 import group9.advisor_eval_system.repository.SchoolClassRepository;
 import group9.advisor_eval_system.repository.TeamRepository;
+import group9.advisor_eval_system.repository.EvaluationRepository;
+import group9.advisor_eval_system.repository.QuestionnaireRepository;
+import group9.advisor_eval_system.repository.ReportRepository;
 import org.apache.poi.ss.usermodel.*;
 import org.apache.poi.xssf.usermodel.XSSFWorkbook;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
 import org.springframework.web.multipart.MultipartFile;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+import jakarta.persistence.EntityManager;
+import jakarta.persistence.PersistenceContext;
 
 import java.io.BufferedReader;
 import java.io.IOException;
@@ -23,6 +34,11 @@ import java.util.Optional;
 @Service
 public class UserManagementService {
 
+    private static final Logger logger = LoggerFactory.getLogger(UserManagementService.class);
+
+    @PersistenceContext
+    private EntityManager entityManager;
+
     @Autowired
     private UserRepository userRepository;
 
@@ -31,6 +47,15 @@ public class UserManagementService {
 
     @Autowired
     private TeamRepository teamRepository;
+
+    @Autowired
+    private EvaluationRepository evaluationRepository;
+
+    @Autowired
+    private QuestionnaireRepository questionnaireRepository;
+
+    @Autowired
+    private ReportRepository reportRepository;
 
     public static class UploadResult {
         private int added;
@@ -55,10 +80,103 @@ public class UserManagementService {
         return userRepository.findAll();
     }
 
+    @Transactional
     public void deleteUser(Long id) {
-        User user = userRepository.findById(id)
-                .orElseThrow(() -> new RuntimeException("User not found"));
-        userRepository.delete(user);
+        try {
+            User user = userRepository.findById(id)
+                    .orElseThrow(() -> new RuntimeException("User not found"));
+            
+            User.UserRole role = user.getRole();
+
+            if (role == User.UserRole.ADVISER) {
+                // Delete evaluation scores for evaluations by this adviser
+                entityManager.createNativeQuery("DELETE FROM evaluation_scores WHERE evaluation_id IN (SELECT id FROM evaluations WHERE adviser_id = ?1)")
+                        .setParameter(1, id)
+                        .executeUpdate();
+                
+                // Delete evaluations conducted by this adviser
+                entityManager.createNativeQuery("DELETE FROM evaluations WHERE adviser_id = ?1")
+                        .setParameter(1, id)
+                        .executeUpdate();
+                
+                // Remove adviser from teams
+                entityManager.createNativeQuery("DELETE FROM team_advisers WHERE adviser_id = ?1")
+                        .setParameter(1, id)
+                        .executeUpdate();
+            }
+            
+            if (role == User.UserRole.TEACHER) {
+                // Get all classes for this teacher
+                List<Long> classIds = entityManager
+                    .createNativeQuery("SELECT id FROM classes WHERE teacher_id = ?1", Long.class)
+                    .setParameter(1, id)
+                    .getResultList();
+                
+                if (!classIds.isEmpty()) {
+                    String classIdList = classIds.stream().map(String::valueOf).reduce((a, b) -> a + "," + b).orElse("");
+                    
+                    // Delete evaluation_scores for teams in these classes
+                    entityManager.createNativeQuery(
+                        "DELETE FROM evaluation_scores WHERE evaluation_id IN (SELECT id FROM evaluations WHERE team_id IN (SELECT id FROM teams WHERE class_id IN (" + classIdList + ")))")
+                        .executeUpdate();
+                    
+                    // Delete evaluations for teams in these classes
+                    entityManager.createNativeQuery(
+                        "DELETE FROM evaluations WHERE team_id IN (SELECT id FROM teams WHERE class_id IN (" + classIdList + "))")
+                        .executeUpdate();
+                    
+                    // Delete questionnaire assignments for teams in these classes
+                    entityManager.createNativeQuery(
+                        "DELETE FROM team_questionnaires WHERE team_id IN (SELECT id FROM teams WHERE class_id IN (" + classIdList + "))")
+                        .executeUpdate();
+                    
+                    // Delete teams in these classes
+                    entityManager.createNativeQuery(
+                        "DELETE FROM teams WHERE class_id IN (" + classIdList + ")")
+                        .executeUpdate();
+                }
+                
+                // Delete questionnaire items
+                entityManager.createNativeQuery("DELETE FROM questionnaire_items WHERE questionnaire_id IN (SELECT id FROM questionnaires WHERE created_by_teacher_id = ?1)")
+                        .setParameter(1, id)
+                        .executeUpdate();
+                
+                // Delete class questionnaire assignments
+                entityManager.createNativeQuery("DELETE FROM class_questionnaires WHERE questionnaire_id IN (SELECT id FROM questionnaires WHERE created_by_teacher_id = ?1)")
+                        .setParameter(1, id)
+                        .executeUpdate();
+                
+                // Delete team questionnaire assignments
+                entityManager.createNativeQuery("DELETE FROM team_questionnaires WHERE questionnaire_id IN (SELECT id FROM questionnaires WHERE created_by_teacher_id = ?1)")
+                        .setParameter(1, id)
+                        .executeUpdate();
+                
+                // Delete questionnaires created by this teacher
+                entityManager.createNativeQuery("DELETE FROM questionnaires WHERE created_by_teacher_id = ?1")
+                        .setParameter(1, id)
+                        .executeUpdate();
+                
+                // Delete classes
+                entityManager.createNativeQuery("DELETE FROM classes WHERE teacher_id = ?1")
+                        .setParameter(1, id)
+                        .executeUpdate();
+            }
+            
+            // Delete reports generated by this user
+            entityManager.createNativeQuery("DELETE FROM reports WHERE generated_by = ?1")
+                    .setParameter(1, id)
+                    .executeUpdate();
+            
+            // Finally, delete the user
+            entityManager.createNativeQuery("DELETE FROM users WHERE id = ?1")
+                    .setParameter(1, id)
+                    .executeUpdate();
+            
+        } catch (Exception e) {
+            logger.error("Error deleting user with ID: " + id, e);
+            String errorMsg = e.getMessage() != null ? e.getMessage() : e.getClass().getSimpleName();
+            throw new RuntimeException("Failed to delete user: " + errorMsg, e);
+        }
     }
 
     /**
