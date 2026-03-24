@@ -16,20 +16,11 @@ const Classes = () => {
   const [error, setError] = useState(null);
   
   // Modal states
-  const [showCreateModal, setShowCreateModal] = useState(false);
   const [showManageModal, setShowManageModal] = useState(false);
   const [selectedClass, setSelectedClass] = useState(null);
   const [classStudents, setClassStudents] = useState([]);
   const [classTeams, setClassTeams] = useState([]);
   const [classQuestionnairesList, setClassQuestionnairesList] = useState([]);
-  
-  // Form states
-  const [newClass, setNewClass] = useState({
-    name: "",
-    section: "",
-    schoolYear: "",
-    description: ""
-  });
   
   // Confirm modal states
   const [confirmModal, setConfirmModal] = useState({
@@ -107,33 +98,6 @@ const Classes = () => {
     }
   };
 
-  const handleCreateClass = async (e) => {
-    e.preventDefault();
-    try {
-      toast.info("Creating class...");
-      
-      // Get the logged-in teacher's ID from localStorage
-      const user = JSON.parse(localStorage.getItem('user'));
-      const classData = {
-        ...newClass,
-        teacherId: user?.id
-      };
-      
-      await classAPI.createClass(classData);
-      setShowCreateModal(false);
-      setNewClass({
-        name: "",
-        section: "",
-        schoolYear: "",
-        description: ""
-      });
-      loadClasses();
-      toast.success("Class created successfully!");
-    } catch (err) {
-      toast.error("Failed to create class: " + err.message);
-    }
-  };
-
   const handleDeleteClass = (classId) => {
     setConfirmModal({
       isOpen: true,
@@ -191,14 +155,11 @@ const Classes = () => {
         {error && <div className="error-message">{error}</div>}
 
         <div className="section">
-          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '20px' }}>
-            <h2>Your Classes</h2>
-            <button className="btn" onClick={() => setShowCreateModal(true)}>Create New Class</button>
-          </div>
+          <h2>Your Classes</h2>
           {loading ? (
             <p>Loading classes...</p>
           ) : classes.length === 0 ? (
-            <p>No classes found. Create your first class to get started.</p>
+            <p>No classes found. Classes are created when you import students.</p>
           ) : (
             <table className="class-table">
               <thead>
@@ -256,63 +217,6 @@ const Classes = () => {
           )}
         </div>
       </div>
-
-      {/* Create Class Modal */}
-      {showCreateModal && createPortal((
-        <div className="modal-overlay" onClick={() => setShowCreateModal(false)}>
-          <div className="modal-content" onClick={(e) => e.stopPropagation()}>
-            <h2>Create New Class</h2>
-            <form onSubmit={handleCreateClass}>
-              <div className="form-group">
-                <label>Class Name *</label>
-                <input
-                  type="text"
-                  value={newClass.name}
-                  onChange={(e) => setNewClass({ ...newClass, name: e.target.value })}
-                  placeholder="e.g., IT 3310"
-                  required
-                />
-              </div>
-              <div className="form-group">
-                <label>Section</label>
-                <input
-                  type="text"
-                  value={newClass.section}
-                  onChange={(e) => setNewClass({ ...newClass, section: e.target.value })}
-                  placeholder="e.g., A"
-                />
-              </div>
-              <div className="form-group">
-                <label>School Year *</label>
-                <input
-                  type="text"
-                  value={newClass.schoolYear}
-                  onChange={(e) => setNewClass({ ...newClass, schoolYear: e.target.value })}
-                  placeholder="e.g., 2024-2025"
-                  required
-                />
-              </div>
-              <div className="form-group">
-                <label>Description</label>
-                <textarea
-                  value={newClass.description}
-                  onChange={(e) => setNewClass({ ...newClass, description: e.target.value })}
-                  placeholder="Class description..."
-                  rows="3"
-                />
-              </div>
-              <div className="modal-actions">
-                <button type="button" className="btn btn-secondary" onClick={() => setShowCreateModal(false)}>
-                  Cancel
-                </button>
-                <button type="submit" className="btn btn-primary">
-                  Create Class
-                </button>
-              </div>
-            </form>
-          </div>
-        </div>
-      ), document.body)}
 
       {/* Manage Class Modal */}
       {showManageModal && selectedClass && createPortal((

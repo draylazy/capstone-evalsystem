@@ -19,16 +19,8 @@ const Teams = () => {
     message: "",
     onConfirm: null
   });
-  const [showCreateModal, setShowCreateModal] = useState(false);
   const [showManageModal, setShowManageModal] = useState(false);
   const [selectedTeam, setSelectedTeam] = useState(null);
-  
-  const [newTeam, setNewTeam] = useState({
-    name: "",
-    description: "",
-    classId: "",
-    isActive: true
-  });
 
   useEffect(() => {
     const loadInitialData = async () => {
@@ -105,38 +97,6 @@ const Teams = () => {
       setAdvisers(adviserList);
     } catch (err) {
       toast.error("Failed to load advisers");
-    }
-  };
-
-  const handleCreateTeam = async (e) => {
-    e.preventDefault();
-    if (!newTeam.classId) {
-      toast.warning("Please select a class");
-      return;
-    }
-    try {
-      const teamData = {
-        name: newTeam.name,
-        description: newTeam.description,
-        classId: parseInt(newTeam.classId),
-        memberIds: [],
-        adviserIds: [],
-        isActive: newTeam.isActive
-      };
-      
-      toast.info("Creating team...");
-      await teamAPI.createTeam(teamData);
-      setShowCreateModal(false);
-      setNewTeam({
-        name: "",
-        description: "",
-        classId: "",
-        isActive: true
-      });
-      loadTeams();
-      toast.success("Team created successfully!");
-    } catch (err) {
-      toast.error("Failed to create team: " + err.message);
     }
   };
 
@@ -256,14 +216,11 @@ const Teams = () => {
         {error && <div className="error-message">{error}</div>}
 
         <div className="section">
-          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '20px' }}>
-            <h2>Your Teams</h2>
-            <button className="btn" onClick={() => setShowCreateModal(true)}>Create New Team</button>
-          </div>
+          <h2>Your Teams</h2>
           {loading ? (
             <p>Loading teams...</p>
           ) : teams.length === 0 ? (
-            <p>No teams found. Create your first team to get started.</p>
+            <p>No teams found. Teams are created when you import students.</p>
           ) : (
             <table className="class-table">
               <thead>
@@ -305,61 +262,6 @@ const Teams = () => {
           )}
         </div>
       </div>
-
-      {/* Create Team Modal */}
-      {showCreateModal && (
-        <div className="modal-overlay" onClick={() => setShowCreateModal(false)}>
-          <div className="modal-content" onClick={(e) => e.stopPropagation()}>
-            <h2>Create New Team</h2>
-            <form onSubmit={handleCreateTeam}>
-              <div className="form-group">
-                <label>Team Name *</label>
-                <input
-                  type="text"
-                  value={newTeam.name}
-                  onChange={(e) => setNewTeam({ ...newTeam, name: e.target.value })}
-                  placeholder="e.g., Alpha Team"
-                  required
-                />
-              </div>
-              <div className="form-group">
-                <label>Class * (Cannot be changed later)</label>
-                <select
-                  value={newTeam.classId}
-                  onChange={(e) => setNewTeam({ ...newTeam, classId: e.target.value })}
-                  required
-                >
-                  <option value="">Select a class</option>
-                  {classes.map((cls) => (
-                    <option key={cls.id} value={cls.id}>
-                      {cls.name} {cls.section ? `- ${cls.section}` : ''} ({cls.schoolYear})
-                    </option>
-                  ))}
-                </select>
-              </div>
-              <div className="form-group">
-                <label>Description</label>
-                <textarea
-                  value={newTeam.description}
-                  onChange={(e) => setNewTeam({ ...newTeam, description: e.target.value })}
-                  placeholder="Brief description of the team"
-                  rows="3"
-                />
-              </div>
-              <div className="modal-actions">
-                <button type="submit" className="btn btn-primary">Create Team</button>
-                <button 
-                  type="button" 
-                  className="btn btn-secondary" 
-                  onClick={() => setShowCreateModal(false)}
-                >
-                  Cancel
-                </button>
-              </div>
-            </form>
-          </div>
-        </div>
-      )}
 
       {/* Manage Team Modal */}
       {showManageModal && selectedTeam && (
