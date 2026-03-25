@@ -14,8 +14,8 @@ function UserManagement() {
   const [uploadFile, setUploadFile] = useState(null);
   const [uploading, setUploading] = useState(false);
   const [uploadError, setUploadError] = useState('');
-  const [showStudentModal, setShowStudentModal] = useState(false);
-  const [showAdviserModal, setShowAdviserModal] = useState(false);
+  const [showImportModal, setShowImportModal] = useState(false);
+  const [importType, setImportType] = useState('STUDENT'); // 'STUDENT' or 'ADVISER'
   const [filterRole, setFilterRole] = useState('ALL');
 
   useEffect(() => {
@@ -45,7 +45,7 @@ function UserManagement() {
     }
   };
 
-  const handleStudentUpload = async (e) => {
+  const handleImport = async (e) => {
     e.preventDefault();
     if (!uploadFile) { setUploadError('Please select a file'); return; }
     setUploading(true);
@@ -53,33 +53,16 @@ function UserManagement() {
     try {
       const formData = new FormData();
       formData.append('file', uploadFile);
-      const res = await userManagementAPI.uploadStudentSheet(formData);
-      toast.success(res.message || 'Student upload successful');
-      setShowStudentModal(false);
+      const res = importType === 'STUDENT' 
+        ? await userManagementAPI.uploadStudentSheet(formData)
+        : await userManagementAPI.uploadAdviserSheet(formData);
+      toast.success(res.message || `${importType === 'STUDENT' ? 'Student' : 'Adviser'} import successful`);
+      setShowImportModal(false);
       setUploadFile(null);
+      setImportType('STUDENT');
       fetchUsers();
     } catch (err) {
-      setUploadError('Upload failed: ' + err.message);
-    } finally {
-      setUploading(false);
-    }
-  };
-
-  const handleAdviserUpload = async (e) => {
-    e.preventDefault();
-    if (!uploadFile) { setUploadError('Please select a file'); return; }
-    setUploading(true);
-    setUploadError('');
-    try {
-      const formData = new FormData();
-      formData.append('file', uploadFile);
-      const res = await userManagementAPI.uploadAdviserSheet(formData);
-      toast.success(res.message || 'Adviser upload successful');
-      setShowAdviserModal(false);
-      setUploadFile(null);
-      fetchUsers();
-    } catch (err) {
-      setUploadError('Upload failed: ' + err.message);
+      setUploadError('Import failed: ' + err.message);
     } finally {
       setUploading(false);
     }
@@ -125,11 +108,17 @@ function UserManagement() {
                 <option value="ADVISER">Advisers</option>
                 <option value="STUDENT">Students</option>
               </select>
-              <button className="btn" onClick={() => setShowStudentModal(true)}>
-                Upload Students
-              </button>
-              <button className="btn" onClick={() => setShowAdviserModal(true)}>
-                Upload Advisers
+              <button 
+                className="btn"
+                onClick={() => { setImportType('STUDENT'); setShowImportModal(true); }}
+                title="Import Users"
+                style={{ padding: '10px 12px', display: 'inline-flex', alignItems: 'center', justifyContent: 'center' }}
+              >
+                <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                  <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path>
+                  <polyline points="17 8 12 3 7 8"></polyline>
+                  <line x1="12" y1="3" x2="12" y2="15"></line>
+                </svg>
               </button>
             </div>
           </div>
@@ -188,82 +177,68 @@ function UserManagement() {
         </div>
       </div>
 
-      {/* Student Upload Modal */}
-      {showStudentModal && createPortal((
-        <div className="modal-overlay" onClick={() => setShowStudentModal(false)}>
-          <div className="modal-content" onClick={(e) => e.stopPropagation()}>
-            <h2>Upload Student Data Sheet</h2>
-            {uploadError && <div className="error-message">{uploadError}</div>}
-            <p style={{ fontSize: '13px', color: '#555', marginBottom: '12px' }}>
-              Upload an Excel (.xlsx / .xls) or CSV file. First row is the header, columns must be (in order):
-            </p>
-            <table className="class-table" style={{ marginBottom: '16px' }}>
-              <thead>
-                <tr><th>CLASS</th><th>TEAMCODE</th><th>MEMBER#</th><th>STUDENTID</th><th>LASTNAME</th><th>FIRSTNAME</th><th>EMAIL</th><th>ADVISERID</th></tr>
-              </thead>
-              <tbody>
-                <tr><td>2B</td><td>T001</td><td>1</td><td>202301</td><td>Doe</td><td>John</td><td>john.doe@cit.edu</td><td>ADV001</td></tr>
-                <tr><td>2B</td><td>T001</td><td>2</td><td>202302</td><td>Smith</td><td>Jane</td><td>jane.smith@cit.edu</td><td>ADV001</td></tr>
-              </tbody>
-            </table>
-            <p style={{ fontSize: '12px', color: '#888', marginBottom: '16px' }}>
-              Required: <strong>CLASS, TEAMCODE, MEMBER#, STUDENTID, LASTNAME, FIRSTNAME, EMAIL, ADVISERID</strong>
-            </p>
-            <form onSubmit={handleStudentUpload}>
-              <div className="form-group">
-                <label>Select File (.xlsx, .xls, or .csv) *</label>
-                <input
-                  type="file"
-                  accept=".xlsx,.xls,.csv"
-                  onChange={(e) => { setUploadFile(e.target.files[0]); setUploadError(''); }}
-                  required
-                />
-                {uploadFile && (
-                  <p style={{ fontSize: '12px', color: '#28a745', marginTop: '6px' }}>
-                    Selected: {uploadFile.name}
-                  </p>
-                )}
-              </div>
-              <div className="modal-actions">
+      {/* Import Modal */}
+      {showImportModal && createPortal((
+        <div className="modal-overlay" onClick={() => { setShowImportModal(false); setUploadFile(null); setUploadError(''); }}>
+          <div className="modal-content" style={{ width: '95%', maxWidth: '900px' }} onClick={(e) => e.stopPropagation()}>
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '20px' }}>
+              <h2 style={{ margin: 0 }}>Import Data</h2>
+              <div style={{ display: 'flex', gap: '8px' }}>
                 <button
-                  type="button"
-                  className="btn-secondary"
-                  onClick={() => { setShowStudentModal(false); setUploadFile(null); setUploadError(''); }}
-                  disabled={uploading}
+                  className={importType === 'STUDENT' ? 'btn' : 'btn-secondary'}
+                  style={{ padding: '8px 16px', fontSize: '12px' }}
+                  onClick={() => { setImportType('STUDENT'); setUploadFile(null); setUploadError(''); }}
                 >
-                  Cancel
+                  Students
                 </button>
-                <button type="submit" className="btn" disabled={uploading}>
-                  {uploading ? 'Uploading...' : 'Upload & Save'}
+                <button
+                  className={importType === 'ADVISER' ? 'btn' : 'btn-secondary'}
+                  style={{ padding: '8px 16px', fontSize: '12px' }}
+                  onClick={() => { setImportType('ADVISER'); setUploadFile(null); setUploadError(''); }}
+                >
+                  Advisers
                 </button>
               </div>
-            </form>
-          </div>
-        </div>
-      ), document.body)}
+            </div>
 
-      {/* Adviser Upload Modal */}
-      {showAdviserModal && createPortal((
-        <div className="modal-overlay" onClick={() => setShowAdviserModal(false)}>
-          <div className="modal-content" onClick={(e) => e.stopPropagation()}>
-            <h2>Upload Adviser Data Sheet</h2>
             {uploadError && <div className="error-message">{uploadError}</div>}
             <p style={{ fontSize: '13px', color: '#555', marginBottom: '12px' }}>
               Upload an Excel (.xlsx / .xls) or CSV file. First row is the header, columns must be (in order):
             </p>
-            <table className="class-table" style={{ marginBottom: '16px' }}>
-              <thead>
-                <tr><th>ADVISERID</th><th>LASTNAME</th><th>FIRSTNAME</th><th>EMAIL</th></tr>
-              </thead>
-              <tbody>
-                <tr><td>ADV001</td><td>Johnson</td><td>Robert</td><td>robert.johnson@cit.edu</td></tr>
-                <tr><td>ADV002</td><td>Williams</td><td>Sarah</td><td>sarah.williams@cit.edu</td></tr>
-              </tbody>
-            </table>
-            <p style={{ fontSize: '12px', color: '#888', marginBottom: '16px' }}>
-              Required: <strong>ADVISERID, LASTNAME, FIRSTNAME, EMAIL</strong>
-            </p>
-            <form onSubmit={handleAdviserUpload}>
+
+            {importType === 'STUDENT' ? (
+              <>
+                <table className="class-table" style={{ marginBottom: '16px' }}>
+                  <thead>
+                    <tr><th>CLASS</th><th>TEAMCODE</th><th>MEMBER#</th><th>STUDENTID</th><th>LASTNAME</th><th>FIRSTNAME</th><th>EMAIL</th><th>ADVISERID</th></tr>
+                  </thead>
+                  <tbody>
+                    <tr><td>2B</td><td>T001</td><td>1</td><td>202301</td><td>Doe</td><td>John</td><td>john.doe@cit.edu</td><td>ADV001</td></tr>
+                    <tr><td>2B</td><td>T001</td><td>2</td><td>202302</td><td>Smith</td><td>Jane</td><td>jane.smith@cit.edu</td><td>ADV001</td></tr>
+                  </tbody>
+                </table>
+                <p style={{ fontSize: '12px', color: '#888', marginBottom: '16px' }}>
+                  Required: <strong>CLASS, TEAMCODE, MEMBER#, STUDENTID, LASTNAME, FIRSTNAME, EMAIL, ADVISERID</strong>
+                </p>
+              </>
+            ) : (
+              <>
+                <table className="class-table" style={{ marginBottom: '16px' }}>
+                  <thead>
+                    <tr><th>ADVISERID</th><th>LASTNAME</th><th>FIRSTNAME</th><th>EMAIL</th></tr>
+                  </thead>
+                  <tbody>
+                    <tr><td>ADV001</td><td>Johnson</td><td>Robert</td><td>robert.johnson@cit.edu</td></tr>
+                    <tr><td>ADV002</td><td>Williams</td><td>Sarah</td><td>sarah.williams@cit.edu</td></tr>
+                  </tbody>
+                </table>
+                <p style={{ fontSize: '12px', color: '#888', marginBottom: '16px' }}>
+                  Required: <strong>ADVISERID, LASTNAME, FIRSTNAME, EMAIL</strong>
+                </p>
+              </>
+            )}
+
+            <form onSubmit={handleImport}>
               <div className="form-group">
                 <label>Select File (.xlsx, .xls, or .csv) *</label>
                 <input
@@ -282,13 +257,13 @@ function UserManagement() {
                 <button
                   type="button"
                   className="btn-secondary"
-                  onClick={() => { setShowAdviserModal(false); setUploadFile(null); setUploadError(''); }}
+                  onClick={() => { setShowImportModal(false); setUploadFile(null); setUploadError(''); }}
                   disabled={uploading}
                 >
                   Cancel
                 </button>
                 <button type="submit" className="btn" disabled={uploading}>
-                  {uploading ? 'Uploading...' : 'Upload & Save'}
+                  {uploading ? 'Importing...' : 'Import & Save'}
                 </button>
               </div>
             </form>
