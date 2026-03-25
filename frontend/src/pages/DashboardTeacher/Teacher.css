@@ -212,6 +212,48 @@
     transform: translateY(0) scale(0.98);
   }
 
+  /* FILTER SELECT */
+  .filter-select {
+    padding: 10px 20px;
+    font-size: 13px;
+    border-radius: 10px;
+    border: 1px solid rgba(242, 201, 76, 0.15);
+    background: linear-gradient(135deg, rgba(138, 21, 31, 0.6), rgba(138, 21, 31, 0.35));
+    cursor: pointer;
+    font-weight: 500;
+    color: var(--dtm-text);
+    transition: all 0.3s ease;
+    appearance: none;
+    min-height: 40px;
+    display: inline-flex;
+    align-items: center;
+    white-space: nowrap;
+    padding-right: 32px;
+    background-image: linear-gradient(135deg, rgba(138, 21, 31, 0.6), rgba(138, 21, 31, 0.35)), url("data:image/svg+xml;charset=UTF-8,%3csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='%23f5f0eb' stroke-width='2'%3e%3cpolyline points='6 9 12 15 18 9'%3e%3c/polyline%3e%3c/svg%3e");
+    background-repeat: no-repeat, no-repeat;
+    background-position: 0 0, right 8px center;
+    background-size: 100% 100%, 18px;
+  }
+
+  .filter-select:hover {
+    background: linear-gradient(135deg, rgba(138, 21, 31, 0.8), rgba(138, 21, 31, 0.5)), url("data:image/svg+xml;charset=UTF-8,%3csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='%23f5f0eb' stroke-width='2'%3e%3cpolyline points='6 9 12 15 18 9'%3e%3c/polyline%3e%3c/svg%3e");
+    background-repeat: no-repeat, no-repeat;
+    background-position: 0 0, right 8px center;
+    background-size: 100% 100%, 18px;
+    border-color: rgba(242, 201, 76, 0.35);
+    box-shadow: 0 4px 20px rgba(138, 21, 31, 0.3), 0 0 12px rgba(242, 201, 76, 0.08);
+    transform: translateY(-1px);
+  }
+
+  .filter-select:active {
+    transform: translateY(0) scale(0.98);
+  }
+
+  .filter-select option {
+    background: #3b252b;
+    color: var(--dtm-text);
+  }
+
   /* MODAL */
   .modal-overlay {
     position: fixed;

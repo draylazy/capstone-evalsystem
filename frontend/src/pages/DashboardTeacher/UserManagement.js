@@ -115,16 +115,16 @@ function UserManagement() {
           <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '16px' }}>
             <h2>System Users</h2>
             <div style={{ display: 'flex', gap: '8px', alignItems: 'center' }}>
-              {['ALL', 'TEACHER', 'ADVISER', 'STUDENT'].map(role => (
-                <button
-                  key={role}
-                  className={filterRole === role ? 'btn' : 'btn-secondary'}
-                  style={{ padding: '6px 12px', fontSize: '12px' }}
-                  onClick={() => setFilterRole(role)}
-                >
-                  {role}
-                </button>
-              ))}
+              <select
+                className="filter-select"
+                value={filterRole}
+                onChange={(e) => setFilterRole(e.target.value)}
+              >
+                <option value="ALL">All Roles</option>
+                <option value="TEACHER">Teachers</option>
+                <option value="ADVISER">Advisers</option>
+                <option value="STUDENT">Students</option>
+              </select>
               <button className="btn" onClick={() => setShowStudentModal(true)}>
                 Upload Students
               </button>
