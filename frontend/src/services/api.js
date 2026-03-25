@@ -881,6 +881,18 @@ export const userManagementAPI = {
     }
     return await response.json();
   },
+
+  getExportData: async (type) => {
+    const response = await fetch(`${API_BASE_URL}/user-management/export?type=${encodeURIComponent(type)}`, {
+      method: 'GET',
+      headers: getHeaders(),
+    });
+    if (!response.ok) {
+      const err = await response.json().catch(() => null);
+      throw new Error(err?.message || 'Failed to fetch export data');
+    }
+    return await response.json();
+  },
 };
 
 export default {

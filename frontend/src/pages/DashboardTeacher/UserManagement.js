@@ -16,6 +16,7 @@ function UserManagement() {
   const [uploadError, setUploadError] = useState('');
   const [showImportModal, setShowImportModal] = useState(false);
   const [importType, setImportType] = useState('STUDENT'); // 'STUDENT' or 'ADVISER'
+  const [showExportModal, setShowExportModal] = useState(false);
   const [filterRole, setFilterRole] = useState('ALL');
 
   useEffect(() => {
@@ -68,6 +69,63 @@ function UserManagement() {
     }
   };
 
+  const downloadTemplate = () => {
+    const headers = importType === 'STUDENT'
+      ? ['CLASS', 'TEAMCODE', 'MEMBER#', 'STUDENTID', 'LASTNAME', 'FIRSTNAME', 'EMAIL', 'ADVISOREMAIL']
+      : ['LASTNAME', 'FIRSTNAME', 'EMAIL', 'ADVISOREMAIL'];
+    
+    const sampleData = importType === 'STUDENT'
+      ? [['2B', 'T001', '1', '202301', 'Doe', 'John', 'john.doe@cit.edu', 'adviser.one@cit.edu']]
+      : [['Johnson', 'Robert', 'robert.johnson@cit.edu', 'robert.johnson@cit.edu']];
+
+    const csvContent = [
+      headers.join(','),
+      ...sampleData.map(row => row.join(','))
+    ].join('\n');
+
+    const blob = new Blob([csvContent], { type: 'text/csv' });
+    const url = window.URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = `${importType === 'STUDENT' ? 'students' : 'advisers'}_template.csv`;
+    document.body.appendChild(a);
+    a.click();
+    window.URL.revokeObjectURL(url);
+    document.body.removeChild(a);
+    setShowExportModal(false);
+    toast.success('Template downloaded successfully');
+  };
+
+  const exportData = async () => {
+    const headers = importType === 'STUDENT'
+      ? ['CLASS', 'TEAMCODE', 'MEMBER#', 'STUDENTID', 'LASTNAME', 'FIRSTNAME', 'EMAIL', 'ADVISOREMAIL']
+      : ['LASTNAME', 'FIRSTNAME', 'EMAIL', 'ADVISOREMAIL'];
+
+    try {
+      const exportRows = await userManagementAPI.getExportData(importType);
+      const rows = exportRows.map((row) => headers.map((header) => row[header] || ''));
+
+      const csvContent = [
+        headers.join(','),
+        ...rows.map(row => row.map(cell => `"${cell || ''}"`).join(','))
+      ].join('\n');
+
+      const blob = new Blob([csvContent], { type: 'text/csv' });
+      const url = window.URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = `${importType === 'STUDENT' ? 'students' : 'advisers'}_export_${new Date().toISOString().split('T')[0]}.csv`;
+      document.body.appendChild(a);
+      a.click();
+      window.URL.revokeObjectURL(url);
+      document.body.removeChild(a);
+      setShowExportModal(false);
+      toast.success('Data exported successfully');
+    } catch (err) {
+      toast.error('Export failed: ' + err.message);
+    }
+  };
+
   const filtered = filterRole === 'ALL'
     ? users
     : users.filter(u => u.role === filterRole);
@@ -112,6 +170,18 @@ function UserManagement() {
                 className="btn"
                 onClick={() => { setImportType('STUDENT'); setShowImportModal(true); }}
                 title="Import Users"
+                style={{ padding: '10px 12px', display: 'inline-flex', alignItems: 'center', justifyContent: 'center' }}
+              >
+                <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                  <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path>
+                  <polyline points="7 10 12 15 17 10"></polyline>
+                  <line x1="12" y1="15" x2="12" y2="3"></line>
+                </svg>
+              </button>
+              <button 
+                className="btn"
+                onClick={() => setShowExportModal(true)}
+                title="Export Users"
                 style={{ padding: '10px 12px', display: 'inline-flex', alignItems: 'center', justifyContent: 'center' }}
               >
                 <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
@@ -210,30 +280,30 @@ function UserManagement() {
               <>
                 <table className="class-table" style={{ marginBottom: '16px' }}>
                   <thead>
-                    <tr><th>CLASS</th><th>TEAMCODE</th><th>MEMBER#</th><th>STUDENTID</th><th>LASTNAME</th><th>FIRSTNAME</th><th>EMAIL</th><th>ADVISERID</th></tr>
+                    <tr><th>CLASS</th><th>TEAMCODE</th><th>MEMBER#</th><th>STUDENTID</th><th>LASTNAME</th><th>FIRSTNAME</th><th>EMAIL</th><th>ADVISOREMAIL</th></tr>
                   </thead>
                   <tbody>
-                    <tr><td>2B</td><td>T001</td><td>1</td><td>202301</td><td>Doe</td><td>John</td><td>john.doe@cit.edu</td><td>ADV001</td></tr>
-                    <tr><td>2B</td><td>T001</td><td>2</td><td>202302</td><td>Smith</td><td>Jane</td><td>jane.smith@cit.edu</td><td>ADV001</td></tr>
+                    <tr><td>2B</td><td>T001</td><td>1</td><td>202301</td><td>Doe</td><td>John</td><td>john.doe@cit.edu</td><td>adviser.one@cit.edu</td></tr>
+                    <tr><td>2B</td><td>T001</td><td>2</td><td>202302</td><td>Smith</td><td>Jane</td><td>jane.smith@cit.edu</td><td>adviser.one@cit.edu</td></tr>
                   </tbody>
                 </table>
                 <p style={{ fontSize: '12px', color: '#888', marginBottom: '16px' }}>
-                  Required: <strong>CLASS, TEAMCODE, MEMBER#, STUDENTID, LASTNAME, FIRSTNAME, EMAIL, ADVISERID</strong>
+                  Required: <strong>CLASS, TEAMCODE, MEMBER#, STUDENTID, LASTNAME, FIRSTNAME, EMAIL, ADVISOREMAIL</strong>
                 </p>
               </>
             ) : (
               <>
                 <table className="class-table" style={{ marginBottom: '16px' }}>
                   <thead>
-                    <tr><th>ADVISERID</th><th>LASTNAME</th><th>FIRSTNAME</th><th>EMAIL</th></tr>
+                    <tr><th>LASTNAME</th><th>FIRSTNAME</th><th>EMAIL</th></tr>
                   </thead>
                   <tbody>
-                    <tr><td>ADV001</td><td>Johnson</td><td>Robert</td><td>robert.johnson@cit.edu</td></tr>
-                    <tr><td>ADV002</td><td>Williams</td><td>Sarah</td><td>sarah.williams@cit.edu</td></tr>
+                    <tr><td>Johnson</td><td>Robert</td><td>robert.johnson@cit.edu</td></tr>
+                    <tr><td>Williams</td><td>Sarah</td><td>sarah.williams@cit.edu</td></tr>
                   </tbody>
                 </table>
                 <p style={{ fontSize: '12px', color: '#888', marginBottom: '16px' }}>
-                  Required: <strong>ADVISERID, LASTNAME, FIRSTNAME, EMAIL</strong>
+                  Required: <strong>LASTNAME, FIRSTNAME, EMAIL</strong>
                 </p>
               </>
             )}
@@ -267,6 +337,86 @@ function UserManagement() {
                 </button>
               </div>
             </form>
+          </div>
+        </div>
+      ), document.body)}
+
+      {/* Export Modal */}
+      {showExportModal && createPortal((
+        <div className="modal-overlay" onClick={() => setShowExportModal(false)}>
+          <div className="modal-content" onClick={(e) => e.stopPropagation()}>
+            <h2>Export Data</h2>
+            <p style={{ fontSize: '13px', color: '#555', marginBottom: '24px' }}>
+              Choose what you'd like to export:
+            </p>
+
+            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '16px', marginBottom: '24px' }}>
+              <div 
+                style={{
+                  padding: '20px',
+                  border: '1px solid rgba(138, 21, 31, 0.3)',
+                  borderRadius: '10px',
+                  cursor: 'pointer',
+                  transition: 'all 0.3s ease',
+                  backgroundColor: 'rgba(138, 21, 31, 0.1)'
+                }}
+                onClick={downloadTemplate}
+                onMouseEnter={(e) => {
+                  e.currentTarget.style.borderColor = 'rgba(138, 21, 31, 0.6)';
+                  e.currentTarget.style.backgroundColor = 'rgba(138, 21, 31, 0.2)';
+                }}
+                onMouseLeave={(e) => {
+                  e.currentTarget.style.borderColor = 'rgba(138, 21, 31, 0.3)';
+                  e.currentTarget.style.backgroundColor = 'rgba(138, 21, 31, 0.1)';
+                }}
+              >
+                <div style={{ fontSize: '20px', marginBottom: '8px' }}>📋</div>
+                <h3 style={{ margin: '0 0 8px 0', color: '#f5f0eb', fontSize: '14px', fontWeight: '600' }}>
+                  Template
+                </h3>
+                <p style={{ margin: '0', fontSize: '12px', color: '#a09890' }}>
+                  Download blank template with headers for {importType === 'STUDENT' ? 'students' : 'advisers'}
+                </p>
+              </div>
+
+              <div 
+                style={{
+                  padding: '20px',
+                  border: '1px solid rgba(138, 21, 31, 0.3)',
+                  borderRadius: '10px',
+                  cursor: 'pointer',
+                  transition: 'all 0.3s ease',
+                  backgroundColor: 'rgba(138, 21, 31, 0.1)'
+                }}
+                onClick={exportData}
+                onMouseEnter={(e) => {
+                  e.currentTarget.style.borderColor = 'rgba(138, 21, 31, 0.6)';
+                  e.currentTarget.style.backgroundColor = 'rgba(138, 21, 31, 0.2)';
+                }}
+                onMouseLeave={(e) => {
+                  e.currentTarget.style.borderColor = 'rgba(138, 21, 31, 0.3)';
+                  e.currentTarget.style.backgroundColor = 'rgba(138, 21, 31, 0.1)';
+                }}
+              >
+                <div style={{ fontSize: '20px', marginBottom: '8px' }}>📊</div>
+                <h3 style={{ margin: '0 0 8px 0', color: '#f5f0eb', fontSize: '14px', fontWeight: '600' }}>
+                  Data
+                </h3>
+                <p style={{ margin: '0', fontSize: '12px', color: '#a09890' }}>
+                  Export current {importType === 'STUDENT' ? 'students' : 'advisers'} data
+                </p>
+              </div>
+            </div>
+
+            <div style={{ display: 'flex', gap: '8px', justifyContent: 'flex-end' }}>
+              <button
+                className="btn-secondary"
+                onClick={() => setShowExportModal(false)}
+                style={{ padding: '10px 20px' }}
+              >
+                Cancel
+              </button>
+            </div>
           </div>
         </div>
       ), document.body)}

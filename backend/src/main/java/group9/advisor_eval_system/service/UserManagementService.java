@@ -32,7 +32,9 @@ import java.io.IOException;
 import java.io.InputStreamReader;
 import java.nio.charset.StandardCharsets;
 import java.util.ArrayList;
+import java.util.LinkedHashMap;
 import java.util.List;
+import java.util.Map;
 import java.util.Optional;
 
 @Service
@@ -88,6 +90,73 @@ public class UserManagementService {
 
     public List<User> getAllUsers() {
         return userRepository.findAll();
+    }
+
+    public List<Map<String, String>> getExportRows(String type) {
+        String normalizedType = type == null ? "STUDENT" : type.trim().toUpperCase();
+        if ("ADVISER".equals(normalizedType)) {
+            return getAdviserExportRows();
+        }
+        return getStudentExportRows();
+    }
+
+    private List<Map<String, String>> getStudentExportRows() {
+        List<Map<String, String>> rows = new ArrayList<>();
+        List<Student> students = studentRepository.findAll();
+
+        for (Student student : students) {
+            Map<String, String> row = new LinkedHashMap<>();
+
+            String className = "";
+            if (student.getClasses() != null && !student.getClasses().isEmpty()) {
+                className = student.getClasses().get(0).getName() == null ? "" : student.getClasses().get(0).getName();
+            }
+
+            String teamCode = "";
+            String memberNumber = "";
+            String adviserEmail = "";
+            List<TeamStudent> memberships = teamStudentRepository.findByStudentId(student.getId());
+            if (!memberships.isEmpty()) {
+                TeamStudent membership = memberships.get(0);
+                if (membership.getTeam() != null) {
+                    Team team = membership.getTeam();
+                    teamCode = team.getName() == null ? "" : team.getName();
+                    if (team.getAdvisers() != null && !team.getAdvisers().isEmpty()) {
+                        User adviser = team.getAdvisers().get(0);
+                        adviserEmail = adviser.getEmail() == null ? "" : adviser.getEmail();
+                    }
+                }
+                memberNumber = membership.getPosition() == null ? "" : String.valueOf(membership.getPosition());
+            }
+
+            row.put("CLASS", className);
+            row.put("TEAMCODE", teamCode);
+            row.put("MEMBER#", memberNumber);
+            row.put("STUDENTID", student.getStudentId() == null ? "" : student.getStudentId());
+            row.put("LASTNAME", student.getLastName() == null ? "" : student.getLastName());
+            row.put("FIRSTNAME", student.getFirstName() == null ? "" : student.getFirstName());
+            row.put("EMAIL", student.getEmail() == null ? "" : student.getEmail());
+            row.put("ADVISOREMAIL", adviserEmail);
+            rows.add(row);
+        }
+
+        return rows;
+    }
+
+    private List<Map<String, String>> getAdviserExportRows() {
+        List<Map<String, String>> rows = new ArrayList<>();
+        List<User> advisers = userRepository.findByRole(User.UserRole.ADVISER);
+
+        for (User adviser : advisers) {
+            Map<String, String> row = new LinkedHashMap<>();
+            row.put("LASTNAME", adviser.getLastName() == null ? "" : adviser.getLastName());
+            row.put("FIRSTNAME", adviser.getFirstName() == null ? "" : adviser.getFirstName());
+            row.put("EMAIL", adviser.getEmail() == null ? "" : adviser.getEmail());
+            row.put("ADVISOREMAIL", adviser.getEmail() == null ? "" : adviser.getEmail());
+            rows.add(row);
+        }
+
+        return rows;
     }
 
     @Transactional

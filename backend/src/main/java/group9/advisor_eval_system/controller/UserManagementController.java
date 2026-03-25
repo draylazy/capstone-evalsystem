@@ -10,6 +10,7 @@ import org.springframework.web.multipart.MultipartFile;
 
 import java.io.IOException;
 import java.util.List;
+import java.util.Map;
 
 @RestController
 @RequestMapping("/api/user-management")
@@ -21,6 +22,12 @@ public class UserManagementController {
     @GetMapping("/users")
     public ResponseEntity<List<User>> getUsers() {
         return ResponseEntity.ok(userManagementService.getAllUsers());
+    }
+
+    @GetMapping("/export")
+    public ResponseEntity<List<Map<String, String>>> getExportData(
+            @RequestParam(name = "type", defaultValue = "STUDENT") String type) {
+        return ResponseEntity.ok(userManagementService.getExportRows(type));
     }
 
     @DeleteMapping("/users/{id}")
