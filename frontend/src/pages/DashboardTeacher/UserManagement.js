@@ -273,7 +273,7 @@ function UserManagement() {
 
             {uploadError && <div className="error-message">{uploadError}</div>}
             <p style={{ fontSize: '13px', color: '#555', marginBottom: '12px' }}>
-              Upload an Excel (.xlsx / .xls) or CSV file. First row is the header, columns must be (in order):
+              Upload an Excel (.xlsx / .xls) or CSV file. First row must be the header; columns are matched by header name and do not need to be in a fixed order:
             </p>
 
             {importType === 'STUDENT' ? (
