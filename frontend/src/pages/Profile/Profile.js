@@ -201,8 +201,6 @@ const Profile = () => {
                 </div>
               )}
 
-              {googleStatus.message && <p className="info-text">{googleStatus.message}</p>}
-
               {!googleStatus.isLinked ? (
                 <button className="btn-link-google" onClick={startGoogleLink} disabled={googleStatus.loading}>
                   Link Google Account
