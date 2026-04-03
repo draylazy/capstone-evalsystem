@@ -37,6 +37,12 @@ public class QuestionnaireItem {
     @Column(columnDefinition = "TEXT")
     private String choices; // JSON string storing multiple choice options
     
+    @Column(nullable = true, length = 1000)
+    private String correctAnswer; // Correct answer for auto-grading
+    
+    @Column(nullable = true)
+    private Integer pointsValue = 1; // Points for correct answer (default 1)
+    
     // Relationships
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "questionnaire_id", nullable = false)

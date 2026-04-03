@@ -24,6 +24,8 @@ public class QuestionnaireResponse {
     private String googleFormId;
     private String googleFormUrl;
     private Boolean isActive;
+    private Boolean isLocked;
+    private LocalDateTime lockedAt;
     private Long createdByTeacherId;
     private String createdByTeacherName;
     private List<Long> assignedClassIds;
@@ -40,6 +42,8 @@ public class QuestionnaireResponse {
         response.setGoogleFormId(questionnaire.getGoogleFormId());
         response.setGoogleFormUrl(questionnaire.getGoogleFormUrl());
         response.setIsActive(questionnaire.getIsActive());
+        response.setIsLocked(questionnaire.getIsLocked() != null && questionnaire.getIsLocked());
+        response.setLockedAt(questionnaire.getLockedAt());
         
         if (questionnaire.getCreatedByTeacher() != null) {
             response.setCreatedByTeacherId(questionnaire.getCreatedByTeacher().getId());

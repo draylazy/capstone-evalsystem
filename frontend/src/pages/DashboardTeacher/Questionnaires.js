@@ -36,7 +36,9 @@ const Questionnaires = () => {
     minScore: 1,
     maxScore: 5,
     choices: [],
-    orderIndex: 0
+    orderIndex: 0,
+    correctAnswer: "",
+    pointsValue: 1
   });
 
   const [selectedClasses, setSelectedClasses] = useState([]);
@@ -231,7 +233,9 @@ const Questionnaires = () => {
       minScore: 1,
       maxScore: 5,
       choices: [],
-      orderIndex: 0
+      orderIndex: 0,
+      correctAnswer: "",
+      pointsValue: 1
     });
   };
 
@@ -309,6 +313,15 @@ const Questionnaires = () => {
                       >
                         {q.isActive ? 'Active' : 'Inactive'}
                       </button>
+                      {q.isLocked && (
+                        <div style={{ marginTop: '5px' }}>
+                          <span className="status-badge" style={{ backgroundColor: '#e74c3c', color: 'white' }}>
+                            🔒 Locked
+                          </span>
+                          <br />
+                          <small style={{ color: '#7f8c8d' }}>Cannot edit - has responses</small>
+                        </div>
+                      )}
                     </td>
                     <td>
                       <div className="action-buttons">
@@ -321,13 +334,16 @@ const Questionnaires = () => {
                         <button 
                           className="btn btn-sm btn-assign" 
                           onClick={() => openAssignModal(q)}
-                          title="Assign to classes"
+                          disabled={q.isLocked}
+                          title={q.isLocked ? "Cannot assign - questionnaire is locked" : "Assign to classes"}
                         >
                           Assign
                         </button>
                         <button 
                           className="btn btn-sm btn-danger" 
                           onClick={() => handleDeleteQuestionnaire(q.id)}
+                          disabled={q.isLocked}
+                          title={q.isLocked ? "Cannot delete - questionnaire is locked" : "Delete"}
                         >
                           Delete
                         </button>
@@ -389,6 +405,11 @@ const Questionnaires = () => {
                           {q.questionType === 'MULTIPLE_CHOICE' && q.choices && q.choices.length > 0 && (
                             <div style={{ marginTop: '5px' }}>
                               <small>Choices: {q.choices.join(', ')}</small>
+                            </div>
+                          )}
+                          {q.correctAnswer && (
+                            <div style={{ marginTop: '5px', color: '#27ae60' }}>
+                              <small>✓ Correct Answer: <strong>{q.correctAnswer}</strong> | Points: <strong>{q.pointsValue || 1}</strong></small>
                             </div>
                           )}
                         </div>
@@ -504,6 +525,33 @@ const Questionnaires = () => {
                         </small>
                       </div>
                     )}
+
+                    <div className="form-group" style={{ marginTop: '12px', borderTop: '1px solid #ddd', paddingTop: '12px' }}>
+                      <h4 style={{ marginBottom: '10px' }}>Quiz Settings (Optional)</h4>
+                      <label>Correct Answer</label>
+                      <input
+                        type="text"
+                        placeholder="Enter correct answer (or leave blank for non-graded questions)"
+                        value={newQuestion.correctAnswer}
+                        onChange={(e) => setNewQuestion({ ...newQuestion, correctAnswer: e.target.value })}
+                      />
+                      <small style={{ display: 'block', marginTop: '5px', color: '#7f8c8d' }}>
+                        For SHORT ANSWER: exact answer text. For MULTIPLE CHOICE: choice letter or text. For NUMERIC: the number.
+                      </small>
+                    </div>
+
+                    <div className="form-group">
+                      <label>Points for Correct Answer</label>
+                      <input
+                        type="number"
+                        min="1"
+                        value={newQuestion.pointsValue}
+                        onChange={(e) => setNewQuestion({ ...newQuestion, pointsValue: parseInt(e.target.value) || 1 })}
+                      />
+                      <small style={{ display: 'block', marginTop: '5px', color: '#7f8c8d' }}>
+                        Points awarded when answer is correct (default: 1)
+                      </small>
+                    </div>
 
                     <button type="button" onClick={handleAddQuestion} className="btn" style={{ marginTop: '12px' }}>
                       + Add Question

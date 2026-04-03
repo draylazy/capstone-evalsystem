@@ -37,6 +37,9 @@ public class CreateQuestionnaireRequest {
         private Integer minScore;
         private List<String> choices; // Array of choices for multiple choice questions
         
+        private String correctAnswer; // Correct answer for auto-grading
+        private Integer pointsValue; // Points for correct answer (default 1)
+        
         public QuestionnaireItem toEntity() {
             QuestionnaireItem item = new QuestionnaireItem();
             item.setQuestionText(this.questionText);
@@ -44,6 +47,8 @@ public class CreateQuestionnaireRequest {
             item.setQuestionType(QuestionnaireItem.QuestionType.valueOf(this.questionType));
             item.setMaxScore(this.maxScore);
             item.setMinScore(this.minScore);
+            item.setCorrectAnswer(this.correctAnswer);
+            item.setPointsValue(this.pointsValue != null ? this.pointsValue : 1);
             
             // Convert choices array to JSON string
             if (this.choices != null && !this.choices.isEmpty()) {
