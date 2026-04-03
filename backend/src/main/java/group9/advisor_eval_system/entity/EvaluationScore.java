@@ -26,6 +26,12 @@ public class EvaluationScore {
     @Column(length = 2000)
     private String textResponse;
     
+    @Column(nullable = true)
+    private Boolean isCorrect; // Whether the answer was correct
+    
+    @Column(nullable = true)
+    private Integer pointsAwarded; // Points earned for this question
+    
     @CreationTimestamp
     @Column(updatable = false)
     private LocalDateTime createdAt;

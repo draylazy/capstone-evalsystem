@@ -71,16 +71,22 @@ const Evaluations = () => {
                     <td>{q.title}</td>
                     <td>{q.description}</td>
                     <td>
-                      <button
-                        className="btn"
-                        onClick={() =>
-                          navigate(
-                            `/adviser/evaluate/${teamId}/${q.id}`
-                          )
-                        }
-                      >
-                        Evaluate
-                      </button>
+                      {!q.isLocked ? (
+                        <button
+                          className="btn"
+                          onClick={() =>
+                            navigate(
+                              `/adviser/evaluate/${teamId}/${q.id}`
+                            )
+                          }
+                        >
+                          Evaluate
+                        </button>
+                      ) : (
+                        <div style={{ color: '#e74c3c', fontWeight: 'bold' }}>
+                          🔒 Locked
+                        </div>
+                      )}
                     </td>
                   </tr>
                 ))}
