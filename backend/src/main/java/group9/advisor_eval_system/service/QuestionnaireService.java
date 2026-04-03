@@ -71,6 +71,7 @@ public class QuestionnaireService {
     /**
      * Get all questionnaires created by a teacher
      */
+    @Transactional(readOnly = true)
     public List<Questionnaire> getQuestionnairesByTeacher(Long teacherId) {
         User teacher = userRepository.findById(teacherId)
                 .orElseThrow(() -> new RuntimeException("Teacher not found"));
@@ -85,9 +86,17 @@ public class QuestionnaireService {
     /**
      * Get questionnaire by ID
      */
+    @Transactional(readOnly = true)
     public Questionnaire getQuestionnaireById(Long questionnaireId) {
-        return questionnaireRepository.findById(questionnaireId)
+        Questionnaire questionnaire = questionnaireRepository.findById(questionnaireId)
                 .orElseThrow(() -> new RuntimeException("Questionnaire not found"));
+        
+        // Eagerly initialize items to avoid LazyInitializationException
+        if (questionnaire.getItems() != null) {
+            questionnaire.getItems().size();
+        }
+        
+        return questionnaire;
     }
 
     /**
@@ -147,6 +156,7 @@ public class QuestionnaireService {
     /**
      * Get questionnaires available to an adviser through their assigned teams
      */
+    @Transactional(readOnly = true)
     public List<Questionnaire> getQuestionnairesForAdviser(Long adviserId) {
         User adviser = userRepository.findById(adviserId)
                 .orElseThrow(() -> new RuntimeException("Adviser not found"));
@@ -178,6 +188,7 @@ public class QuestionnaireService {
     /**
      * Get questionnaires for a specific class
      */
+    @Transactional(readOnly = true)
     public List<Questionnaire> getQuestionnairesByClass(Long classId) {
         SchoolClass schoolClass = schoolClassRepository.findById(classId)
                 .orElseThrow(() -> new RuntimeException("Class not found"));

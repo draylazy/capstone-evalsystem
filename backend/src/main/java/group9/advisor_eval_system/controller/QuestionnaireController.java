@@ -122,7 +122,7 @@ public class QuestionnaireController {
             getUserFromAuthentication(authentication);
 
             Questionnaire questionnaire = questionnaireService.getQuestionnaireById(id);
-            return ResponseEntity.ok(QuestionnaireResponse.fromEntity(questionnaire));
+            return ResponseEntity.ok(QuestionnaireResponse.fromEntityWithItems(questionnaire));
 
         } catch (Exception e) {
             log.error("Error fetching questionnaire", e);

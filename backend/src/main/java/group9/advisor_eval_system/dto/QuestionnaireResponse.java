@@ -79,6 +79,24 @@ public class QuestionnaireResponse {
         response.setQuestionCount(0);
         
         // Map questionnaire items to DTOs for edit modal
+        // Items are only populated for single questionnaire fetch (edit modal)
+        // For list view, items will be empty to avoid LazyInitializationException
+        response.setItems(new ArrayList<>());
+        
+        response.setCreatedAt(questionnaire.getCreatedAt());
+        response.setUpdatedAt(questionnaire.getUpdatedAt());
+        
+        return response;
+    }
+    
+    /**
+     * Create a response with items populated for single questionnaire detail view
+     * Only call this when questionnaire items are eagerly loaded
+     */
+    public static QuestionnaireResponse fromEntityWithItems(Questionnaire questionnaire) {
+        QuestionnaireResponse response = fromEntity(questionnaire);
+        
+        // Only populate items if they're already loaded
         try {
             if (questionnaire.getItems() != null && !questionnaire.getItems().isEmpty()) {
                 response.setItems(
@@ -86,15 +104,11 @@ public class QuestionnaireResponse {
                         .map(QuestionnaireItemDto::fromEntity)
                         .collect(Collectors.toList())
                 );
-            } else {
-                response.setItems(new ArrayList<>());
             }
         } catch (Exception e) {
+            // If lazy loading fails or items don't exist, keep empty list
             response.setItems(new ArrayList<>());
         }
-        
-        response.setCreatedAt(questionnaire.getCreatedAt());
-        response.setUpdatedAt(questionnaire.getUpdatedAt());
         
         return response;
     }
