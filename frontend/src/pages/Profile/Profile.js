@@ -157,35 +157,6 @@ const Profile = () => {
     }
   };
 
-  const unlinkGoogle = async () => {
-    const token = getToken();
-    if (!token) {
-      toast.error('You are not authenticated. Please log in again.');
-      return;
-    }
-
-    try {
-      setGoogleStatus((prev) => ({ ...prev, loading: true }));
-      const res = await fetch(`${API_BASE_URL}/api/google-auth/unlink`, {
-        method: 'DELETE',
-        headers: {
-          Authorization: `Bearer ${token}`,
-        },
-      });
-
-      const data = await res.json().catch(() => null);
-      if (!res.ok) {
-        throw new Error(data?.message || `Failed to unlink Google account (HTTP ${res.status})`);
-      }
-
-      toast.success('Google account unlinked');
-      await fetchGoogleLinkStatus();
-    } catch (e) {
-      setGoogleStatus((prev) => ({ ...prev, loading: false }));
-      toast.error(e.message || 'Failed to unlink Google account');
-    }
-  };
-
   if (loading) {
     return <div className="profile-container">Loading...</div>;
   }
@@ -215,33 +186,14 @@ const Profile = () => {
               <label>Role:</label>
               <span>{user?.role}</span>
             </div>
-            {user?.department && (
-              <div className="info-row">
-                <label>Department:</label>
-                <span>{user.department}</span>
-              </div>
-            )}
-            {user?.phoneNumber && (
-              <div className="info-row">
-                <label>Phone:</label>
-                <span>{user.phoneNumber}</span>
-              </div>
-            )}
           </div>
         </div>
 
         {user?.role === 'TEACHER' && (
           <div className="profile-section google-section">
             <h2>Google Account</h2>
-            <p className="section-description">
-              Link your Google account to create questionnaires (Google Forms).
-            </p>
 
             <div className="google-link-status">
-              <div className={`status-badge ${googleStatus.isLinked ? 'linked' : 'not-linked'}`}>
-                {googleStatus.isLinked ? 'Linked' : 'Not linked'}
-              </div>
-
               {googleStatus.googleEmail && (
                 <div className="linked-email">
                   <label>Google email</label>
@@ -249,17 +201,11 @@ const Profile = () => {
                 </div>
               )}
 
-              {googleStatus.message && <p className="info-text">{googleStatus.message}</p>}
-
               {!googleStatus.isLinked ? (
                 <button className="btn-link-google" onClick={startGoogleLink} disabled={googleStatus.loading}>
                   Link Google Account
                 </button>
-              ) : (
-                <button className="btn-unlink" onClick={unlinkGoogle} disabled={googleStatus.loading}>
-                  Unlink Google Account
-                </button>
-              )}
+              ) : null}
             </div>
           </div>
         )}

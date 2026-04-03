@@ -79,7 +79,7 @@ public class QuestionnaireService {
             throw new RuntimeException("Only teachers can access questionnaires");
         }
 
-        return questionnaireRepository.findByCreatedByTeacherIdAndIsActiveTrue(teacherId);
+        return questionnaireRepository.findByCreatedByTeacherId(teacherId);
     }
 
     /**
@@ -186,6 +186,20 @@ public class QuestionnaireService {
     }
 
     /**
+     * Get questionnaires for a specific class for teachers (includes inactive)
+     */
+    public List<Questionnaire> getQuestionnairesByClassForTeacher(Long classId, Long teacherId) {
+        SchoolClass schoolClass = schoolClassRepository.findById(classId)
+                .orElseThrow(() -> new RuntimeException("Class not found"));
+
+        if (!schoolClass.getTeacher().getId().equals(teacherId)) {
+            throw new RuntimeException("You can only view questionnaires for your own classes");
+        }
+
+        return questionnaireRepository.findByAssignedClassesContaining(schoolClass);
+    }
+
+    /**
      * Soft delete questionnaire
      */
     @Transactional
@@ -217,6 +231,11 @@ public class QuestionnaireService {
             throw new RuntimeException("You can only update your own questionnaires");
         }
 
+        // Check if questionnaire is locked (has responses)
+        if (questionnaire.getIsLocked() != null && questionnaire.getIsLocked()) {
+            throw new RuntimeException("Cannot edit locked questionnaire. It has been answered by advisers.");
+        }
+
         if (title != null && !title.isEmpty()) {
             questionnaire.setTitle(title);
         }
@@ -228,6 +247,92 @@ public class QuestionnaireService {
 
         log.info("Updated questionnaire {}", questionnaireId);
 
+        return saved;
+    }
+
+    /**
+     * Update questionnaire items (questions with correct answers and points)
+     */
+    @Transactional
+    public QuestionnaireItem updateQuestionnaireItem(Long questionnaireId, Long itemId, 
+            String questionText, String correctAnswer, Integer pointsValue, Long teacherId) {
+        Questionnaire questionnaire = questionnaireRepository.findById(questionnaireId)
+                .orElseThrow(() -> new RuntimeException("Questionnaire not found"));
+
+        // Verify teacher owns this questionnaire
+        if (!questionnaire.getCreatedByTeacher().getId().equals(teacherId)) {
+            throw new RuntimeException("You can only update your own questionnaires");
+        }
+
+        // Check if questionnaire is locked
+        if (questionnaire.getIsLocked() != null && questionnaire.getIsLocked()) {
+            throw new RuntimeException("Cannot edit locked questionnaire. It has been answered by advisers.");
+        }
+
+        QuestionnaireItem item = questionnaireItemRepository.findById(itemId)
+                .orElseThrow(() -> new RuntimeException("Question not found"));
+
+        if (!item.getQuestionnaire().getId().equals(questionnaireId)) {
+            throw new RuntimeException("Question does not belong to this questionnaire");
+        }
+
+        if (questionText != null && !questionText.isEmpty()) {
+            item.setQuestionText(questionText);
+        }
+        if (correctAnswer != null) {
+            item.setCorrectAnswer(correctAnswer);
+        }
+        if (pointsValue != null && pointsValue > 0) {
+            item.setPointsValue(pointsValue);
+        }
+
+        QuestionnaireItem saved = questionnaireItemRepository.save(item);
+        log.info("Updated questionnaire item {} with correct answer and points", itemId);
+
+        return saved;
+    }
+
+    /**
+     * Check if questionnaire is locked
+     */
+    public Boolean isQuestionnaireLocked(Long questionnaireId) {
+        Questionnaire questionnaire = questionnaireRepository.findById(questionnaireId)
+                .orElseThrow(() -> new RuntimeException("Questionnaire not found"));
+        return questionnaire.getIsLocked() != null && questionnaire.getIsLocked();
+    }
+
+    /**
+     * Lock questionnaire (called when first evaluation is submitted)
+     */
+    @Transactional
+    public void lockQuestionnaire(Long questionnaireId) {
+        Questionnaire questionnaire = questionnaireRepository.findById(questionnaireId)
+                .orElseThrow(() -> new RuntimeException("Questionnaire not found"));
+
+        if (!questionnaire.getIsLocked()) {
+            questionnaire.setIsLocked(true);
+            questionnaire.setLockedAt(java.time.LocalDateTime.now());
+            questionnaireRepository.save(questionnaire);
+            log.info("Locked questionnaire {} at {}", questionnaireId, questionnaire.getLockedAt());
+        }
+    }
+
+    /**
+     * Activate/deactivate questionnaire without changing assignments
+     */
+    @Transactional
+    public Questionnaire updateQuestionnaireStatus(Long questionnaireId, Boolean isActive, Long teacherId) {
+        Questionnaire questionnaire = questionnaireRepository.findById(questionnaireId)
+                .orElseThrow(() -> new RuntimeException("Questionnaire not found"));
+
+        if (!questionnaire.getCreatedByTeacher().getId().equals(teacherId)) {
+            throw new RuntimeException("You can only update your own questionnaires");
+        }
+
+        questionnaire.setIsActive(isActive);
+        Questionnaire saved = questionnaireRepository.save(questionnaire);
+
+        log.info("Updated questionnaire {} status to {}", questionnaireId, isActive);
         return saved;
     }
 }

@@ -18,6 +18,8 @@ public interface QuestionnaireRepository extends JpaRepository<Questionnaire, Lo
     
     List<Questionnaire> findByIsActiveTrue();
     
+    List<Questionnaire> findByCreatedByTeacherId(Long teacherId);
+
     List<Questionnaire> findByCreatedByTeacherIdAndIsActiveTrue(Long teacherId);
     
     @Query("SELECT q FROM Questionnaire q JOIN q.assignedClasses c WHERE c.id IN :classIds AND q.isActive = true")
@@ -25,6 +27,9 @@ public interface QuestionnaireRepository extends JpaRepository<Questionnaire, Lo
     
     @Query("SELECT q FROM Questionnaire q JOIN q.assignedClasses c WHERE c = :schoolClass AND q.isActive = true")
     List<Questionnaire> findByAssignedClassesContainingAndIsActiveTrue(@Param("schoolClass") SchoolClass schoolClass);
+
+    @Query("SELECT q FROM Questionnaire q JOIN q.assignedClasses c WHERE c = :schoolClass")
+    List<Questionnaire> findByAssignedClassesContaining(@Param("schoolClass") SchoolClass schoolClass);
     
     @Query("SELECT DISTINCT q FROM Questionnaire q LEFT JOIN FETCH q.items WHERE q.id = :id")
     Optional<Questionnaire> findByIdWithItems(@Param("id") Long id);

@@ -1,5 +1,6 @@
 package group9.advisor_eval_system.dto;
 
+import jakarta.validation.constraints.NotNull;
 import lombok.AllArgsConstructor;
 import lombok.Data;
 import lombok.NoArgsConstructor;
@@ -7,9 +8,8 @@ import lombok.NoArgsConstructor;
 @Data
 @NoArgsConstructor
 @AllArgsConstructor
-public class ImportStudentDTO {
-    private String studentId;
-    private String firstName;
-    private String lastName;
-    private String email;
+public class UpdateQuestionnaireStatusRequest {
+
+    @NotNull(message = "isActive is required")
+    private Boolean isActive;
 }

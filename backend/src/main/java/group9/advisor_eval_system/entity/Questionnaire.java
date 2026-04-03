@@ -39,6 +39,12 @@ public class Questionnaire {
     @Column(nullable = false)
     private Boolean isActive = true;
     
+    @Column(nullable = false)
+    private Boolean isLocked = false; // Lock after first evaluation submission
+    
+    @Column(nullable = true)
+    private LocalDateTime lockedAt; // When questionnaire was locked
+    
     @CreationTimestamp
     @Column(updatable = false)
     private LocalDateTime createdAt;

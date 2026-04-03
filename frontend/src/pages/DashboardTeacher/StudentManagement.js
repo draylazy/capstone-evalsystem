@@ -29,7 +29,6 @@ const StudentManagement = () => {
     firstName: '',
     lastName: '',
     email: '',
-    phoneNumber: '',
     classIds: []
   });
 
@@ -210,14 +209,13 @@ const StudentManagement = () => {
                   <th>Last Name</th>
                   <th>Class</th>
                   <th>Email</th>
-                  <th>Phone Number</th>
                   <th>Actions</th>
                 </tr>
               </thead>
               <tbody>
                 {students.length === 0 ? (
                   <tr>
-                    <td colSpan="7" style={{ textAlign: 'center' }}>No students found</td>
+                    <td colSpan="6" style={{ textAlign: 'center' }}>No students found</td>
                   </tr>
                 ) : (
                   students.map((student) => (
@@ -235,7 +233,6 @@ const StudentManagement = () => {
                         }
                       </td>
                       <td>{student.email || 'N/A'}</td>
-                      <td>{student.phoneNumber || 'N/A'}</td>
                       <td>
                         <div className="action-buttons">
                         <button className="btn btn-sm" onClick={() => handleEdit(student)}>
@@ -319,16 +316,6 @@ const StudentManagement = () => {
                     value={currentStudent.email}
                     onChange={handleInputChange}
                     placeholder="student@example.com"
-                  />
-                </div>
-                <div className="form-group">
-                  <label>Phone Number</label>
-                  <input
-                    type="tel"
-                    name="phoneNumber"
-                    value={currentStudent.phoneNumber}
-                    onChange={handleInputChange}
-                    placeholder="+1234567890"
                   />
                 </div>
                 <div style={{ display: 'flex', gap: '10px', marginTop: '20px' }}>

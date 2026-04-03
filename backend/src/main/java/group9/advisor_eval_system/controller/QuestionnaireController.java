@@ -3,6 +3,7 @@ package group9.advisor_eval_system.controller;
 import group9.advisor_eval_system.dto.AssignQuestionnaireRequest;
 import group9.advisor_eval_system.dto.CreateQuestionnaireRequest;
 import group9.advisor_eval_system.dto.QuestionnaireResponse;
+import group9.advisor_eval_system.dto.UpdateQuestionnaireStatusRequest;
 import group9.advisor_eval_system.entity.Questionnaire;
 import group9.advisor_eval_system.entity.QuestionnaireItem;
 import group9.advisor_eval_system.entity.User;
@@ -161,6 +162,40 @@ public class QuestionnaireController {
     }
 
     /**
+     * Get questionnaires for a specific class for teachers (includes inactive)
+     */
+    @GetMapping("/class/{classId}/teacher")
+    public ResponseEntity<?> getQuestionnairesByClassForTeacher(
+            @PathVariable Long classId,
+            Authentication authentication) {
+        try {
+            User user = getUserFromAuthentication(authentication);
+
+            if (user.getRole() != User.UserRole.TEACHER) {
+                return ResponseEntity.status(HttpStatus.FORBIDDEN)
+                        .body(new ErrorResponse("Only teachers can access this endpoint"));
+            }
+
+            List<Questionnaire> questionnaires = questionnaireService.getQuestionnairesByClassForTeacher(classId, user.getId());
+            List<QuestionnaireResponse> responses = questionnaires.stream()
+                    .map(q -> {
+                        QuestionnaireResponse response = QuestionnaireResponse.fromEntity(q);
+                        long count = questionnaireItemRepository.countByQuestionnaireId(q.getId());
+                        response.setQuestionCount((int) count);
+                        return response;
+                    })
+                    .collect(Collectors.toList());
+
+            return ResponseEntity.ok(responses);
+
+        } catch (Exception e) {
+            log.error("Error fetching questionnaires for teacher class", e);
+            return ResponseEntity.status(HttpStatus.BAD_REQUEST)
+                    .body(new ErrorResponse(e.getMessage()));
+        }
+    }
+
+    /**
      * Assign questionnaire to classes (Teacher only)
      */
     @PostMapping("/{id}/assign")
@@ -215,6 +250,36 @@ public class QuestionnaireController {
 
         } catch (Exception e) {
             log.error("Error removing questionnaire from classes", e);
+            return ResponseEntity.status(HttpStatus.BAD_REQUEST)
+                    .body(new ErrorResponse(e.getMessage()));
+        }
+    }
+
+    /**
+     * Activate/deactivate questionnaire (Teacher only)
+     */
+    @PutMapping("/{id}/status")
+    public ResponseEntity<?> updateQuestionnaireStatus(
+            @PathVariable Long id,
+            @Valid @RequestBody UpdateQuestionnaireStatusRequest request,
+            Authentication authentication) {
+        try {
+            User user = getUserFromAuthentication(authentication);
+
+            if (user.getRole() != User.UserRole.TEACHER) {
+                return ResponseEntity.status(HttpStatus.FORBIDDEN)
+                        .body(new ErrorResponse("Only teachers can update questionnaire status"));
+            }
+
+            Questionnaire questionnaire = questionnaireService.updateQuestionnaireStatus(
+                    id,
+                    request.getIsActive(),
+                    user.getId());
+
+            return ResponseEntity.ok(QuestionnaireResponse.fromEntity(questionnaire));
+
+        } catch (Exception e) {
+            log.error("Error updating questionnaire status", e);
             return ResponseEntity.status(HttpStatus.BAD_REQUEST)
                     .body(new ErrorResponse(e.getMessage()));
         }
@@ -295,6 +360,81 @@ public class QuestionnaireController {
             log.error("Error getting questionnaire items", e);
             return ResponseEntity.status(HttpStatus.BAD_REQUEST)
                     .body(Map.of("error", e.getMessage()));
+        }
+    }
+
+    /**
+     * Update questionnaire item with correct answer and points (Teacher only)
+     */
+    @PutMapping("/{questionnaireId}/items/{itemId}")
+    public ResponseEntity<?> updateQuestionnaireItem(
+            @PathVariable Long questionnaireId,
+            @PathVariable Long itemId,
+            @RequestBody Map<String, Object> request,
+            Authentication authentication) {
+        try {
+            User user = getUserFromAuthentication(authentication);
+
+            if (user.getRole() != User.UserRole.TEACHER) {
+                return ResponseEntity.status(HttpStatus.FORBIDDEN)
+                        .body(new ErrorResponse("Only teachers can update questions"));
+            }
+
+            String questionText = (String) request.get("questionText");
+            String correctAnswer = (String) request.get("correctAnswer");
+            Integer pointsValue = request.get("pointsValue") != null ? 
+                ((Number) request.get("pointsValue")).intValue() : null;
+
+            QuestionnaireItem updatedItem = questionnaireService.updateQuestionnaireItem(
+                    questionnaireId,
+                    itemId,
+                    questionText,
+                    correctAnswer,
+                    pointsValue,
+                    user.getId());
+
+            return ResponseEntity.ok(Map.of(
+                    "id", updatedItem.getId(),
+                    "questionText", updatedItem.getQuestionText(),
+                    "correctAnswer", updatedItem.getCorrectAnswer(),
+                    "pointsValue", updatedItem.getPointsValue()
+            ));
+
+        } catch (Exception e) {
+            log.error("Error updating questionnaire item", e);
+            return ResponseEntity.status(HttpStatus.BAD_REQUEST)
+                    .body(new ErrorResponse(e.getMessage()));
+        }
+    }
+
+    /**
+     * Get questionnaire lock status
+     */
+    @GetMapping("/{id}/lock-status")
+    public ResponseEntity<?> getLockStatus(
+            @PathVariable Long id,
+            Authentication authentication) {
+        try {
+            User user = getUserFromAuthentication(authentication);
+            Questionnaire questionnaire = questionnaireService.getQuestionnaireById(id);
+
+            // Only teacher who created it can check lock status
+            if (user.getRole() == User.UserRole.TEACHER 
+                && !questionnaire.getCreatedByTeacher().getId().equals(user.getId())) {
+                return ResponseEntity.status(HttpStatus.FORBIDDEN)
+                        .body(new ErrorResponse("You can only view lock status for your own questionnaires"));
+            }
+
+            return ResponseEntity.ok(Map.of(
+                    "questionnaireId", id,
+                    "isLocked", questionnaire.getIsLocked() != null && questionnaire.getIsLocked(),
+                    "lockedAt", questionnaire.getLockedAt()
+            ));
+
+        } catch (Exception e) {
+            log.error("Error getting lock status", e);
+            return ResponseEntity.status(HttpStatus.BAD_REQUEST)
+                    .body(new ErrorResponse(e.getMessage()));
         }
     }
 

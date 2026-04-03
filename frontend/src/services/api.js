@@ -406,6 +406,19 @@ export const questionnaireAPI = {
     
     return await response.json();
   },
+
+  getQuestionnairesByClassForTeacher: async (classId) => {
+    const response = await fetch(`${API_BASE_URL}/questionnaires/class/${classId}/teacher`, {
+      method: 'GET',
+      headers: getHeaders(),
+    });
+
+    if (!response.ok) {
+      throw new Error('Failed to fetch questionnaires for teacher class');
+    }
+
+    return await response.json();
+  },
   
   createQuestionnaire: async (questionnaireData) => {
     const response = await fetch(`${API_BASE_URL}/questionnaires`, {
@@ -434,6 +447,21 @@ export const questionnaireAPI = {
       throw new Error(error.message || 'Failed to update questionnaire');
     }
     
+    return await response.json();
+  },
+
+  updateQuestionnaireStatus: async (id, isActive) => {
+    const response = await fetch(`${API_BASE_URL}/questionnaires/${id}/status`, {
+      method: 'PUT',
+      headers: getHeaders(),
+      body: JSON.stringify({ isActive }),
+    });
+
+    if (!response.ok) {
+      const error = await response.json().catch(() => ({ message: 'Failed to update questionnaire status' }));
+      throw new Error(error.message || 'Failed to update questionnaire status');
+    }
+
     return await response.json();
   },
   
@@ -645,7 +673,7 @@ export const adviserAPI = {
     });
 
     if (!response.ok) {
-      throw new Error('Failed to fetch adviser teams');
+      await throwApiError(response, 'Failed to fetch adviser teams');
     }
 
     return await response.json();
@@ -659,7 +687,7 @@ export const adviserAPI = {
     });
 
     if (!response.ok) {
-      throw new Error('Failed to fetch team questionnaires');
+      await throwApiError(response, 'Failed to fetch team questionnaires');
     }
 
     return await response.json();
@@ -676,7 +704,7 @@ export const adviserAPI = {
     );
 
     if (!response.ok) {
-      throw new Error('Failed to get evaluation');
+      await throwApiError(response, 'Failed to get evaluation');
     }
 
     return await response.json();
@@ -691,7 +719,7 @@ export const adviserAPI = {
     });
 
     if (!response.ok) {
-      throw new Error('Failed to save evaluation');
+      await throwApiError(response, 'Failed to save evaluation');
     }
 
     return await response.json();
@@ -708,7 +736,7 @@ export const adviserAPI = {
     );
 
     if (!response.ok) {
-      throw new Error('Failed to submit evaluation');
+      await throwApiError(response, 'Failed to submit evaluation');
     }
 
     return await response.json();
@@ -724,7 +752,7 @@ export const adviserAPI = {
     );
 
     if (!response.ok) {
-      throw new Error("Failed to fetch completed evaluations");
+      await throwApiError(response, 'Failed to fetch completed evaluations');
     }
 
     return await response.json();
@@ -818,6 +846,50 @@ export const userManagementAPI = {
     if (!response.ok) {
       const err = await response.json().catch(() => null);
       throw new Error(err?.message || 'Upload failed');
+    }
+    return await response.json();
+  },
+
+  uploadStudentSheet: async (formData) => {
+    const token = getAuthToken();
+    const headers = {};
+    if (token) headers['Authorization'] = `Bearer ${token}`;
+    const response = await fetch(`${API_BASE_URL}/user-management/upload-students`, {
+      method: 'POST',
+      headers: headers,
+      body: formData,
+    });
+    if (!response.ok) {
+      const err = await response.json().catch(() => null);
+      throw new Error(err?.message || 'Upload failed');
+    }
+    return await response.json();
+  },
+
+  uploadAdviserSheet: async (formData) => {
+    const token = getAuthToken();
+    const headers = {};
+    if (token) headers['Authorization'] = `Bearer ${token}`;
+    const response = await fetch(`${API_BASE_URL}/user-management/upload-advisers`, {
+      method: 'POST',
+      headers: headers,
+      body: formData,
+    });
+    if (!response.ok) {
+      const err = await response.json().catch(() => null);
+      throw new Error(err?.message || 'Upload failed');
+    }
+    return await response.json();
+  },
+
+  getExportData: async (type) => {
+    const response = await fetch(`${API_BASE_URL}/user-management/export?type=${encodeURIComponent(type)}`, {
+      method: 'GET',
+      headers: getHeaders(),
+    });
+    if (!response.ok) {
+      const err = await response.json().catch(() => null);
+      throw new Error(err?.message || 'Failed to fetch export data');
     }
     return await response.json();
   },

@@ -13,6 +13,7 @@ const EvaluateForm = () => {
   const [comments, setComments] = useState("");
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
+  const [saveError, setSaveError] = useState(null);
 
   useEffect(() => {
     const load = async () => {
@@ -25,14 +26,29 @@ const EvaluateForm = () => {
         console.log("Evaluation data:", evalData);
         console.log("Questionnaire:", evalData?.questionnaire);
         console.log("Items:", evalData?.questionnaire?.items);
+        console.log("Scores:", evalData?.scores);
+
+        if (!evalData) {
+          setError("Failed to load evaluation: No data returned from server");
+          setLoading(false);
+          return;
+        }
 
         setEvaluation(evalData);
 
         const existing = {};
-        (evalData.scores || []).forEach((s) => {
-          existing[s.questionnaireItem.id] =
-            s.numericScore ?? s.textResponse;
-        });
+        if (evalData.scores && Array.isArray(evalData.scores)) {
+          evalData.scores.forEach((s) => {
+            // Handle both nested structure (questionnaireItem.id) and flat structure (questionnaireItemId)
+            const itemId = s.questionnaireItem?.id || s.questionnaireItemId;
+            if (itemId) {
+              existing[itemId] =
+                s.numericScore ?? s.textResponse;
+            } else {
+              console.warn("Score missing item ID:", s);
+            }
+          });
+        }
 
         setAnswers(existing);
         setComments(evalData.generalComments || "");
@@ -52,22 +68,34 @@ const EvaluateForm = () => {
   };
 
   const saveDraft = async () => {
-    await adviserAPI.saveEvaluation({
-      evaluationId: evaluation.id,
-      answers,
-      generalComments: comments,
-    });
-    alert("Draft saved");
+    try {
+      setSaveError(null);
+      await adviserAPI.saveEvaluation({
+        evaluationId: evaluation.id,
+        answers,
+        generalComments: comments,
+      });
+      alert("Draft saved");
+    } catch (e) {
+      console.error("Error saving evaluation:", e);
+      setSaveError(e.message || "Failed to save evaluation");
+    }
   };
 
   const submit = async () => {
-    await adviserAPI.saveEvaluation({
-      evaluationId: evaluation.id,
-      answers,
-      generalComments: comments,
-    });
-    await adviserAPI.submitEvaluation(evaluation.id);
-    navigate("/adviser/completed");
+    try {
+      setSaveError(null);
+      await adviserAPI.saveEvaluation({
+        evaluationId: evaluation.id,
+        answers,
+        generalComments: comments,
+      });
+      await adviserAPI.submitEvaluation(evaluation.id);
+      navigate("/adviser/completed");
+    } catch (e) {
+      console.error("Error submitting evaluation:", e);
+      setSaveError(e.message || "Failed to submit evaluation");
+    }
   };
 
   if (loading) return <p>Loading...</p>;
@@ -92,6 +120,15 @@ const EvaluateForm = () => {
             <p>Please contact the teacher to add questions to this questionnaire.</p>
           </div>
         ) : null}
+
+        {saveError && (
+          <div className="error-message" style={{ marginBottom: "20px" }}>
+            <p>{saveError}</p>
+            <button onClick={() => setSaveError(null)} style={{ marginTop: "10px" }}>
+              Dismiss
+            </button>
+          </div>
+        )}
 
         {items.map((item) => (
           <div key={item.id} className="form-group">

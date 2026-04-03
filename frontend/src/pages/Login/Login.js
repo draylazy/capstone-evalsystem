@@ -1,10 +1,8 @@
 import React, { useCallback, useEffect, useRef, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useToast } from '../../contexts/ToastContext';
-import TextPressure from '../../components/TextPressure/TextPressure';
 import Aurora from '../../components/Aurora/Aurora';
 import BlurText from '../../components/BlurText/BlurText';
-import '../../components/TextPressure/TextPressure.css';
 import '../../components/Aurora/Aurora.css';
 import './Login.css';
 
@@ -133,20 +131,7 @@ function Login() {
       />
       <div className="login-container">
         <div className="login-box" ref={cardRef} onMouseMove={handleCardMouse}>
-          <div className="text-pressure-wrapper">
-            <TextPressure
-              text="SAES"
-              flex
-              alpha={false}
-              stroke={false}
-              width
-              weight
-              italic
-              textColor="#f2c94c"
-              strokeColor="#8a151f"
-              minFontSize={42}
-            />
-          </div>
+          <h1>SAES</h1>
           <h3>
             <BlurText
               text="Student and Adviser Evaluation System"
@@ -154,8 +139,6 @@ function Login() {
               animateBy="words"
             />
           </h3>
-
-        {error && <div className="error-message">{error}</div>}
 
         <div className="google-button-container">
           <button
