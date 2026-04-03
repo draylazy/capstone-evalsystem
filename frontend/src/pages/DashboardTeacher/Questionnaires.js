@@ -21,7 +21,9 @@ const Questionnaires = () => {
   });
   const [showCreateModal, setShowCreateModal] = useState(false);
   const [showAssignModal, setShowAssignModal] = useState(false);
+  const [showEditModal, setShowEditModal] = useState(false);
   const [selectedQuestionnaire, setSelectedQuestionnaire] = useState(null);
+  const [editingQuestions, setEditingQuestions] = useState({});
   const [googleLinked, setGoogleLinked] = useState(false);
 
   const [formData, setFormData] = useState({
@@ -245,6 +247,85 @@ const Questionnaires = () => {
     setShowAssignModal(true);
   };
 
+  const openEditModal = async (questionnaire) => {
+    try {
+      // Fetch full questionnaire details including items
+      const response = await fetch(`${API_BASE_URL}/api/questionnaires/${questionnaire.id}`, {
+        headers: {
+          'Authorization': `Bearer ${JSON.parse(localStorage.getItem('user'))?.token}`
+        }
+      });
+      
+      if (!response.ok) {
+        throw new Error('Failed to load questionnaire details');
+      }
+      
+      const fullQuestionnaire = await response.json();
+      setSelectedQuestionnaire(fullQuestionnaire);
+      
+      // Initialize editing questions with data from selected questionnaire
+      const questionsMap = {};
+      if (fullQuestionnaire.items && fullQuestionnaire.items.length > 0) {
+        fullQuestionnaire.items.forEach((item) => {
+          questionsMap[item.id] = {
+            questionText: item.questionText,
+            correctAnswer: item.correctAnswer || '',
+            pointsValue: item.pointsValue || 1
+          };
+        });
+      }
+      setEditingQuestions(questionsMap);
+      setShowEditModal(true);
+    } catch (err) {
+      toast.error('Error loading questionnaire: ' + err.message);
+    }
+  };
+
+  const handleEditQuestionChange = (itemId, field, value) => {
+    setEditingQuestions({
+      ...editingQuestions,
+      [itemId]: {
+        ...editingQuestions[itemId],
+        [field]: value
+      }
+    });
+  };
+
+  const handleSaveQuestionnaireEdits = async () => {
+    try {
+      toast.info('Saving changes...');
+      
+      // Save each edited question
+      for (const [itemId, changes] of Object.entries(editingQuestions)) {
+        const response = await fetch(`${API_BASE_URL}/api/questionnaires/${selectedQuestionnaire.id}/items/${itemId}`, {
+          method: 'PUT',
+          headers: {
+            'Content-Type': 'application/json',
+            'Authorization': `Bearer ${JSON.parse(localStorage.getItem('user'))?.token}`
+          },
+          body: JSON.stringify({
+            questionText: changes.questionText,
+            correctAnswer: changes.correctAnswer,
+            pointsValue: parseInt(changes.pointsValue) || 1
+          })
+        });
+
+        if (!response.ok) {
+          const error = await response.json();
+          throw new Error(error.error || 'Failed to save question');
+        }
+      }
+
+      toast.success('Questionnaire updated successfully!');
+      setShowEditModal(false);
+      setSelectedQuestionnaire(null);
+      setEditingQuestions({});
+      await fetchQuestionnaires();
+    } catch (err) {
+      toast.error('Error saving questionnaire: ' + err.message);
+    }
+  };
+
   const formatDate = (dateString) => {
     return new Date(dateString).toLocaleDateString();
   };
@@ -330,6 +411,14 @@ const Questionnaires = () => {
                           onClick={() => window.open(q.googleFormUrl, '_blank')}
                         >
                           View Form
+                        </button>
+                        <button
+                          className="btn btn-sm btn-primary"
+                          onClick={() => openEditModal(q)}
+                          disabled={q.isLocked}
+                          title={q.isLocked ? "Cannot edit - questionnaire is locked" : "Edit questions and answers"}
+                        >
+                          Edit
                         </button>
                         <button 
                           className="btn btn-sm btn-assign" 
@@ -631,6 +720,94 @@ const Questionnaires = () => {
               <div className="form-actions">
                 <button onClick={handleAssignToClasses} className="btn btn-primary">Save Class Assignments</button>
                 <button onClick={() => { setShowAssignModal(false); setSelectedClasses([]); }} className="btn btn-secondary">
+                  Cancel
+                </button>
+              </div>
+            </div>
+          </div>
+        )}
+
+        {/* Edit Questionnaire Modal */}
+        {showEditModal && selectedQuestionnaire && (
+          <div className="modal-overlay" onClick={() => setShowEditModal(false)}>
+            <div className="modal-content modal-content-lg" onClick={(e) => e.stopPropagation()}>
+              <h2>Edit Questionnaire: {selectedQuestionnaire.title}</h2>
+              
+              {selectedQuestionnaire.items && selectedQuestionnaire.items.length > 0 ? (
+                <div style={{ maxHeight: '600px', overflowY: 'auto', marginBottom: '20px' }}>
+                  {selectedQuestionnaire.items.map((item) => (
+                    <div 
+                      key={item.id}
+                      style={{
+                        padding: '15px',
+                        marginBottom: '15px',
+                        border: '1px solid #ddd',
+                        borderRadius: '4px',
+                        backgroundColor: '#f9f9f9'
+                      }}
+                    >
+                      <div style={{ marginBottom: '10px' }}>
+                        <strong>Q{item.orderIndex + 1}: </strong>
+                        <span style={{ color: '#7f8c8d' }}>{item.questionType}</span>
+                      </div>
+
+                      <div className="form-group">
+                        <label>Question Text</label>
+                        <input
+                          type="text"
+                          value={editingQuestions[item.id]?.questionText || item.questionText}
+                          onChange={(e) => handleEditQuestionChange(item.id, 'questionText', e.target.value)}
+                        />
+                      </div>
+
+                      <div className="form-group">
+                        <label>Correct Answer *</label>
+                        <input
+                          type="text"
+                          placeholder="Enter the correct answer"
+                          value={editingQuestions[item.id]?.correctAnswer || item.correctAnswer || ''}
+                          onChange={(e) => handleEditQuestionChange(item.id, 'correctAnswer', e.target.value)}
+                        />
+                        <small style={{ color: '#7f8c8d', display: 'block', marginTop: '5px' }}>
+                          {item.questionType === 'TEXT' && 'Text answer (case-insensitive)'}
+                          {(item.questionType === 'NUMERIC_SCALE' || item.questionType === 'RATING') && 'Numeric value'}
+                          {item.questionType === 'MULTIPLE_CHOICE' && 'Choice letter or text'}
+                        </small>
+                      </div>
+
+                      <div className="form-group">
+                        <label>Points for Correct Answer</label>
+                        <input
+                          type="number"
+                          min="1"
+                          value={editingQuestions[item.id]?.pointsValue || item.pointsValue || 1}
+                          onChange={(e) => handleEditQuestionChange(item.id, 'pointsValue', parseInt(e.target.value) || 1)}
+                        />
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              ) : (
+                <p>No questions to edit.</p>
+              )}
+
+              <div className="form-actions">
+                <button 
+                  type="button"
+                  onClick={handleSaveQuestionnaireEdits}
+                  className="btn btn-primary"
+                >
+                  Save Changes
+                </button>
+                <button 
+                  type="button"
+                  onClick={() => { 
+                    setShowEditModal(false);
+                    setSelectedQuestionnaire(null);
+                    setEditingQuestions({});
+                  }}
+                  className="btn btn-secondary"
+                >
                   Cancel
                 </button>
               </div>

@@ -1,6 +1,7 @@
 package group9.advisor_eval_system.dto;
 
 import group9.advisor_eval_system.entity.Questionnaire;
+import group9.advisor_eval_system.entity.QuestionnaireItem;
 import group9.advisor_eval_system.entity.SchoolClass;
 import lombok.AllArgsConstructor;
 import lombok.Data;
@@ -31,6 +32,7 @@ public class QuestionnaireResponse {
     private List<Long> assignedClassIds;
     private List<String> assignedClassNames;
     private Integer questionCount;
+    private List<QuestionnaireItemDto> items;
     private LocalDateTime createdAt;
     private LocalDateTime updatedAt;
     
@@ -75,6 +77,21 @@ public class QuestionnaireResponse {
         
         // Note: questionCount is set by the controller using direct database query
         response.setQuestionCount(0);
+        
+        // Map questionnaire items to DTOs for edit modal
+        try {
+            if (questionnaire.getItems() != null && !questionnaire.getItems().isEmpty()) {
+                response.setItems(
+                    questionnaire.getItems().stream()
+                        .map(QuestionnaireItemDto::fromEntity)
+                        .collect(Collectors.toList())
+                );
+            } else {
+                response.setItems(new ArrayList<>());
+            }
+        } catch (Exception e) {
+            response.setItems(new ArrayList<>());
+        }
         
         response.setCreatedAt(questionnaire.getCreatedAt());
         response.setUpdatedAt(questionnaire.getUpdatedAt());

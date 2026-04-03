@@ -21,6 +21,8 @@ public class QuestionnaireItemDto {
     private Integer maxScore;
     private Integer minScore;
     private List<String> choices;
+    private String correctAnswer;
+    private Integer pointsValue;
     
     public static QuestionnaireItemDto fromEntity(QuestionnaireItem item) {
         if (item == null) {
@@ -48,6 +50,10 @@ public class QuestionnaireItemDto {
         } else {
             dto.setChoices(new ArrayList<>());
         }
+        
+        // Set quiz-specific fields
+        dto.setCorrectAnswer(item.getCorrectAnswer());
+        dto.setPointsValue(item.getPointsValue() != null ? item.getPointsValue() : 1);
         
         return dto;
     }
