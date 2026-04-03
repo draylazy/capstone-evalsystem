@@ -68,6 +68,6 @@ public class Questionnaire {
     @ManyToMany(mappedBy = "questionnaires")
     private Set<Team> assignedTeams = new HashSet<>();
     
-    @OneToMany(mappedBy = "questionnaire", cascade = CascadeType.ALL)
+    @OneToMany(mappedBy = "questionnaire", cascade = CascadeType.ALL, fetch = FetchType.EAGER)
     private Set<QuestionnaireItem> items = new HashSet<>();
 }
