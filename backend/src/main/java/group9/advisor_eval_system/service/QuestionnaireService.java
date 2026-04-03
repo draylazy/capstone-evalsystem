@@ -121,8 +121,10 @@ public class QuestionnaireService {
                 .orElseThrow(() -> new RuntimeException("Questionnaire not found"));
         
         // Initialize items within transaction
-        if (questionnaire.getItems() != null) {
-            questionnaire.getItems().forEach(item -> {
+        // Convert to list to avoid ConcurrentModificationException during Hibernate initialization
+        if (questionnaire.getItems() != null && !questionnaire.getItems().isEmpty()) {
+            List<QuestionnaireItem> itemsList = new ArrayList<>(questionnaire.getItems());
+            itemsList.forEach(item -> {
                 item.getId();
                 item.getQuestionText();
                 item.getCorrectAnswer();
