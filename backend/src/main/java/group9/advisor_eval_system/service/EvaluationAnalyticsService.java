@@ -19,8 +19,6 @@ import java.util.stream.Collectors;
 public class EvaluationAnalyticsService {
 
     private final EvaluationRepository evaluationRepository;
-    private final QuestionnaireRepository questionnaireRepository;
-    private final TeamRepository teamRepository;
     private final GeminiClient geminiClient;
 
     /**
@@ -28,11 +26,11 @@ public class EvaluationAnalyticsService {
      */
     @Transactional(readOnly = true)
     public EvaluationAnalyticsResponse generateEvaluationSummary(User teacher, EvaluationAnalyticsRequest request) {
-        log.info("Generating evaluation summary for teacherId={} questionnaireId={}", 
+        log.info("Generating evaluation summary for teacherId={} questionnaireId={}",
                 teacher.getId(), request.getQuestionnaireId());
 
         List<Evaluation> evaluations = getRelevantEvaluations(teacher, request);
-        
+
         if (evaluations.isEmpty()) {
             return new EvaluationAnalyticsResponse();
         }
@@ -140,8 +138,7 @@ public class EvaluationAnalyticsService {
      */
     private List<GroupSummary> generateGroupSummaries(List<Evaluation> evaluations) {
         Map<String, List<Evaluation>> groupedByTeam = evaluations.stream()
-                .collect(Collectors.groupingBy(e -> e.getTeam().getTeamName() != null ? 
-                        e.getTeam().getTeamName() : "Unknown"));
+                .collect(Collectors.groupingBy(e -> e.getTeam().getName() != null ? e.getTeam().getName() : "Unknown"));
 
         return groupedByTeam.entrySet().stream()
                 .map(entry -> {
@@ -151,8 +148,8 @@ public class EvaluationAnalyticsService {
                             .count();
 
                     double avgScore = calculateAverageScore(groupEvals);
-                    String performanceLevel = avgScore >= 3.5 ? "High" : 
-                                             avgScore >= 2.5 ? "Average" : "Needs Improvement";
+                    String performanceLevel = avgScore >= 3.5 ? "High"
+                            : avgScore >= 2.5 ? "Average" : "Needs Improvement";
 
                     return GroupSummary.builder()
                             .groupName(entry.getKey())
@@ -160,7 +157,7 @@ public class EvaluationAnalyticsService {
                             .completedResponses((int) completed)
                             .averageScore(Math.round(avgScore * 100.0) / 100.0)
                             .performanceLevel(performanceLevel)
-                            .summary(String.format("%d/%d respondents completed with avg score %.2f", 
+                            .summary(String.format("%d/%d respondents completed with avg score %.2f",
                                     completed, groupEvals.size(), avgScore))
                             .build();
                 })
@@ -198,16 +195,16 @@ public class EvaluationAnalyticsService {
 
         return RankingInsights.builder()
                 .highestScorer(highest != null ? RespondentScore.builder()
-                        .name(highest.getTeam().getTeamName())
+                        .name(highest.getTeam().getName())
                         .score(highestScore)
-                        .groupName(highest.getTeam().getTeamName())
+                        .groupName(highest.getTeam().getName())
                         .build() : null)
                 .lowestScorer(lowest != null ? RespondentScore.builder()
-                        .name(lowest.getTeam().getTeamName())
+                        .name(lowest.getTeam().getName())
                         .score(lowestScore)
-                        .groupName(lowest.getTeam().getTeamName())
+                        .groupName(lowest.getTeam().getName())
                         .build() : null)
-                .gaps(String.format("Score gap: %.2f (%.2f - %.2f)", 
+                .gaps(String.format("Score gap: %.2f (%.2f - %.2f)",
                         highestScore - lowestScore, highestScore, lowestScore))
                 .unusualResults(identifyUnusualResults(scores))
                 .build();
@@ -220,18 +217,18 @@ public class EvaluationAnalyticsService {
         Map<String, Integer> completedPerGroup = evaluations.stream()
                 .filter(e -> e.getStatus() == Evaluation.EvaluationStatus.SUBMITTED)
                 .collect(Collectors.groupingBy(
-                        e -> e.getTeam().getTeamName() != null ? e.getTeam().getTeamName() : "Unknown",
+                        e -> e.getTeam().getName() != null ? e.getTeam().getName() : "Unknown",
                         Collectors.summingInt(e -> 1)));
 
         List<String> lowParticipationGroups = evaluations.stream()
                 .collect(Collectors.groupingBy(
-                        e -> e.getTeam().getTeamName() != null ? e.getTeam().getTeamName() : "Unknown"))
+                        e -> e.getTeam().getName() != null ? e.getTeam().getName() : "Unknown"))
                 .entrySet().stream()
                 .filter(e -> e.getValue().stream()
                         .filter(eval -> eval.getStatus() == Evaluation.EvaluationStatus.SUBMITTED)
                         .count() == 0)
                 .map(Map.Entry::getKey)
-                .collect(Collectors.toList());
+                .toList();
 
         int totalComments = (int) evaluations.stream()
                 .filter(e -> e.getGeneralComments() != null && !e.getGeneralComments().isEmpty())
@@ -276,18 +273,19 @@ public class EvaluationAnalyticsService {
     /**
      * Generate actionable recommendations
      */
-    private List<String> generateRecommendations(List<Evaluation> evaluations, 
-                                                 EvaluationAnalyticsResponse response) {
+    private List<String> generateRecommendations(List<Evaluation> evaluations,
+            EvaluationAnalyticsResponse response) {
         List<String> recommendations = new ArrayList<>();
 
         // Low completion recommendation
         if (response.getOverallProgress().getCompletionPercentage() < 50) {
-            recommendations.add("Follow up with advisers who have not yet submitted evaluations to improve completion rate");
+            recommendations
+                    .add("Follow up with advisers who have not yet submitted evaluations to improve completion rate");
         }
 
         // Low participation groups
         if (!response.getResponseMetrics().getLowParticipationGroups().isEmpty()) {
-            recommendations.add("Prioritize getting feedback from: " + 
+            recommendations.add("Prioritize getting feedback from: " +
                     String.join(", ", response.getResponseMetrics().getLowParticipationGroups()));
         }
 
@@ -295,7 +293,8 @@ public class EvaluationAnalyticsService {
         boolean hasNeedsImprovement = response.getGroupSummaries().stream()
                 .anyMatch(g -> "Needs Improvement".equals(g.getPerformanceLevel()));
         if (hasNeedsImprovement) {
-            recommendations.add("Identify teams with 'Needs Improvement' ratings and provide targeted support or resources");
+            recommendations
+                    .add("Identify teams with 'Needs Improvement' ratings and provide targeted support or resources");
         }
 
         // Sentiment-based recommendation
@@ -337,7 +336,7 @@ public class EvaluationAnalyticsService {
             return 0;
         }
         return evaluation.getScores().stream()
-                .mapToDouble(score -> score.getScore() != null ? score.getScore() : 0)
+                .mapToDouble(score -> score.getNumericScore() != null ? score.getNumericScore() : 0)
                 .average()
                 .orElse(0);
     }
@@ -346,7 +345,8 @@ public class EvaluationAnalyticsService {
      * Helper: Identify unusual scoring results
      */
     private List<String> identifyUnusualResults(Map<Evaluation, Double> scores) {
-        if (scores.isEmpty()) return new ArrayList<>();
+        if (scores.isEmpty())
+            return new ArrayList<>();
 
         double avg = scores.values().stream()
                 .mapToDouble(Double::doubleValue)
@@ -360,9 +360,9 @@ public class EvaluationAnalyticsService {
 
         return scores.entrySet().stream()
                 .filter(e -> Math.abs(e.getValue() - avg) > 2 * stdDev)
-                .map(e -> String.format("%s scored %.2f (significant outlier)", 
-                        e.getKey().getTeam().getTeamName(), e.getValue()))
-                .collect(Collectors.toList());
+                .map(e -> String.format("%s scored %.2f (significant outlier)",
+                        e.getKey().getTeam().getName(), e.getValue()))
+                .toList();
     }
 
     /**
@@ -370,8 +370,8 @@ public class EvaluationAnalyticsService {
      */
     private List<String> extractThemes(List<String> comments) {
         Map<String, Integer> keywords = new HashMap<>();
-        String[] commonKeywords = {"excellent", "good", "needs", "improvement", "support", 
-                                   "strength", "weakness", "collaboration", "communication", "leadership"};
+        String[] commonKeywords = { "excellent", "good", "needs", "improvement", "support",
+                "strength", "weakness", "collaboration", "communication", "leadership" };
 
         for (String comment : comments) {
             String lower = comment.toLowerCase();
@@ -405,21 +405,25 @@ public class EvaluationAnalyticsService {
      */
     private String estimateSentiment(List<String> comments) {
         int positive = 0, negative = 0;
-        String[] positiveWords = {"excellent", "good", "great", "strong", "impressive", "outstanding"};
-        String[] negativeWords = {"poor", "weak", "needs", "lacking", "concerning", "inadequate"};
+        String[] positiveWords = { "excellent", "good", "great", "strong", "impressive", "outstanding" };
+        String[] negativeWords = { "poor", "weak", "needs", "lacking", "concerning", "inadequate" };
 
         for (String comment : comments) {
             String lower = comment.toLowerCase();
             for (String word : positiveWords) {
-                if (lower.contains(word)) positive++;
+                if (lower.contains(word))
+                    positive++;
             }
             for (String word : negativeWords) {
-                if (lower.contains(word)) negative++;
+                if (lower.contains(word))
+                    negative++;
             }
         }
 
-        if (positive > negative) return "Positive";
-        if (negative > positive) return "Negative";
+        if (positive > negative)
+            return "Positive";
+        if (negative > positive)
+            return "Negative";
         return "Neutral";
     }
 
@@ -436,12 +440,11 @@ public class EvaluationAnalyticsService {
 
         context.append("Group Performance:\n");
         Map<String, List<Evaluation>> grouped = evaluations.stream()
-                .collect(Collectors.groupingBy(e -> e.getTeam().getTeamName() != null ? 
-                        e.getTeam().getTeamName() : "Unknown"));
-        
+                .collect(Collectors.groupingBy(e -> e.getTeam().getName() != null ? e.getTeam().getName() : "Unknown"));
+
         grouped.forEach((group, evals) -> {
             double avgScore = calculateAverageScore(evals);
-            context.append("- ").append(group).append(": ").append(String.format("%.2f avg score, %d responses", 
+            context.append("- ").append(group).append(": ").append(String.format("%.2f avg score, %d responses",
                     avgScore, evals.size())).append("\n");
         });
 
@@ -458,7 +461,8 @@ public class EvaluationAnalyticsService {
      * Helper: Make text presentable
      */
     private String makePresentableText(String text) {
-        if (text == null) return "";
+        if (text == null)
+            return "";
         return text.replaceAll("\\*\\*", "").replaceAll("__", "").replaceAll("`", "");
     }
 }

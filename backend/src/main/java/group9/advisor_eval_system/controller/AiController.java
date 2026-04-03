@@ -56,7 +56,7 @@ public class AiController {
 
         User user = getUserFromAuthentication(authentication);
 
-        log.info("Analytics request userId={} mode={} questionnaireId={}", 
+        log.info("Analytics request userId={} mode={} questionnaireId={}",
                 user.getId(), request.getMode(), request.getQuestionnaireId());
 
         if (user.getRole() != User.UserRole.TEACHER) {
@@ -71,7 +71,8 @@ public class AiController {
                 return ResponseEntity.ok(new AiChatResponse(response));
             } else if ("evaluation_summary".equals(request.getMode())) {
                 // Auto analysis mode: generate structured report
-                EvaluationAnalyticsResponse response = evaluationAnalyticsService.generateEvaluationSummary(user, request);
+                EvaluationAnalyticsResponse response = evaluationAnalyticsService.generateEvaluationSummary(user,
+                        request);
                 return ResponseEntity.ok(response);
             } else {
                 return ResponseEntity.badRequest()
@@ -91,7 +92,7 @@ public class AiController {
 
         User user = getUserFromAuthentication(authentication);
 
-        log.info("Request evaluation summary for questionnaireId={} userId={}", 
+        log.info("Request evaluation summary for questionnaireId={} userId={}",
                 questionnaireId, user.getId());
 
         if (user.getRole() != User.UserRole.TEACHER) {
