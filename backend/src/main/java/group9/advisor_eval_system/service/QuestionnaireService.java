@@ -2,7 +2,6 @@ package group9.advisor_eval_system.service;
 
 import com.google.api.services.forms.v1.model.Form;
 import group9.advisor_eval_system.entity.*;
-import group9.advisor_eval_system.dto.QuestionnaireResponse;
 import group9.advisor_eval_system.repository.*;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
@@ -72,7 +71,6 @@ public class QuestionnaireService {
     /**
      * Get all questionnaires created by a teacher
      */
-    @Transactional(readOnly = true)
     public List<Questionnaire> getQuestionnairesByTeacher(Long teacherId) {
         User teacher = userRepository.findById(teacherId)
                 .orElseThrow(() -> new RuntimeException("Teacher not found"));
@@ -87,53 +85,9 @@ public class QuestionnaireService {
     /**
      * Get questionnaire by ID
      */
-    @Transactional(readOnly = true)
     public Questionnaire getQuestionnaireById(Long questionnaireId) {
-        Questionnaire questionnaire = questionnaireRepository.findById(questionnaireId)
+        return questionnaireRepository.findById(questionnaireId)
                 .orElseThrow(() -> new RuntimeException("Questionnaire not found"));
-        
-        // Eagerly initialize items to avoid LazyInitializationException
-        try {
-            if (questionnaire.getItems() != null) {
-                // Force load of items while transaction is active
-                questionnaire.getItems().forEach(item -> {
-                    // Access all properties to ensure they're loaded
-                    item.getId();
-                    item.getQuestionText();
-                    item.getCorrectAnswer();
-                    item.getPointsValue();
-                });
-            }
-        } catch (Exception e) {
-            log.warn("Could not eagerly load questionnaire items", e);
-        }
-        
-        return questionnaire;
-    }
-
-    /**
-     * Get questionnaire details with items for edit modal
-     * Conversion happens within transaction context to avoid LazyInitializationException
-     */
-    @Transactional(readOnly = true)
-    public QuestionnaireResponse getQuestionnaireWithItems(Long questionnaireId) {
-        Questionnaire questionnaire = questionnaireRepository.findById(questionnaireId)
-                .orElseThrow(() -> new RuntimeException("Questionnaire not found"));
-        
-        // Initialize items within transaction
-        // Convert to list to avoid ConcurrentModificationException during Hibernate initialization
-        if (questionnaire.getItems() != null && !questionnaire.getItems().isEmpty()) {
-            List<QuestionnaireItem> itemsList = new ArrayList<>(questionnaire.getItems());
-            itemsList.forEach(item -> {
-                item.getId();
-                item.getQuestionText();
-                item.getCorrectAnswer();
-                item.getPointsValue();
-            });
-        }
-        
-        // Convert to DTO while still in transaction context
-        return QuestionnaireResponse.fromEntityWithItems(questionnaire);
     }
 
     /**
@@ -193,7 +147,6 @@ public class QuestionnaireService {
     /**
      * Get questionnaires available to an adviser through their assigned teams
      */
-    @Transactional(readOnly = true)
     public List<Questionnaire> getQuestionnairesForAdviser(Long adviserId) {
         User adviser = userRepository.findById(adviserId)
                 .orElseThrow(() -> new RuntimeException("Adviser not found"));
@@ -225,7 +178,6 @@ public class QuestionnaireService {
     /**
      * Get questionnaires for a specific class
      */
-    @Transactional(readOnly = true)
     public List<Questionnaire> getQuestionnairesByClass(Long classId) {
         SchoolClass schoolClass = schoolClassRepository.findById(classId)
                 .orElseThrow(() -> new RuntimeException("Class not found"));

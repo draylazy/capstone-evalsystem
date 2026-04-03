@@ -1,7 +1,6 @@
 package group9.advisor_eval_system.dto;
 
 import group9.advisor_eval_system.entity.Questionnaire;
-import group9.advisor_eval_system.entity.QuestionnaireItem;
 import group9.advisor_eval_system.entity.SchoolClass;
 import lombok.AllArgsConstructor;
 import lombok.Data;
@@ -32,7 +31,6 @@ public class QuestionnaireResponse {
     private List<Long> assignedClassIds;
     private List<String> assignedClassNames;
     private Integer questionCount;
-    private List<QuestionnaireItemDto> items;
     private LocalDateTime createdAt;
     private LocalDateTime updatedAt;
     
@@ -78,40 +76,8 @@ public class QuestionnaireResponse {
         // Note: questionCount is set by the controller using direct database query
         response.setQuestionCount(0);
         
-        // Map questionnaire items to DTOs for edit modal
-        // Items are only populated for single questionnaire fetch (edit modal)
-        // For list view, items will be empty to avoid LazyInitializationException
-        response.setItems(new ArrayList<>());
-        
         response.setCreatedAt(questionnaire.getCreatedAt());
         response.setUpdatedAt(questionnaire.getUpdatedAt());
-        
-        return response;
-    }
-    
-    /**
-     * Create a response with items populated for single questionnaire detail view
-     * Only call this when questionnaire items are eagerly loaded
-     */
-    public static QuestionnaireResponse fromEntityWithItems(Questionnaire questionnaire) {
-        QuestionnaireResponse response = fromEntity(questionnaire);
-        
-        // Only populate items if they're already loaded
-        try {
-            if (questionnaire.getItems() != null && !questionnaire.getItems().isEmpty()) {
-                List<QuestionnaireItemDto> itemDtos = questionnaire.getItems().stream()
-                        .map(QuestionnaireItemDto::fromEntity)
-                        .filter(item -> item != null)  // Skip null items
-                        .collect(Collectors.toList());
-                response.setItems(itemDtos);
-            } else {
-                response.setItems(new ArrayList<>());
-            }
-        } catch (Exception e) {
-            // If conversion fails, log and keep empty list
-            e.printStackTrace();
-            response.setItems(new ArrayList<>());
-        }
         
         return response;
     }
