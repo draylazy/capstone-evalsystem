@@ -60,7 +60,7 @@ const Questionnaires = () => {
         return false;
       }
 
-      const response = await fetch(`${API_BASE_URL}/api/google-auth/status`, {
+      const response = await fetch(`${API_BASE_URL}/google-auth/status`, {
         headers: {
           'Authorization': `Bearer ${token}`
         }
@@ -250,7 +250,7 @@ const Questionnaires = () => {
   const openEditModal = async (questionnaire) => {
     try {
       // Fetch full questionnaire details including items
-      const response = await fetch(`${API_BASE_URL}/api/questionnaires/${questionnaire.id}`, {
+      const response = await fetch(`${API_BASE_URL}/questionnaires/${questionnaire.id}`, {
         headers: {
           'Authorization': `Bearer ${JSON.parse(localStorage.getItem('user'))?.token}`
         }
@@ -297,7 +297,7 @@ const Questionnaires = () => {
       
       // Save each edited question
       for (const [itemId, changes] of Object.entries(editingQuestions)) {
-        const response = await fetch(`${API_BASE_URL}/api/questionnaires/${selectedQuestionnaire.id}/items/${itemId}`, {
+        const response = await fetch(`${API_BASE_URL}/questionnaires/${selectedQuestionnaire.id}/items/${itemId}`, {
           method: 'PUT',
           headers: {
             'Content-Type': 'application/json',
