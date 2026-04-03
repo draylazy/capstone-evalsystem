@@ -19,7 +19,9 @@ public class CreateQuestionnaireRequest {
     
     private String description;
     
-    private List<QuestionnaireItemDto> questions;
+    private List<QuestionnaireItemDto> questions; // Questions not in sections (legacy support)
+    
+    private List<QuestionnaireSectionInputDto> sections; // New: questions organized into sections
     
     @Data
     @NoArgsConstructor
@@ -62,5 +64,20 @@ public class CreateQuestionnaireRequest {
             
             return item;
         }
+    }
+    
+    @Data
+    @NoArgsConstructor
+    @AllArgsConstructor
+    public static class QuestionnaireSectionInputDto {
+        @NotBlank(message = "Section title is required")
+        private String sectionTitle;
+        
+        private String sectionDescription;
+        
+        private Integer orderIndex;
+        
+        @NotBlank(message = "At least one question is required in a section")
+        private List<QuestionnaireItemDto> items;
     }
 }

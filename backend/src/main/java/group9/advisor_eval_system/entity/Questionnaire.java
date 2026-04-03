@@ -5,6 +5,7 @@ import jakarta.validation.constraints.NotBlank;
 import lombok.AllArgsConstructor;
 import lombok.Data;
 import lombok.NoArgsConstructor;
+import com.fasterxml.jackson.annotation.JsonIgnore;
 import org.hibernate.annotations.CreationTimestamp;
 import org.hibernate.annotations.UpdateTimestamp;
 
@@ -55,19 +56,37 @@ public class Questionnaire {
     // Relationships
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "created_by_teacher_id", nullable = false)
+    @JsonIgnore
+    @lombok.ToString.Exclude
+    @lombok.EqualsAndHashCode.Exclude
     private User createdByTeacher;
-    
+
     @ManyToMany
     @JoinTable(
         name = "class_questionnaires",
         joinColumns = @JoinColumn(name = "questionnaire_id"),
         inverseJoinColumns = @JoinColumn(name = "class_id")
     )
+    @JsonIgnore
+    @lombok.ToString.Exclude
+    @lombok.EqualsAndHashCode.Exclude
     private Set<SchoolClass> assignedClasses = new HashSet<>();
-    
+
     @ManyToMany(mappedBy = "questionnaires")
+    @JsonIgnore
+    @lombok.ToString.Exclude
+    @lombok.EqualsAndHashCode.Exclude
     private Set<Team> assignedTeams = new HashSet<>();
-    
+
+    @OneToMany(mappedBy = "questionnaire", cascade = CascadeType.ALL, orphanRemoval = true)
+    @JsonIgnore
+    @lombok.ToString.Exclude
+    @lombok.EqualsAndHashCode.Exclude
+    private Set<QuestionnaireSection> sections = new HashSet<>();
+
     @OneToMany(mappedBy = "questionnaire", cascade = CascadeType.ALL)
+    @JsonIgnore
+    @lombok.ToString.Exclude
+    @lombok.EqualsAndHashCode.Exclude
     private Set<QuestionnaireItem> items = new HashSet<>();
 }

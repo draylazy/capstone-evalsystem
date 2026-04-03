@@ -12,6 +12,7 @@ import com.google.auth.http.HttpCredentialsAdapter;
 import com.google.auth.oauth2.AccessToken;
 import com.google.auth.oauth2.GoogleCredentials;
 import group9.advisor_eval_system.entity.QuestionnaireItem;
+import group9.advisor_eval_system.entity.QuestionnaireSection;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
@@ -125,6 +126,91 @@ public class GoogleFormsService {
     }
 
     /**
+     * Create a Google Form with sections using page breaks
+     */
+    public Form createGoogleFormWithSections(Long teacherId, String title, String description, 
+                                             List<QuestionnaireItem> questions, 
+                                             List<QuestionnaireSection> sections) {
+        try {
+            String accessToken = googleAuthService.getValidAccessToken(teacherId);
+            Forms formsService = getFormsService(accessToken);
+
+            // Create form structure
+            Form form = new Form();
+            Info info = new Info();
+            info.setTitle(title);
+            if (description != null && !description.isEmpty()) {
+                info.setDocumentTitle(title);
+            }
+            form.setInfo(info);
+
+            // Create the form
+            Form createdForm = formsService.forms().create(form).execute();
+            log.info("Created Google Form with ID: {}", createdForm.getFormId());
+
+            // Add questions and sections with page breaks
+            if ((sections != null && !sections.isEmpty()) || (questions != null && !questions.isEmpty())) {
+                addQuestionsAndSectionsToForm(formsService, createdForm.getFormId(), questions, sections);
+            } else {
+                log.warn("No questions or sections provided to add to Google Form");
+            }
+
+            // Retrieve the updated form with responder URI
+            Form updatedForm = formsService.forms().get(createdForm.getFormId()).execute();
+
+            return updatedForm;
+
+        } catch (Exception e) {
+            log.error("Error creating Google Form with sections", e);
+
+            if (e instanceof GoogleJsonResponseException gjre) {
+                var details = gjre.getDetails();
+                int status = gjre.getStatusCode();
+                String message = details != null ? details.getMessage() : gjre.getMessage();
+
+                if (status == 403 && message != null
+                        && (message.contains("SERVICE_DISABLED") || message.contains("accessNotConfigured")
+                                || message.contains("disabled") || message.contains("Enable it"))) {
+                    String activationUrl = null;
+                    try {
+                        if (details != null && details.getDetails() != null) {
+                            for (Object d : details.getDetails()) {
+                                String s = String.valueOf(d);
+                                Matcher m = ACTIVATION_URL_PATTERN.matcher(s);
+                                if (m.find()) {
+                                    activationUrl = m.group(0);
+                                    break;
+                                }
+                            }
+                        }
+                    } catch (Exception ignored) {
+                        // ignore
+                    }
+
+                    if (activationUrl == null) {
+                        Matcher m = ACTIVATION_URL_PATTERN.matcher(message);
+                        if (m.find()) {
+                            activationUrl = m.group(0);
+                        }
+                    }
+
+                    String extra = activationUrl != null ? (" Enable it here: " + activationUrl) : "";
+                    throw new RuntimeException(
+                            "Google Forms API is disabled for your Google Cloud project." +
+                                    extra +
+                                    " After enabling, wait a few minutes for it to propagate, then retry.",
+                            e);
+                }
+
+                throw new RuntimeException("Failed to create Google Form (HTTP " + status + "): "
+                        + (message != null ? message : "Unknown error"), e);
+            }
+
+            throw new RuntimeException("Failed to create Google Form with sections: " + e.getMessage(), e);
+        }
+    }
+
+    /**
      * Add questions to an existing Google Form
      */
     private void addQuestionsToForm(Forms formsService, String formId, List<QuestionnaireItem> questions) {
@@ -147,6 +233,79 @@ public class GoogleFormsService {
             log.error("Error adding questions to form", e);
             throw new RuntimeException("Failed to add questions to form: " + e.getMessage(), e);
         }
+    }
+
+    /**
+     * Add questions and sections with page breaks to an existing Google Form
+     */
+    private void addQuestionsAndSectionsToForm(Forms formsService, String formId, 
+                                                List<QuestionnaireItem> looseQuestions, 
+                                                List<QuestionnaireSection> sections) {
+        try {
+            List<Request> requests = new ArrayList<>();
+            int itemIndex = 0;
+
+            // Add loose questions first (if any)
+            if (looseQuestions != null && !looseQuestions.isEmpty()) {
+                for (QuestionnaireItem item : looseQuestions) {
+                    Request request = createQuestionRequest(item, itemIndex++);
+                    requests.add(request);
+                }
+            }
+
+            // Add sections with page breaks
+            if (sections != null && !sections.isEmpty()) {
+                for (int sectionIdx = 0; sectionIdx < sections.size(); sectionIdx++) {
+                    QuestionnaireSection section = sections.get(sectionIdx);
+
+                    // Add page break before section (except before first section if no loose questions)
+                    if (itemIndex > 0) {
+                        Request pageBreakRequest = createPageBreakRequest(itemIndex++);
+                        requests.add(pageBreakRequest);
+                    }
+
+                    // Add questions in this section
+                    if (section.getItems() != null && !section.getItems().isEmpty()) {
+                        for (QuestionnaireItem item : section.getItems()) {
+                            Request request = createQuestionRequest(item, itemIndex++);
+                            requests.add(request);
+                        }
+                    }
+                }
+            }
+
+            if (!requests.isEmpty()) {
+                BatchUpdateFormRequest batchUpdateRequest = new BatchUpdateFormRequest()
+                        .setRequests(requests);
+
+                formsService.forms().batchUpdate(formId, batchUpdateRequest).execute();
+                log.info("Added {} items (questions and page breaks) to form {}", requests.size(), formId);
+            }
+
+        } catch (Exception e) {
+            log.error("Error adding questions and sections to form", e);
+            throw new RuntimeException("Failed to add questions and sections to form: " + e.getMessage(), e);
+        }
+    }
+
+    /**
+     * Create a page break request for Google Forms API
+     */
+    private Request createPageBreakRequest(int index) {
+        Item pageBreakItem = new Item();
+        pageBreakItem.setPageBreakItem(new PageBreakItem());
+
+        CreateItemRequest createItemRequest = new CreateItemRequest();
+        createItemRequest.setItem(pageBreakItem);
+        
+        Location location = new Location();
+        location.setIndex(index);
+        createItemRequest.setLocation(location);
+
+        Request request = new Request();
+        request.setCreateItem(createItemRequest);
+
+        return request;
     }
 
     /**

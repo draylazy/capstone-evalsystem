@@ -33,4 +33,7 @@ public interface QuestionnaireRepository extends JpaRepository<Questionnaire, Lo
     
     @Query("SELECT DISTINCT q FROM Questionnaire q LEFT JOIN FETCH q.items WHERE q.id = :id")
     Optional<Questionnaire> findByIdWithItems(@Param("id") Long id);
+    
+    @Query("SELECT DISTINCT q FROM Questionnaire q LEFT JOIN FETCH q.sections s LEFT JOIN FETCH s.items LEFT JOIN FETCH q.items WHERE q.id = :id")
+    Optional<Questionnaire> findByIdWithSectionsAndItems(@Param("id") Long id);
 }
