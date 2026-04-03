@@ -12,6 +12,7 @@ import group9.advisor_eval_system.entity.Team;
 import group9.advisor_eval_system.repository.EvaluationRepository;
 import group9.advisor_eval_system.repository.EvaluationScoreRepository;
 import group9.advisor_eval_system.repository.QuestionnaireItemRepository;
+import group9.advisor_eval_system.repository.QuestionnaireRepository;
 import group9.advisor_eval_system.service.EvaluationService;
 import group9.advisor_eval_system.service.QuestionnaireService;
 import group9.advisor_eval_system.service.TeamService;
@@ -41,6 +42,7 @@ public class AdviserEvaluationController {
     private final EvaluationRepository evaluationRepository;
     private final EvaluationScoreRepository evaluationScoreRepository;
     private final QuestionnaireItemRepository questionnaireItemRepository;
+    private final QuestionnaireRepository questionnaireRepository;
 
     private Long getAdviserId(HttpServletRequest request) {
         String authHeader = request.getHeader("Authorization");
@@ -154,16 +156,12 @@ public class AdviserEvaluationController {
             
             log.info("Response allowEdit={}, status={}", response.getAllowEdit(), response.getStatus());
             
-            // Fetch questionnaire with items directly
-            Questionnaire q = evaluation.getQuestionnaire();
-            List<QuestionnaireItem> items = questionnaireItemRepository.findByQuestionnaireIdOrderByOrderIndex(q.getId());
+            // Fetch questionnaire with sections and items eagerly loaded to avoid lazy loading issues
+            Questionnaire q = questionnaireRepository.findByIdWithSectionsAndItems(evaluation.getQuestionnaire().getId())
+                    .orElseThrow(() -> new RuntimeException("Questionnaire not found"));
             
-            QuestionnaireWithItemsDto qDto = new QuestionnaireWithItemsDto();
-            qDto.setId(q.getId());
-            qDto.setTitle(q.getTitle());
-            qDto.setDescription(q.getDescription());
-            qDto.setGoogleFormUrl(q.getGoogleFormUrl());
-            qDto.setItems(new ArrayList<>(items).stream().map(QuestionnaireItemDto::fromEntity).collect(Collectors.toList()));
+            // Use the fromEntity method which properly handles both items and sections
+            QuestionnaireWithItemsDto qDto = QuestionnaireWithItemsDto.fromEntity(q);
             
             response.setQuestionnaire(qDto);
             
@@ -171,7 +169,9 @@ public class AdviserEvaluationController {
             List<EvaluationScore> scores = evaluationScoreRepository.findByEvaluationId(evaluation.getId());
             response.setScores(new ArrayList<>(scores).stream().map(EvaluationScoreDto::fromEntity).collect(Collectors.toList()));
             
-            log.info("Successfully retrieved evaluation with {} items", items.size());
+            int totalItems = (qDto.getItems() != null ? qDto.getItems().size() : 0) +
+                            (qDto.getSections() != null ? qDto.getSections().stream().mapToInt(s -> s.getItems() != null ? s.getItems().size() : 0).sum() : 0);
+            log.info("Successfully retrieved evaluation with {} items in {} sections", totalItems, qDto.getSections() != null ? qDto.getSections().size() : 0);
             return ResponseEntity.ok(response);
         } catch (Exception e) {
             log.error("Error getting evaluation: {}", e.getMessage(), e);

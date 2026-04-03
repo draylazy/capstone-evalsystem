@@ -1,6 +1,7 @@
 package group9.advisor_eval_system.service;
 
 import com.google.api.services.forms.v1.model.Form;
+import group9.advisor_eval_system.dto.CreateQuestionnaireRequest;
 import group9.advisor_eval_system.entity.*;
 import group9.advisor_eval_system.repository.*;
 import lombok.RequiredArgsConstructor;
@@ -20,6 +21,7 @@ public class QuestionnaireService {
 
     private final QuestionnaireRepository questionnaireRepository;
     private final QuestionnaireItemRepository questionnaireItemRepository;
+    private final QuestionnaireSectionRepository questionnaireSectionRepository;
     private final UserRepository userRepository;
     private final SchoolClassRepository schoolClassRepository;
     private final GoogleFormsService googleFormsService;
@@ -28,7 +30,9 @@ public class QuestionnaireService {
      * Create a new questionnaire with Google Form
      */
     @Transactional
-    public Questionnaire createQuestionnaire(Long teacherId, String title, String description, List<QuestionnaireItem> questions) {
+    public Questionnaire createQuestionnaire(Long teacherId, String title, String description, 
+                                            List<QuestionnaireItem> questions, 
+                                            List<CreateQuestionnaireRequest.QuestionnaireSectionInputDto> sections) {
         User teacher = userRepository.findById(teacherId)
                 .orElseThrow(() -> new RuntimeException("Teacher not found"));
 
@@ -40,8 +44,47 @@ public class QuestionnaireService {
             throw new RuntimeException("Teacher must link Google account first");
         }
 
-        // Create Google Form
-        Form googleForm = googleFormsService.createGoogleForm(teacherId, title, description, questions);
+        Form googleForm;
+        int totalQuestionCount = 0;
+
+        // Create Google Form with appropriate method based on whether sections are used
+        if (sections != null && !sections.isEmpty()) {
+            // Create list of QuestionnaireSection entities for Google Forms API
+            List<QuestionnaireSection> sectionEntities = new ArrayList<>();
+            for (CreateQuestionnaireRequest.QuestionnaireSectionInputDto sectionDto : sections) {
+                QuestionnaireSection section = new QuestionnaireSection();
+                section.setSectionTitle(sectionDto.getSectionTitle());
+                section.setSectionDescription(sectionDto.getSectionDescription());
+                section.setOrderIndex(sectionDto.getOrderIndex() != null ? sectionDto.getOrderIndex() : 0);
+                
+                // Convert items to entities
+                List<QuestionnaireItem> sectionItems = new ArrayList<>();
+                if (sectionDto.getItems() != null) {
+                    for (int i = 0; i < sectionDto.getItems().size(); i++) {
+                        QuestionnaireItem item = sectionDto.getItems().get(i).toEntity();
+                        item.setOrderIndex(i);
+                        sectionItems.add(item);
+                        totalQuestionCount++;
+                    }
+                }
+                section.setItems(new java.util.HashSet<>(sectionItems));
+                sectionEntities.add(section);
+            }
+
+            // Create Google Form with sections and page breaks
+            googleForm = googleFormsService.createGoogleFormWithSections(
+                teacherId, title, description, questions != null ? questions : List.of(), sectionEntities);
+        } else {
+            // Create Google Form without sections (legacy)
+            List<QuestionnaireItem> allQuestions = new ArrayList<>(questions != null ? questions : List.of());
+            totalQuestionCount = allQuestions.size();
+            googleForm = googleFormsService.createGoogleForm(teacherId, title, description, allQuestions);
+        }
+
+        // Also count loose questions if they exist
+        if (questions != null && !questions.isEmpty()) {
+            totalQuestionCount += questions.size();
+        }
 
         // Create questionnaire entity
         Questionnaire questionnaire = new Questionnaire();
@@ -54,18 +97,54 @@ public class QuestionnaireService {
 
         Questionnaire savedQuestionnaire = questionnaireRepository.save(questionnaire);
 
-        // Save questions
+        // Save sections and their questions
+        if (sections != null && !sections.isEmpty()) {
+            for (CreateQuestionnaireRequest.QuestionnaireSectionInputDto sectionDto : sections) {
+                QuestionnaireSection section = new QuestionnaireSection();
+                section.setSectionTitle(sectionDto.getSectionTitle());
+                section.setSectionDescription(sectionDto.getSectionDescription());
+                section.setOrderIndex(sectionDto.getOrderIndex() != null ? sectionDto.getOrderIndex() : 0);
+                section.setQuestionnaire(savedQuestionnaire);
+                
+                QuestionnaireSection savedSection = questionnaireSectionRepository.save(section);
+                
+                // Save questions in this section
+                if (sectionDto.getItems() != null && !sectionDto.getItems().isEmpty()) {
+                    for (int i = 0; i < sectionDto.getItems().size(); i++) {
+                        QuestionnaireItem item = sectionDto.getItems().get(i).toEntity();
+                        item.setQuestionnaire(savedQuestionnaire);
+                        item.setSection(savedSection);
+                        item.setOrderIndex(i);
+                        questionnaireItemRepository.save(item);
+                    }
+                }
+            }
+        }
+
+        // Save loose questions (not in sections)
         if (questions != null && !questions.isEmpty()) {
-            for (QuestionnaireItem item : questions) {
+            for (int i = 0; i < questions.size(); i++) {
+                QuestionnaireItem item = questions.get(i);
                 item.setQuestionnaire(savedQuestionnaire);
+                item.setOrderIndex(i);
                 questionnaireItemRepository.save(item);
             }
         }
 
-        log.info("Created questionnaire {} with {} questions", savedQuestionnaire.getId(), 
-            questions != null ? questions.size() : 0);
+        log.info("Created questionnaire {} with {} questions and {} sections", 
+            savedQuestionnaire.getId(), 
+            totalQuestionCount,
+            sections != null ? sections.size() : 0);
 
         return savedQuestionnaire;
+    }
+
+    /**
+     * Create a new questionnaire with Google Form (legacy method for backward compatibility)
+     */
+    @Transactional
+    public Questionnaire createQuestionnaire(Long teacherId, String title, String description, List<QuestionnaireItem> questions) {
+        return createQuestionnaire(teacherId, title, description, questions, List.of());
     }
 
     /**

@@ -57,7 +57,8 @@ public class QuestionnaireController {
                     user.getId(),
                     request.getTitle(),
                     request.getDescription(),
-                    questions);
+                    questions,
+                    request.getSections() != null ? request.getSections() : List.of());
 
             QuestionnaireResponse response = QuestionnaireResponse.fromEntity(questionnaire);
             // Set the actual question count from database
