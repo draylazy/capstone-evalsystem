@@ -2,6 +2,7 @@ package group9.advisor_eval_system.service;
 
 import com.google.api.services.forms.v1.model.Form;
 import group9.advisor_eval_system.entity.*;
+import group9.advisor_eval_system.dto.QuestionnaireResponse;
 import group9.advisor_eval_system.repository.*;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
@@ -108,6 +109,29 @@ public class QuestionnaireService {
         }
         
         return questionnaire;
+    }
+
+    /**
+     * Get questionnaire details with items for edit modal
+     * Conversion happens within transaction context to avoid LazyInitializationException
+     */
+    @Transactional(readOnly = true)
+    public QuestionnaireResponse getQuestionnaireWithItems(Long questionnaireId) {
+        Questionnaire questionnaire = questionnaireRepository.findById(questionnaireId)
+                .orElseThrow(() -> new RuntimeException("Questionnaire not found"));
+        
+        // Initialize items within transaction
+        if (questionnaire.getItems() != null) {
+            questionnaire.getItems().forEach(item -> {
+                item.getId();
+                item.getQuestionText();
+                item.getCorrectAnswer();
+                item.getPointsValue();
+            });
+        }
+        
+        // Convert to DTO while still in transaction context
+        return QuestionnaireResponse.fromEntityWithItems(questionnaire);
     }
 
     /**

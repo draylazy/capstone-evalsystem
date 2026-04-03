@@ -121,8 +121,9 @@ public class QuestionnaireController {
         try {
             getUserFromAuthentication(authentication);
 
-            Questionnaire questionnaire = questionnaireService.getQuestionnaireById(id);
-            return ResponseEntity.ok(QuestionnaireResponse.fromEntityWithItems(questionnaire));
+            // Use service method that converts to DTO within transaction
+            QuestionnaireResponse response = questionnaireService.getQuestionnaireWithItems(id);
+            return ResponseEntity.ok(response);
 
         } catch (Exception e) {
             log.error("Error fetching questionnaire", e);
