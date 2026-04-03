@@ -92,8 +92,19 @@ public class QuestionnaireService {
                 .orElseThrow(() -> new RuntimeException("Questionnaire not found"));
         
         // Eagerly initialize items to avoid LazyInitializationException
-        if (questionnaire.getItems() != null) {
-            questionnaire.getItems().size();
+        try {
+            if (questionnaire.getItems() != null) {
+                // Force load of items while transaction is active
+                questionnaire.getItems().forEach(item -> {
+                    // Access all properties to ensure they're loaded
+                    item.getId();
+                    item.getQuestionText();
+                    item.getCorrectAnswer();
+                    item.getPointsValue();
+                });
+            }
+        } catch (Exception e) {
+            log.warn("Could not eagerly load questionnaire items", e);
         }
         
         return questionnaire;

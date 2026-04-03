@@ -99,14 +99,17 @@ public class QuestionnaireResponse {
         // Only populate items if they're already loaded
         try {
             if (questionnaire.getItems() != null && !questionnaire.getItems().isEmpty()) {
-                response.setItems(
-                    questionnaire.getItems().stream()
+                List<QuestionnaireItemDto> itemDtos = questionnaire.getItems().stream()
                         .map(QuestionnaireItemDto::fromEntity)
-                        .collect(Collectors.toList())
-                );
+                        .filter(item -> item != null)  // Skip null items
+                        .collect(Collectors.toList());
+                response.setItems(itemDtos);
+            } else {
+                response.setItems(new ArrayList<>());
             }
         } catch (Exception e) {
-            // If lazy loading fails or items don't exist, keep empty list
+            // If conversion fails, log and keep empty list
+            e.printStackTrace();
             response.setItems(new ArrayList<>());
         }
         
