@@ -693,6 +693,19 @@ export const adviserAPI = {
     return await response.json();
   },
 
+  getTeamEvaluationStatuses: async (teamId) => {
+    const response = await fetch(`${API_BASE_URL}/adviser/teams/${teamId}/evaluation-statuses`, {
+      method: 'GET',
+      headers: getHeaders(),
+    });
+
+    if (!response.ok) {
+      await throwApiError(response, 'Failed to fetch team evaluation statuses');
+    }
+
+    return await response.json();
+  },
+
   // Get or create evaluation
   getEvaluation: async (teamId, questionnaireId) => {
     const response = await fetch(

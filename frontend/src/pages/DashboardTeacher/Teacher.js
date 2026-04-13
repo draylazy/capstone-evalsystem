@@ -1,17 +1,21 @@
 import React, { useEffect, useMemo, useState } from "react";
 import { createPortal } from "react-dom";
+import { useNavigate } from "react-router-dom";
 import TeacherSidebar from "../../components/Sidebar/TeacherSidebar";
 import SummaryCard from "../../components/Cards/SummaryCard";
 import { classAPI, studentAPI, teamAPI, questionnaireAPI } from "../../services/api";
 import "./Teacher.css";
 
 const Teacher = () => {
+  const navigate = useNavigate();
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
   const [classes, setClasses] = useState([]);
   const [students, setStudents] = useState([]);
   const [teams, setTeams] = useState([]);
   const [questionnaires, setQuestionnaires] = useState([]);
+  const [classSearch, setClassSearch] = useState("");
+  const [showNeedsSetupOnly, setShowNeedsSetupOnly] = useState(false);
   const [showTeamsModal, setShowTeamsModal] = useState(false);
   const [selectedClass, setSelectedClass] = useState(null);
   const [showTeamMembersModal, setShowTeamMembersModal] = useState(false);
@@ -104,6 +108,25 @@ const Teacher = () => {
     return questionnaires[classId] || [];
   };
 
+  const filteredClasses = useMemo(() => {
+    const normalizedSearch = classSearch.trim().toLowerCase();
+
+    return classes.filter((c) => {
+      const classText = `${c.name || ""} ${c.section || ""}`.toLowerCase();
+      const hasQuestionnaire = (questionnaires[c.id] || []).length > 0;
+
+      if (showNeedsSetupOnly && hasQuestionnaire) {
+        return false;
+      }
+
+      if (!normalizedSearch) {
+        return true;
+      }
+
+      return classText.includes(normalizedSearch);
+    });
+  }, [classes, classSearch, questionnaires, showNeedsSetupOnly]);
+
   const getStudentsForTeam = (team) => {
     if (!team || !team.memberIds || team.memberIds.length === 0) return [];
     // Convert memberIds to strings for comparison since IDs can be stored as different types
@@ -116,6 +139,8 @@ const Teacher = () => {
     setShowTeamMembersModal(true);
   };
 
+  const teacherName = [currentUser?.firstName, currentUser?.lastName].filter(Boolean).join(" ") || "Teacher";
+
   return (
     <div className="teacher-container">
       <TeacherSidebar />
@@ -123,6 +148,20 @@ const Teacher = () => {
       <div className="teacher-content">
 
         <h1>Teacher Dashboard</h1>
+
+        <section className="teacher-hero">
+          <div>
+            <p className="teacher-hero-kicker">Academic Control Center</p>
+            <h2 className="teacher-hero-title">Welcome, {teacherName}</h2>
+            <p className="teacher-hero-text">
+              Track class setup, manage team readiness, and monitor questionnaire coverage from one focused view.
+            </p>
+          </div>
+          <div className="teacher-hero-actions">
+            <button className="btn" onClick={() => navigate("/teacher/questionnaires")}>Manage Questionnaires</button>
+            <button className="btn-secondary" onClick={() => navigate("/teacher/reports")}>Open Reports</button>
+          </div>
+        </section>
 
         <div className="summary-row">
           <SummaryCard title="Total Classes" value={loading ? "-" : String(classes.length)} />
@@ -134,53 +173,94 @@ const Teacher = () => {
         {error && <div className="error-message">{error}</div>}
 
         <div className="section">
-          <h2>Your Classes</h2>
+          <div className="section-toolbar">
+            <h2>Your Classes</h2>
+            <div className="section-toolbar-actions">
+              <input
+                type="text"
+                className="table-search-input"
+                placeholder="Search class or section..."
+                value={classSearch}
+                onChange={(e) => setClassSearch(e.target.value)}
+              />
+              <button
+                className={`btn-secondary filter-toggle-btn ${showNeedsSetupOnly ? "is-active" : ""}`}
+                onClick={() => setShowNeedsSetupOnly((prev) => !prev)}
+              >
+                Needs Setup Only
+              </button>
+            </div>
+          </div>
 
           {loading ? (
             <p>Loading...</p>
           ) : classes.length === 0 ? (
             <p>No classes found.</p>
+          ) : filteredClasses.length === 0 ? (
+            <p>No classes matched your current filter.</p>
           ) : (
 
           <table className="class-table">
             <thead>
               <tr>
+                <th>#</th>
                 <th>Class</th>
                 <th>Section</th>
                 <th>School Year</th>
                 <th>Students</th>
                 <th>Teams</th>
                 <th>Questionnaires</th>
+                <th>Readiness</th>
                 <th>Action</th>
               </tr>
             </thead>
 
             <tbody>
-              {classes.map((c) => (
+              {filteredClasses.map((c, index) => {
+                const questionnaireCount = getQuestionnairesForClass(c.id).length;
+                const hasQuestionnaire = questionnaireCount > 0;
+
+                return (
                 <tr key={c.id}>
+                  <td>{index + 1}</td>
                   <td>{c.name}</td>
                   <td>{c.section || "N/A"}</td>
                   <td>{c.schoolYear}</td>
                   <td>{getStudentsForClass(c.id).length} Students</td>
                   <td>{teamsByClassId.get(c.id) || 0} Teams</td>
-                  <td>
-                    {getQuestionnairesForClass(c.id).length === 0 ? (
-                      <span style={{ color: '#6c757d', fontStyle: 'italic' }}>
-                        0 Questionnaires
+                  <td className="table-chip-cell">
+                    {hasQuestionnaire ? (
+                      <span className="questionnaire-count-badge is-available">
+                        <span className="status-chip-dot" aria-hidden="true"></span>
+                        {questionnaireCount} {questionnaireCount === 1 ? "assigned" : "assigned"}
                       </span>
                     ) : (
-                      <span style={{ color: '#28a745', fontWeight: 'bold' }}>
-                        {getQuestionnairesForClass(c.id).length} {getQuestionnairesForClass(c.id).length === 1 ? 'Questionnaire' : 'Questionnaires'}
+                      <span className="questionnaire-count-badge is-zero">
+                        <span className="status-chip-dot" aria-hidden="true"></span>
+                        0 assigned
                       </span>
                     )}
                   </td>
-                  <td>
+                  <td className="table-chip-cell">
+                    {hasQuestionnaire ? (
+                      <span className="class-readiness-badge readiness-good">
+                        <span className="status-chip-dot" aria-hidden="true"></span>
+                        Ready
+                      </span>
+                    ) : (
+                      <span className="class-readiness-badge readiness-setup">
+                        <span className="status-chip-dot" aria-hidden="true"></span>
+                        Needs Setup
+                      </span>
+                    )}
+                  </td>
+                  <td className="table-action-cell">
                     <button className="btn" onClick={() => handleManageClass(c)}>
-                      Manage
+                      Manage Class
                     </button>
                   </td>
                 </tr>
-              ))}
+              );})}
             </tbody>
           </table>
 

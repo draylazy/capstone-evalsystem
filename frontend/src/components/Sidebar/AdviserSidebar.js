@@ -1,10 +1,11 @@
 import React, { useState, useEffect, useRef } from "react";
-import { useNavigate } from "react-router-dom";
+import { useLocation, useNavigate } from "react-router-dom";
 import { authAPI } from "../../services/api";
 import "./Sidebar.css";
 
 const AdviserSidebar = () => {
   const navigate = useNavigate();
+  const location = useLocation();
   const [showProfileMenu, setShowProfileMenu] = useState(false);
   const [user, setUser] = useState(null);
   const [forceOpen, setForceOpen] = useState(() => sessionStorage.getItem('sidebarForceOpen') === '1');
@@ -55,19 +56,27 @@ const AdviserSidebar = () => {
     return (f + l).toUpperCase() || user.email?.[0]?.toUpperCase() || '?';
   };
 
+  const menuItems = [
+    { label: "Dashboard", icon: "⌂", path: "/adviser/dashboard", navigatePath: "/adviser/dashboard" },
+    { label: "Evaluations", icon: "✦", path: "/adviser/evaluations", navigatePath: "/adviser/dashboard" },
+    { label: "Completed", icon: "✓", path: "/adviser/completed", navigatePath: "/adviser/completed" },
+  ];
+
   return (
-    <div className={`sidebar${forceOpen ? ' sidebar-force-open' : ''}`}>
+    <div className={`sidebar sidebar--adviser${forceOpen ? ' sidebar-force-open' : ''}`}>
+      <div className="sidebar-collapsed-id" aria-hidden="true">AP</div>
       <h2>Adviser Panel</h2>
       <ul>
-        <li onClick={() => handleNavigate("/adviser/dashboard")}>
-          Dashboard
-        </li>
-        <li onClick={() => handleNavigate("/adviser/dashboard")}>
-          Evaluations
-        </li>
-        <li onClick={() => handleNavigate("/adviser/completed")}>
-          Completed
-        </li>
+        {menuItems.map((item) => (
+          <li
+            key={item.path}
+            className={location.pathname.startsWith(item.path) ? "is-active" : ""}
+            onClick={() => handleNavigate(item.navigatePath)}
+          >
+            <span className="nav-icon" aria-hidden="true">{item.icon}</span>
+            <span>{item.label}</span>
+          </li>
+        ))}
       </ul>
 
       <div className="sidebar-profile" ref={menuRef}>
