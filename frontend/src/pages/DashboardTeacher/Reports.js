@@ -1,4 +1,4 @@
-import React, { useEffect, useMemo, useState } from "react";
+import React, { useEffect, useMemo, useRef, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import TeacherSidebar from "../../components/Sidebar/TeacherSidebar";
 import { teacherReportAPI } from "../../services/api";
@@ -21,6 +21,8 @@ const Reports = () => {
   ]);
   const [aiInput, setAiInput] = useState('');
   const [aiLoading, setAiLoading] = useState(false);
+  const [isAiOpen, setIsAiOpen] = useState(false);
+  const aiMessagesEndRef = useRef(null);
 
   const token = useMemo(() => {
     try {
@@ -34,6 +36,12 @@ const Reports = () => {
   useEffect(() => {
     loadQuestionnaires();
   }, []);
+
+  useEffect(() => {
+    if (isAiOpen) {
+      aiMessagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
+    }
+  }, [aiMessages, aiLoading, isAiOpen]);
 
   const loadQuestionnaires = async () => {
     try {
@@ -86,20 +94,43 @@ const Reports = () => {
     const history = aiMessages.slice(-12);
 
     const reportContext = (() => {
-      if (!selectedQuestionnaire) return '';
+      if (!selectedQuestionnaire) {
+        const titles = questionnaires.slice(0, 20).map((q) => q.title).join(', ');
+        return [
+          `Teacher reports overview`,
+          `Total active questionnaires: ${questionnaires.length}`,
+          titles ? `Questionnaire titles (up to 20): ${titles}` : '',
+          `No specific questionnaire selected yet.`,
+        ]
+          .filter(Boolean)
+          .join('\n');
+      }
       const total = evaluations.length;
       const submitted = evaluations.filter((e) => e.status === 'SUBMITTED').length;
       const inProgress = total - submitted;
+      const progressRate = total > 0 ? ((submitted / total) * 100).toFixed(1) : '0.0';
+      const latestSubmission = evaluations
+        .filter((e) => e.submittedAt)
+        .sort((a, b) => new Date(b.submittedAt).getTime() - new Date(a.submittedAt).getTime())[0];
 
       const recentTeams = evaluations
         .slice(0, 20)
         .map((e) => `${e.teamName || 'Unknown team'}: ${e.status || 'UNKNOWN'}`)
         .join('\n');
 
+      const pendingTeams = evaluations
+        .filter((e) => e.status !== 'SUBMITTED')
+        .slice(0, 20)
+        .map((e) => e.teamName || 'Unknown team')
+        .join(', ');
+
       return [
         `Selected questionnaire: ${selectedQuestionnaire.title}`,
         selectedQuestionnaire.description ? `Description: ${selectedQuestionnaire.description}` : '',
         `Evaluations summary: total=${total}, submitted=${submitted}, in_progress=${inProgress}`,
+        `Progress rate: ${progressRate}%`,
+        latestSubmission ? `Latest submission: ${latestSubmission.teamName || 'Unknown team'} at ${new Date(latestSubmission.submittedAt).toLocaleString()}` : '',
+        pendingTeams ? `Pending teams: ${pendingTeams}` : 'Pending teams: none',
         recentTeams ? `Sample teams/status (up to 20):\n${recentTeams}` : '',
       ]
         .filter(Boolean)
@@ -248,52 +279,74 @@ const Reports = () => {
           </div>
         )}
 
-        <div className="section">
-          <h2>AI Assistant</h2>
-          <div className="ai-chat">
-            <div className="ai-chat-messages">
-              {aiMessages.map((m, idx) => (
-                <div
-                  key={idx}
-                  className={`ai-chat-row ${m.role === 'user' ? 'is-user' : 'is-assistant'}`}
-                >
-                  <div className="ai-chat-bubble">
-                    <div className="ai-chat-meta">{m.role === 'user' ? 'You' : 'AI'}</div>
-                    <div className="ai-chat-text">{m.text}</div>
-                  </div>
-                </div>
-              ))}
+        <button
+          className="ai-fab"
+          onClick={() => setIsAiOpen((prev) => !prev)}
+          aria-label="Open AI assistant"
+          title="AI Assistant"
+        >
+          AI
+        </button>
 
-              {aiLoading && (
-                <div className="ai-chat-row is-assistant ai-chat-typing">
-                  <div className="ai-chat-bubble">
-                    <div className="ai-chat-meta">AI</div>
-                    <div className="ai-typing-dots" aria-label="AI is typing" role="status">
-                      <span></span>
-                      <span></span>
-                      <span></span>
-                    </div>
-                  </div>
-                </div>
-              )}
-            </div>
-
-            <div className="ai-chat-composer">
-              <textarea
-                className="form-input ai-chat-input"
-                rows={2}
-                placeholder="Ask the AI about questionnaires, improvements, or report interpretation..."
-                value={aiInput}
-                onChange={(e) => setAiInput(e.target.value)}
-                onKeyDown={onAiKeyDown}
-                disabled={aiLoading}
-              />
-              <button className="btn btn-primary ai-chat-send" onClick={sendAiMessage} disabled={aiLoading || !aiInput.trim()}>
-                {aiLoading ? 'Sending...' : 'Send'}
+        {isAiOpen && (
+          <div className="ai-fab-panel" role="dialog" aria-label="AI assistant chat">
+            <div className="ai-fab-header">
+              <div>
+                <strong>AI Report Assistant</strong>
+                <p>Ask for progress, insights, and next actions.</p>
+              </div>
+              <button className="btn-secondary" onClick={() => setIsAiOpen(false)}>
+                Close
               </button>
             </div>
+
+            <div className="ai-chat ai-chat-fab">
+              <div className="ai-chat-messages">
+                {aiMessages.map((m, idx) => (
+                  <div
+                    key={idx}
+                    className={`ai-chat-row ${m.role === 'user' ? 'is-user' : 'is-assistant'}`}
+                  >
+                    <div className="ai-chat-bubble">
+                      <div className="ai-chat-meta">{m.role === 'user' ? 'You' : 'AI'}</div>
+                      <div className="ai-chat-text">{m.text}</div>
+                    </div>
+                  </div>
+                ))}
+
+                {aiLoading && (
+                  <div className="ai-chat-row is-assistant ai-chat-typing">
+                    <div className="ai-chat-bubble">
+                      <div className="ai-chat-meta">AI</div>
+                      <div className="ai-typing-dots" aria-label="AI is typing" role="status">
+                        <span></span>
+                        <span></span>
+                        <span></span>
+                      </div>
+                    </div>
+                  </div>
+                )}
+
+                <div ref={aiMessagesEndRef}></div>
+              </div>
+
+              <div className="ai-chat-composer">
+                <textarea
+                  className="form-input ai-chat-input"
+                  rows={2}
+                  placeholder="Ask for summary, trends, weak areas, and recommendations..."
+                  value={aiInput}
+                  onChange={(e) => setAiInput(e.target.value)}
+                  onKeyDown={onAiKeyDown}
+                  disabled={aiLoading}
+                />
+                <button className="btn btn-primary ai-chat-send" onClick={sendAiMessage} disabled={aiLoading || !aiInput.trim()}>
+                  {aiLoading ? 'Sending...' : 'Send'}
+                </button>
+              </div>
+            </div>
           </div>
-        </div>
+        )}
       </div>
     </div>
   );

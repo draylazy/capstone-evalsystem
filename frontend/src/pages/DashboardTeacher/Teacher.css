@@ -113,6 +113,181 @@
     color: var(--dtm-gold);
     margin-bottom: 16px;
   }
+
+  .evaluation-summary-grid {
+    display: grid;
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+    gap: 12px;
+    margin-bottom: 18px;
+  }
+
+  .evaluation-summary-card {
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+    padding: 14px;
+    border-radius: 10px;
+    background: rgba(255, 255, 255, 0.06);
+    border: 1px solid rgba(255, 255, 255, 0.12);
+  }
+
+  .evaluation-summary-label {
+    font-size: 12px;
+    color: var(--dtm-muted);
+    text-transform: uppercase;
+    letter-spacing: 0.08em;
+  }
+
+  .evaluation-summary-value {
+    font-size: 22px;
+    font-weight: 700;
+    color: var(--dtm-gold);
+  }
+
+  .evaluation-response-item {
+    padding: 14px;
+    margin-bottom: 12px;
+    border-radius: 10px;
+    background: rgba(255, 255, 255, 0.06);
+    border: 1px solid rgba(255, 255, 255, 0.12);
+  }
+
+  .evaluation-response-question {
+    margin-bottom: 8px;
+    color: var(--dtm-text);
+    line-height: 1.45;
+  }
+
+  .evaluation-response-answer {
+    color: var(--dtm-text);
+    line-height: 1.45;
+    white-space: pre-wrap;
+  }
+
+  .evaluation-feedback-header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 12px;
+    margin-bottom: 10px;
+  }
+
+  .evaluation-feedback-subtitle {
+    font-size: 13px;
+    color: var(--dtm-muted);
+    margin-top: 4px;
+  }
+
+  .evaluation-ai-panel {
+    position: relative;
+    padding: 16px;
+    border-radius: 14px;
+    border: 1px solid rgba(242, 201, 76, 0.22);
+    background:
+      linear-gradient(145deg, rgba(242, 201, 76, 0.06), rgba(138, 21, 31, 0.08)),
+      rgba(255, 255, 255, 0.02);
+    box-shadow: 0 10px 30px rgba(0, 0, 0, 0.28), inset 0 0 0 1px rgba(255, 255, 255, 0.03);
+    overflow: hidden;
+  }
+
+  .evaluation-ai-panel::before {
+    content: "";
+    position: absolute;
+    left: 0;
+    top: 0;
+    bottom: 0;
+    width: 4px;
+    background: linear-gradient(180deg, var(--dtm-gold), rgba(242, 201, 76, 0.1));
+  }
+
+  .evaluation-feedback-chip-row {
+    display: flex;
+    gap: 8px;
+    flex-wrap: wrap;
+    margin-bottom: 12px;
+  }
+
+  .evaluation-feedback-chip {
+    font-size: 11px;
+    font-weight: 700;
+    letter-spacing: 0.06em;
+    text-transform: uppercase;
+    color: var(--dtm-gold);
+    border: 1px solid rgba(242, 201, 76, 0.28);
+    background: rgba(242, 201, 76, 0.08);
+    border-radius: 999px;
+    padding: 5px 10px;
+  }
+
+  .evaluation-feedback-header .btn-secondary {
+    width: auto;
+    min-height: 34px;
+    padding: 6px 12px;
+  }
+
+  .evaluation-ai-feedback-box {
+    background: rgba(10, 6, 8, 0.35);
+    border: 1px solid rgba(255, 255, 255, 0.14);
+    border-radius: 10px;
+    padding: 16px;
+    color: var(--dtm-text);
+    line-height: 1.55;
+    white-space: pre-wrap;
+  }
+
+  .ai-feedback-sections {
+    display: grid;
+    gap: 12px;
+  }
+
+  .ai-feedback-section-card {
+    position: relative;
+    padding: 14px 14px 12px 14px;
+    border-radius: 10px;
+    border: 1px solid rgba(255, 255, 255, 0.14);
+    background: rgba(255, 255, 255, 0.03);
+  }
+
+  .ai-feedback-section-card::before {
+    content: "";
+    position: absolute;
+    left: 0;
+    top: 10px;
+    bottom: 10px;
+    width: 3px;
+    border-radius: 3px;
+    background: linear-gradient(180deg, rgba(242, 201, 76, 0.95), rgba(138, 21, 31, 0.45));
+  }
+
+  .ai-feedback-section-title {
+    margin: 0 0 8px 8px;
+    font-size: 12px;
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+    color: var(--dtm-gold);
+    font-weight: 800;
+  }
+
+  .ai-feedback-paragraph {
+    margin: 0 0 8px 8px;
+    color: var(--dtm-text);
+    line-height: 1.55;
+  }
+
+  .ai-feedback-paragraph:last-of-type {
+    margin-bottom: 6px;
+  }
+
+  .ai-feedback-list {
+    margin: 0 0 0 28px;
+    padding: 0;
+    color: var(--dtm-text);
+  }
+
+  .ai-feedback-list li {
+    margin-bottom: 6px;
+    line-height: 1.5;
+  }
   
   /* TABLE */
   .class-table {
@@ -500,6 +675,79 @@
 
   .ai-chat-send:hover {
     box-shadow: 0 4px 16px rgba(138, 21, 31, 0.3);
+  }
+
+  .ai-fab {
+    position: fixed;
+    right: 24px;
+    bottom: 24px;
+    width: 58px;
+    height: 58px;
+    border-radius: 50%;
+    border: 1px solid rgba(242, 201, 76, 0.35);
+    background: linear-gradient(135deg, var(--dtm-maroon), var(--dtm-maroon-dark));
+    color: #fff;
+    font-size: 14px;
+    font-weight: 700;
+    box-shadow: 0 12px 28px rgba(0, 0, 0, 0.45);
+    z-index: 1002;
+    cursor: pointer;
+    transition: transform 0.25s ease, box-shadow 0.25s ease;
+  }
+
+  .ai-fab:hover {
+    transform: translateY(-2px) scale(1.03);
+    box-shadow: 0 16px 32px rgba(0, 0, 0, 0.55);
+  }
+
+  .ai-fab-panel {
+    position: fixed;
+    right: 24px;
+    bottom: 96px;
+    width: min(420px, calc(100vw - 32px));
+    max-height: min(72vh, 620px);
+    background: rgba(24, 12, 14, 0.96);
+    border: 1px solid rgba(255, 255, 255, 0.14);
+    border-radius: 16px;
+    box-shadow: 0 20px 44px rgba(0, 0, 0, 0.5);
+    z-index: 1001;
+    overflow: hidden;
+    backdrop-filter: blur(12px);
+  }
+
+  .ai-fab-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: flex-start;
+    gap: 12px;
+    padding: 12px 14px;
+    border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+  }
+
+  .ai-fab-header strong {
+    display: block;
+    color: var(--dtm-gold);
+    font-size: 14px;
+    margin-bottom: 4px;
+  }
+
+  .ai-fab-header p {
+    margin: 0;
+    font-size: 12px;
+    color: var(--dtm-muted);
+  }
+
+  .ai-fab-header .btn-secondary {
+    width: auto;
+    min-height: 34px;
+    padding: 6px 12px;
+  }
+
+  .ai-chat.ai-chat-fab {
+    height: min(60vh, 520px);
+    border: 0;
+    border-radius: 0;
+    background: transparent;
   }
 
   /* Team Management Styles */
@@ -980,6 +1228,42 @@
       flex-direction: column;
       align-items: flex-start;
       gap: 8px;
+    }
+
+    .evaluation-summary-grid {
+      grid-template-columns: 1fr;
+    }
+
+    .evaluation-feedback-header {
+      flex-direction: column;
+      align-items: stretch;
+    }
+
+    .evaluation-feedback-header .btn-secondary {
+      width: 100%;
+    }
+
+    .ai-fab {
+      right: 16px;
+      bottom: 16px;
+      width: 52px;
+      height: 52px;
+    }
+
+    .ai-fab-panel {
+      right: 12px;
+      bottom: 78px;
+      width: calc(100vw - 24px);
+      max-height: 76vh;
+    }
+
+    .ai-fab-header {
+      flex-direction: column;
+      align-items: stretch;
+    }
+
+    .ai-fab-header .btn-secondary {
+      width: 100%;
     }
   }
 
