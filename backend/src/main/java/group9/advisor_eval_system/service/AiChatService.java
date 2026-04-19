@@ -39,6 +39,7 @@ public class AiChatService {
 
                 AiIntent intent = detectIntent(message, contextType);
                 String transcript = formatHistoryTail(request == null ? null : request.getHistory(), 12);
+                String modeInstruction = buildModeInstruction(intent);
 
                 String systemInstruction = String.join("\n",
                                 "You are an AI assistant inside a capstone Adviser Evaluation System used by teachers.",
@@ -74,7 +75,8 @@ public class AiChatService {
                                 "Base the answer strictly on that data: summarize trends, averages, strengths, concerns, and actions.",
                                 "State how many respondent evaluations were analyzed when that information is available.",
                                 "",
-                                "MODE: " + intent.name());
+                                "MODE: " + intent.name(),
+                                modeInstruction);
 
                 List<String> promptParts = new ArrayList<>();
                 promptParts.add("Teacher context (read-only):\n" + safeBlock(teacherContext));
@@ -164,6 +166,28 @@ public class AiChatService {
                         }
                 }
                 return false;
+        }
+
+        private String buildModeInstruction(AiIntent intent) {
+                if (intent != AiIntent.RESPONSE_SUMMARY) {
+                        return "";
+                }
+
+                return String.join("\n",
+                                "RESPONSE_SUMMARY strict rules:",
+                                "- Act as a summarizer only. Do not invent or assume missing data.",
+                                "- Use only evidence present in the provided questionnaire answers and comments.",
+                                "- Do not output unsupported labels such as Risks, Gaps, or Strengths unless explicitly grounded in responses.",
+                                "- If evidence is missing for any section, write: Not enough data from responses.",
+                                "- Keep wording factual and transparent; avoid speculation.",
+                                "- When score data is provided, report it exactly as provided.",
+                                "- If asked for a structured summary, follow this exact order:",
+                                "  Overall Score:",
+                                "  Performance Level:",
+                                "  Key Strengths:",
+                                "  Key Issues:",
+                                "  Brief Summary:",
+                                "  Suggested Actions:");
         }
 
         private String formatHistoryTail(List<AiChatRequest.ChatMessage> history, int maxItems) {
