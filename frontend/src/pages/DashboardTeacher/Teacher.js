@@ -147,7 +147,7 @@ const Teacher = () => {
 
       <div className="teacher-content">
 
-        <h1>Teacher Dashboard</h1>
+        <h1 className="teacher-page-title">Teacher Dashboard</h1>
 
         <section className="teacher-hero">
           <div>
@@ -173,23 +173,15 @@ const Teacher = () => {
         {error && <div className="error-message">{error}</div>}
 
         <div className="section">
-          <div className="section-toolbar">
+          <div className="classes-header">
             <h2>Your Classes</h2>
-            <div className="section-toolbar-actions">
-              <input
-                type="text"
-                className="table-search-input"
-                placeholder="Search class or section..."
-                value={classSearch}
-                onChange={(e) => setClassSearch(e.target.value)}
-              />
-              <button
-                className={`btn-secondary filter-toggle-btn ${showNeedsSetupOnly ? "is-active" : ""}`}
-                onClick={() => setShowNeedsSetupOnly((prev) => !prev)}
-              >
-                Needs Setup Only
-              </button>
-            </div>
+            <button
+              className={`classes-filter-btn ${showNeedsSetupOnly ? "is-active" : ""}`}
+              onClick={() => setShowNeedsSetupOnly((prev) => !prev)}
+              title={showNeedsSetupOnly ? "Showing: Classes Needing Setup" : "Show: Classes Needing Setup Only"}
+            >
+              Needs Setup Only
+            </button>
           </div>
 
           {loading ? (
