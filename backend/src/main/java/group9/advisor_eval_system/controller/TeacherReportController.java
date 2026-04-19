@@ -1,6 +1,7 @@
 package group9.advisor_eval_system.controller;
 
 import group9.advisor_eval_system.dto.EvaluationResponse;
+import group9.advisor_eval_system.dto.PendingEvaluationDto;
 import group9.advisor_eval_system.entity.Evaluation;
 import group9.advisor_eval_system.entity.Questionnaire;
 import group9.advisor_eval_system.entity.User;
@@ -130,6 +131,50 @@ public class TeacherReportController {
             return ResponseEntity.ok(response);
         } catch (Exception e) {
             log.error("Error fetching evaluation details", e);
+            return ResponseEntity.status(HttpStatus.BAD_REQUEST)
+                    .body(Map.of("error", e.getMessage()));
+        }
+    }
+
+    @GetMapping("/pending-evaluations")
+    public ResponseEntity<?> getPendingEvaluations(HttpServletRequest request) {
+        try {
+            Long teacherId = getTeacherId(request);
+            User teacher = userRepository.findById(teacherId)
+                    .orElseThrow(() -> new RuntimeException("Teacher not found"));
+
+            if (teacher.getRole() != User.UserRole.TEACHER) {
+                return ResponseEntity.status(HttpStatus.FORBIDDEN)
+                        .body(Map.of("error", "Only teachers can access this"));
+            }
+
+            // Get all pending evaluations for this teacher's classes
+            List<Evaluation> pendingEvaluations = evaluationRepository.findPendingEvaluationsByTeacherId(teacherId);
+
+            // Convert to DTOs
+            List<PendingEvaluationDto> response = pendingEvaluations.stream()
+                    .map(eval -> new PendingEvaluationDto(
+                            eval.getId(),
+                            eval.getAdviser().getId(),
+                            (eval.getAdviser().getFirstName() != null ? eval.getAdviser().getFirstName() : "") + " " +
+                            (eval.getAdviser().getLastName() != null ? eval.getAdviser().getLastName() : ""),
+                            eval.getTeam().getSchoolClass().getId(),
+                            eval.getTeam().getSchoolClass().getName(),
+                            eval.getTeam().getId(),
+                            eval.getTeam().getName(),
+                            eval.getQuestionnaire().getId(),
+                            eval.getQuestionnaire().getTitle()
+                    ))
+                    .collect(Collectors.toList());
+
+            Map<String, Object> result = Map.of(
+                    "total", response.size(),
+                    "pending", response
+            );
+
+            return ResponseEntity.ok(result);
+        } catch (Exception e) {
+            log.error("Error fetching pending evaluations", e);
             return ResponseEntity.status(HttpStatus.BAD_REQUEST)
                     .body(Map.of("error", e.getMessage()));
         }

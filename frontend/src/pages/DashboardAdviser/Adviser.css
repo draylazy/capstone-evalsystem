@@ -67,8 +67,7 @@
   .adviser-content {
     flex: 1;
     padding: 36px 40px 30px 40px;
-    margin-left: 80px;
-    transition: margin-left 0.35s cubic-bezier(0.4, 0, 0.2, 1);
+    margin-left: 280px;
   }
   
   .adviser-content h1 {
@@ -81,11 +80,6 @@
     letter-spacing: 1px;
   }
 
-  .sidebar:hover ~ .adviser-content,
-  .sidebar.sidebar-force-open ~ .adviser-content {
-    margin-left: 280px;
-  }
-  
   /* SUMMARY CARDS */
   .summary-row {
     display: flex;

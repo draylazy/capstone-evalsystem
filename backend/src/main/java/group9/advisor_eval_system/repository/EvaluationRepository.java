@@ -44,4 +44,13 @@ public interface EvaluationRepository extends JpaRepository<Evaluation, Long> {
     List<Evaluation> findByAdviserIdAndTeamIdWithProgress(
             @Param("adviserId") Long adviserId,
             @Param("teamId") Long teamId);
+
+    @Query("SELECT DISTINCT e FROM Evaluation e " +
+            "JOIN e.questionnaire q " +
+            "JOIN e.team t " +
+            "JOIN t.schoolClass sc " +
+            "JOIN e.adviser a " +
+            "WHERE sc.teacher.id = :teacherId " +
+            "AND e.status = 'IN_PROGRESS'")
+    List<Evaluation> findPendingEvaluationsByTeacherId(@Param("teacherId") Long teacherId);
 }

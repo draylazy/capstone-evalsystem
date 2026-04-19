@@ -818,6 +818,22 @@ export const teacherReportAPI = {
 
     return await response.json();
   },
+
+  getPendingEvaluations: async () => {
+    const response = await fetch(
+      `${API_BASE_URL}/teacher/reports/pending-evaluations`,
+      {
+        method: 'GET',
+        headers: getHeaders(),
+      }
+    );
+
+    if (!response.ok) {
+      await throwApiError(response, 'Failed to fetch pending evaluations');
+    }
+
+    return await response.json();
+  },
 };
 
 

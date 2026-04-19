@@ -67,8 +67,7 @@
   .teacher-content {
     flex: 1;
     padding: 36px 40px 30px 40px;
-    margin-left: 80px;
-    transition: margin-left 0.35s cubic-bezier(0.4, 0, 0.2, 1);
+    margin-left: 280px;
   }
   
   .teacher-content h1 {
@@ -91,11 +90,6 @@
     letter-spacing: 0.04em;
   }
 
-  .sidebar:hover ~ .teacher-content,
-  .sidebar.sidebar-force-open ~ .teacher-content {
-    margin-left: 280px;
-  }
-  
   /* SUMMARY CARDS */
   .teacher-hero {
     display: flex;
@@ -150,6 +144,12 @@
     gap: 14px;
     margin-bottom: 24px;
     align-items: stretch;
+  }
+
+  .summary-card-wrapper {
+    cursor: pointer;
+    min-width: 0;
+    display: contents;
   }
 
   .teacher-content .summary-row .summary-card {
@@ -1360,31 +1360,21 @@
   }
 
   .questionnaire-count-badge {
-    display: inline-flex;
-    align-items: center;
-    justify-content: center;
-    min-height: 40px;
-    padding: 10px 20px;
-    border-radius: 10px;
-    font-size: 13px;
-    font-weight: 500;
-    line-height: 1;
-    letter-spacing: 0.02em;
-    white-space: nowrap;
+    display: inline;
+    color: var(--dtm-text);
   }
 
   .questionnaire-count-badge.is-available {
-    color: #dff8e7;
-    background: linear-gradient(135deg, rgba(39, 174, 96, 0.82), rgba(30, 132, 73, 0.75));
-    border: 1px solid rgba(111, 245, 166, 0.4);
-    box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.12);
+    color: var(--dtm-text);
+    background: none;
+    border: none;
+    box-shadow: none;
   }
 
   .questionnaire-count-badge.is-zero {
-    color: #c8bfb8;
-    background: rgba(255, 255, 255, 0.06);
-    border: 1px solid rgba(255, 255, 255, 0.16);
-    font-style: italic;
+    color: var(--dtm-text);
+    background: none;
+    border: none;
   }
 
   .questions-success-hint {

@@ -3,7 +3,8 @@ import { createPortal } from "react-dom";
 import { useNavigate } from "react-router-dom";
 import TeacherSidebar from "../../components/Sidebar/TeacherSidebar";
 import SummaryCard from "../../components/Cards/SummaryCard";
-import { classAPI, studentAPI, teamAPI, questionnaireAPI } from "../../services/api";
+import PendingEvaluationsModal from "../../components/Modal/PendingEvaluationsModal";
+import { classAPI, studentAPI, teamAPI, questionnaireAPI, teacherReportAPI } from "../../services/api";
 import "./Teacher.css";
 
 const Teacher = () => {
@@ -15,11 +16,13 @@ const Teacher = () => {
   const [teams, setTeams] = useState([]);
   const [questionnaires, setQuestionnaires] = useState([]);
   const [classSearch, setClassSearch] = useState("");
-  const [showNeedsSetupOnly, setShowNeedsSetupOnly] = useState(false);
   const [showTeamsModal, setShowTeamsModal] = useState(false);
   const [selectedClass, setSelectedClass] = useState(null);
   const [showTeamMembersModal, setShowTeamMembersModal] = useState(false);
   const [selectedTeam, setSelectedTeam] = useState(null);
+  const [pendingEvaluations, setPendingEvaluations] = useState([]);
+  const [pendingCount, setPendingCount] = useState(0);
+  const [showPendingModal, setShowPendingModal] = useState(false);
 
   const currentUser = useMemo(() => {
     const raw = localStorage.getItem("user");
@@ -72,6 +75,17 @@ const Teacher = () => {
         setStudents(teacherStudents);
         setTeams(teacherTeams);
         setQuestionnaires(questionnairesMap);
+
+        // Load pending evaluations
+        try {
+          const pendingData = await teacherReportAPI.getPendingEvaluations();
+          setPendingEvaluations(pendingData.pending || []);
+          setPendingCount(pendingData.total || 0);
+        } catch (err) {
+          console.error("Error fetching pending evaluations:", err);
+          setPendingCount(0);
+          setPendingEvaluations([]);
+        }
       } catch (e) {
         setError(e?.message || "Failed to load dashboard data");
       } finally {
@@ -113,11 +127,6 @@ const Teacher = () => {
 
     return classes.filter((c) => {
       const classText = `${c.name || ""} ${c.section || ""}`.toLowerCase();
-      const hasQuestionnaire = (questionnaires[c.id] || []).length > 0;
-
-      if (showNeedsSetupOnly && hasQuestionnaire) {
-        return false;
-      }
 
       if (!normalizedSearch) {
         return true;
@@ -125,7 +134,7 @@ const Teacher = () => {
 
       return classText.includes(normalizedSearch);
     });
-  }, [classes, classSearch, questionnaires, showNeedsSetupOnly]);
+  }, [classes, classSearch]);
 
   const getStudentsForTeam = (team) => {
     if (!team || !team.memberIds || team.memberIds.length === 0) return [];
@@ -158,8 +167,6 @@ const Teacher = () => {
             </p>
           </div>
           <div className="teacher-hero-actions">
-            <button className="btn" onClick={() => navigate("/teacher/questionnaires")}>Manage Questionnaires</button>
-            <button className="btn-secondary" onClick={() => navigate("/teacher/reports")}>Open Reports</button>
           </div>
         </section>
 
@@ -167,7 +174,9 @@ const Teacher = () => {
           <SummaryCard title="Total Classes" value={loading ? "-" : String(classes.length)} />
           <SummaryCard title="Total Students" value={loading ? "-" : String(students.length)} />
           <SummaryCard title="Total Teams" value={loading ? "-" : String(teams.length)} />
-          <SummaryCard title="Pending Evaluations" value={loading ? "-" : "0"} />
+          <div className="summary-card-wrapper" onClick={() => setShowPendingModal(true)}>
+            <SummaryCard title="Pending Evaluations" value={loading ? "-" : String(pendingCount)} />
+          </div>
         </div>
 
         {error && <div className="error-message">{error}</div>}
@@ -175,13 +184,6 @@ const Teacher = () => {
         <div className="section">
           <div className="classes-header">
             <h2>Your Classes</h2>
-            <button
-              className={`classes-filter-btn ${showNeedsSetupOnly ? "is-active" : ""}`}
-              onClick={() => setShowNeedsSetupOnly((prev) => !prev)}
-              title={showNeedsSetupOnly ? "Showing: Classes Needing Setup" : "Show: Classes Needing Setup Only"}
-            >
-              Needs Setup Only
-            </button>
           </div>
 
           {loading ? (
@@ -202,7 +204,6 @@ const Teacher = () => {
                 <th>Students</th>
                 <th>Teams</th>
                 <th>Questionnaires</th>
-                <th>Readiness</th>
                 <th>Action</th>
               </tr>
             </thead>
@@ -223,26 +224,11 @@ const Teacher = () => {
                   <td className="table-chip-cell">
                     {hasQuestionnaire ? (
                       <span className="questionnaire-count-badge is-available">
-                        <span className="status-chip-dot" aria-hidden="true"></span>
                         {questionnaireCount} {questionnaireCount === 1 ? "assigned" : "assigned"}
                       </span>
                     ) : (
                       <span className="questionnaire-count-badge is-zero">
-                        <span className="status-chip-dot" aria-hidden="true"></span>
                         0 assigned
-                      </span>
-                    )}
-                  </td>
-                  <td className="table-chip-cell">
-                    {hasQuestionnaire ? (
-                      <span className="class-readiness-badge readiness-good">
-                        <span className="status-chip-dot" aria-hidden="true"></span>
-                        Ready
-                      </span>
-                    ) : (
-                      <span className="class-readiness-badge readiness-setup">
-                        <span className="status-chip-dot" aria-hidden="true"></span>
-                        Needs Setup
                       </span>
                     )}
                   </td>
@@ -420,7 +406,17 @@ const Teacher = () => {
             </div>
           </div>
         </div>
-      ), document.body)}    </div>
+      ), document.body)}
+
+      {createPortal(
+        <PendingEvaluationsModal 
+          isOpen={showPendingModal} 
+          onClose={() => setShowPendingModal(false)} 
+          pendingEvaluations={pendingEvaluations}
+        />,
+        document.body
+      )}
+    </div>
   );
 };
 

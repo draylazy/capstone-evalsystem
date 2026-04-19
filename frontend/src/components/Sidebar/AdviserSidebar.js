@@ -8,7 +8,6 @@ const AdviserSidebar = () => {
   const location = useLocation();
   const [showProfileMenu, setShowProfileMenu] = useState(false);
   const [user, setUser] = useState(null);
-  const [forceOpen, setForceOpen] = useState(() => sessionStorage.getItem('sidebarForceOpen') === '1');
   const menuRef = useRef(null);
 
   useEffect(() => {
@@ -28,24 +27,12 @@ const AdviserSidebar = () => {
     return () => document.removeEventListener('mousedown', handleClickOutside);
   }, []);
 
-  useEffect(() => {
-    if (!forceOpen) return;
-
-    const timer = setTimeout(() => {
-      sessionStorage.removeItem('sidebarForceOpen');
-      setForceOpen(false);
-    }, 450);
-
-    return () => clearTimeout(timer);
-  }, [forceOpen]);
-
   const handleLogout = () => {
     authAPI.logout();
     navigate("/login");
   };
 
   const handleNavigate = (path) => {
-    sessionStorage.setItem('sidebarForceOpen', '1');
     navigate(path);
   };
 
@@ -63,8 +50,7 @@ const AdviserSidebar = () => {
   ];
 
   return (
-    <div className={`sidebar sidebar--adviser${forceOpen ? ' sidebar-force-open' : ''}`}>
-      <div className="sidebar-collapsed-id" aria-hidden="true">AP</div>
+    <div className="sidebar sidebar--adviser">
       <h2>Adviser Panel</h2>
       <ul>
         {menuItems.map((item) => (
