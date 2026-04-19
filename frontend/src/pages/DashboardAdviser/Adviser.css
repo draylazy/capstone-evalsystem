@@ -150,12 +150,6 @@
     line-height: 1.5;
   }
 
-  .adviser-hero-actions {
-    display: flex;
-    gap: 10px;
-    align-items: center;
-  }
-
   .adviser-metric-grid {
     display: grid;
     grid-template-columns: repeat(4, minmax(0, 1fr));
@@ -334,22 +328,6 @@
   .adviser-progress-text {
     font-size: 11px;
     color: var(--dtm-muted);
-  }
-
-  .completed-top-strip {
-    display: flex;
-    align-items: center;
-    justify-content: flex-start;
-    gap: 12px;
-    margin-bottom: 14px;
-    flex-wrap: wrap;
-  }
-
-  .completed-top-strip .btn-secondary {
-    min-height: 36px;
-    padding: 8px 14px;
-    border-color: rgba(242, 201, 76, 0.24);
-    color: var(--dtm-text);
   }
 
   .completed-kpi-row {
@@ -801,22 +779,8 @@
       font-size: 20px;
     }
 
-    .adviser-hero-actions {
-      width: 100%;
-      flex-direction: column;
-    }
-
-    .completed-top-strip {
-      align-items: stretch;
-    }
-
     .completed-kpi-row {
       grid-template-columns: 1fr;
-    }
-
-    .adviser-hero-actions .btn,
-    .adviser-hero-actions .btn-secondary {
-      width: 100%;
     }
 
     .section-header-row {

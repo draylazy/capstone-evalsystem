@@ -1,11 +1,9 @@
 import React, { useEffect, useState } from "react";
-import { useNavigate } from "react-router-dom";
 import AdviserSidebar from "../../components/Sidebar/AdviserSidebar";
 import { adviserAPI } from "../../services/api";
 import "./Adviser.css";
 
 const Completed = () => {
-  const navigate = useNavigate();
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
   const [completed, setCompleted] = useState([]);
@@ -35,10 +33,6 @@ const Completed = () => {
       <AdviserSidebar />
 
       <div className="adviser-content">
-        <div className="completed-top-strip">
-          <button className="btn-secondary" onClick={() => navigate("/adviser/dashboard")}>Back to Dashboard</button>
-        </div>
-
         <h1>Completed Evaluations</h1>
 
         <section className="adviser-hero adviser-hero-tight">

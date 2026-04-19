@@ -51,10 +51,6 @@ const Adviser = () => {
               Review team readiness, open assigned questionnaires, and drive consistent adviser feedback quality.
             </p>
           </div>
-          <div className="adviser-hero-actions">
-            <button className="btn" onClick={() => navigate("/adviser/completed")}>View Completed</button>
-            <button className="btn-secondary" onClick={() => window.location.reload()}>Refresh</button>
-          </div>
         </section>
 
         <div className="adviser-metric-grid">
@@ -79,7 +75,6 @@ const Adviser = () => {
         <div className="section">
           <div className="section-header-row">
             <h2>Assigned Teams</h2>
-            {!loading && <span className="section-helper-text">{teams.length} teams ready for evaluation access</span>}
           </div>
 
           {loading ? <p>Loading...</p> : (
