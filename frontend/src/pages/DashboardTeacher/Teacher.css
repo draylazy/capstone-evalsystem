@@ -200,7 +200,9 @@
     align-items: center;
     justify-content: space-between;
     gap: 12px;
-    margin-bottom: 10px;
+    margin-bottom: 16px;
+    padding-bottom: 12px;
+    border-bottom: 1px solid rgba(242, 201, 76, 0.15);
   }
 
   .evaluation-snapshot-row {
@@ -451,7 +453,7 @@
     display: flex;
     gap: 8px;
     flex-wrap: wrap;
-    margin-bottom: 12px;
+    margin-bottom: 16px;
   }
 
   .evaluation-feedback-chip {
@@ -473,10 +475,10 @@
   }
 
   .evaluation-ai-feedback-box {
-    background: rgba(10, 6, 8, 0.35);
-    border: 1px solid rgba(255, 255, 255, 0.14);
-    border-radius: 10px;
-    padding: 16px;
+    background: transparent;
+    border: none;
+    border-radius: 0;
+    padding: 8px 0;
     color: var(--dtm-text);
     line-height: 1.55;
     white-space: pre-wrap;
@@ -484,63 +486,54 @@
 
   .ai-feedback-sections {
     display: grid;
-    gap: 12px;
+    gap: 24px;
   }
 
   .ai-feedback-section-card {
     position: relative;
-    padding: 14px 14px 12px 14px;
-    border-radius: 10px;
-    border: 1px solid rgba(255, 255, 255, 0.14);
-    background: rgba(255, 255, 255, 0.03);
-  }
-
-  .ai-feedback-section-card::before {
-    content: "";
-    position: absolute;
-    left: 0;
-    top: 10px;
-    bottom: 10px;
-    width: 3px;
-    border-radius: 3px;
-    background: linear-gradient(180deg, rgba(242, 201, 76, 0.95), rgba(138, 21, 31, 0.45));
+    padding: 16px 0 0 0;
+    border-radius: 0;
+    border: none;
+    border-top: 2px solid rgba(242, 201, 76, 0.68);
+    background: transparent;
   }
 
   .ai-feedback-section-title {
-    margin: 0 0 8px 8px;
-    font-size: 12px;
-    letter-spacing: 0.08em;
+    margin: 8px 0 10px 0;
+    font-size: 13px;
+    letter-spacing: 0.07em;
     text-transform: uppercase;
     color: var(--dtm-gold);
-    font-weight: 800;
+    font-weight: 700;
   }
 
   .ai-feedback-evidence {
-    margin: 0 0 10px 8px;
+    margin: 0 0 12px 0;
     font-size: 11px;
     color: var(--dtm-muted);
     letter-spacing: 0.02em;
   }
 
   .ai-feedback-paragraph {
-    margin: 0 0 8px 8px;
+    margin: 0 0 10px 0;
     color: var(--dtm-text);
-    line-height: 1.55;
+    line-height: 1.60;
   }
 
   .ai-feedback-paragraph:last-of-type {
-    margin-bottom: 6px;
+    margin-bottom: 8px;
   }
 
   .ai-feedback-list {
-    margin: 0 0 0 28px;
+    margin: 0 0 0 20px;
     padding: 0;
     color: var(--dtm-text);
   }
 
   .ai-feedback-list li {
-    margin-bottom: 6px;
-    line-height: 1.5;
+    margin-bottom: 8px;
+    line-height: 1.60;
+    letter-spacing: 0.01em;
   }
 
   .ai-feedback-skeleton-box {
