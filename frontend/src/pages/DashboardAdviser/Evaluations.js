@@ -170,7 +170,6 @@ const Evaluations = () => {
         <div className="section">
           <div className="section-header-row">
             <h2>Assigned Questionnaires</h2>
-            <button className="btn-secondary" onClick={() => navigate("/adviser/dashboard")}>Back to Dashboard</button>
           </div>
 
           {error && <div className="error-message">{error}</div>}
