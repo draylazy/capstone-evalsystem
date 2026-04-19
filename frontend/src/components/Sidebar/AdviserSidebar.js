@@ -45,7 +45,6 @@ const AdviserSidebar = () => {
 
   const menuItems = [
     { label: "Dashboard", icon: "⌂", path: "/adviser/dashboard", navigatePath: "/adviser/dashboard" },
-    { label: "Evaluations", icon: "✦", path: "/adviser/evaluations", navigatePath: "/adviser/dashboard" },
     { label: "Completed", icon: "✓", path: "/adviser/completed", navigatePath: "/adviser/completed" },
   ];
 
