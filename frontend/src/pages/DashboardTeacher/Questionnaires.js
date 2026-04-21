@@ -75,7 +75,7 @@ const Questionnaires = () => {
       // Filter classes for this teacher only
       const user = JSON.parse(localStorage.getItem('user'));
       if (user && user.id) {
-        const teacherClasses = data.filter(c => c.teacherId === user.id);
+        const teacherClasses = data.filter(c => String(c.teacherId) === String(user.id));
         setClasses(teacherClasses);
       } else {
         setClasses(data);

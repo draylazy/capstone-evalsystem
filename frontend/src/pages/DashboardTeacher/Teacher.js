@@ -47,13 +47,14 @@ const Teacher = () => {
         ]);
 
         const teacherClasses = (allClasses || []).filter(
-          (c) => c.teacherId === currentUser.id
+          (c) => String(c.teacherId) === String(currentUser.id)
         );
 
         const teacherClassIds = new Set(teacherClasses.map((c) => c.id));
 
         const teacherStudents = (allStudents || []).filter(
-          (s) => Array.isArray(s.classIds) && s.classIds.some((id) => teacherClassIds.has(id))
+          (s) => String(s.createdBy) === String(currentUser.id) || 
+                 (Array.isArray(s.classIds) && s.classIds.some((id) => teacherClassIds.has(id)))
         );
 
         const teacherTeams = (allTeams || []).filter(

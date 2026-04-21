@@ -12,8 +12,7 @@ public class DataSeeder implements CommandLineRunner {
     @Autowired
     private UserRepository userRepository;
 
-    private static final String TEACHER_ADMIN_EMAIL = "authortet@gmail.com";
-
+    private static final String TEACHER_ADMIN_EMAIL = "draysanity@gmail.com";
 
     @Override
     public void run(String... args) throws Exception {
@@ -30,7 +29,8 @@ public class DataSeeder implements CommandLineRunner {
             teacherAdmin.setIsActive(true);
             teacherAdmin.setIsGoogleLinked(false);
             userRepository.save(teacherAdmin);
-            System.out.println("=== Default teacher admin account created: " + TEACHER_ADMIN_EMAIL + " (OAuth login only) ===");
+            System.out.println(
+                    "=== Default teacher admin account created: " + TEACHER_ADMIN_EMAIL + " (OAuth login only) ===");
         }
     }
 }
