@@ -211,6 +211,7 @@ const Reports = () => {
                   <tr>
                     <th>Questionnaire Title</th>
                     <th>Description</th>
+                    <th>Target</th>
                     <th>Created Date</th>
                     <th>Action</th>
                   </tr>
@@ -220,6 +221,18 @@ const Reports = () => {
                     <tr key={q.id}>
                       <td>{q.title}</td>
                       <td>{q.description || "N/A"}</td>
+                      <td>
+                        <span style={{
+                          padding: '3px 10px',
+                          borderRadius: '12px',
+                          fontSize: '11px',
+                          fontWeight: '700',
+                          background: q.target === 'ADVISER' ? '#cce5ff' : '#fff3cd',
+                          color: q.target === 'ADVISER' ? '#004085' : '#856404',
+                        }}>
+                          {q.target === 'ADVISER' ? 'Adviser' : 'Student'}
+                        </span>
+                      </td>
                       <td>{new Date(q.createdAt).toLocaleDateString()}</td>
                       <td>
                         <button
@@ -274,8 +287,11 @@ const Reports = () => {
                       >
                         <h3 style={{ margin: '0 0 12px 0', color: 'var(--dtm-gold)' }}>{teamName}</h3>
                         <div style={{ fontSize: '0.85rem', color: 'var(--dtm-muted)' }}>
-                          <p style={{ margin: '4px 0' }}>Adviser Eval: {adviserCount > 0 ? '✅ Submitted' : '🕒 Pending'}</p>
-                          <p style={{ margin: '4px 0' }}>Student Evals: {studentCount}/{totalCount} Submitted</p>
+                          {selectedQuestionnaire.target === 'ADVISER' ? (
+                            <p style={{ margin: '4px 0' }}>Adviser Eval: {adviserCount > 0 ? '✅ Submitted' : '🕒 Pending'}</p>
+                          ) : (
+                            <p style={{ margin: '4px 0' }}>Student Evals: {studentCount}/{totalCount} Submitted</p>
+                          )}
                         </div>
                         <button className="btn btn-assign" style={{ marginTop: '16px', width: '100%', fontSize: '0.85rem' }}>
                           View Team Details
@@ -307,158 +323,162 @@ const Reports = () => {
               <p>Loading evaluations...</p>
             ) : (
               <>
-                <div style={{ marginBottom: '40px' }}>
-                  <h3 style={{ borderBottom: '1px solid rgba(255,255,255,0.1)', paddingBottom: '10px' }}>Adviser Evaluation</h3>
-                  {evaluations.filter(e => e.teamName === selectedTeamName).length === 0 ? (
-                    <p className="pending">No adviser evaluation for this team yet.</p>
-                  ) : (
-                    <table className="class-table">
-                      <thead>
-                        <tr>
-                          <th>Adviser Name</th>
-                          <th>Status</th>
-                          <th>Submitted Date</th>
-                          <th>Action</th>
-                        </tr>
-                      </thead>
-                      <tbody>
-                        {evaluations.filter(e => e.teamName === selectedTeamName).map((evaluation) => (
-                          <tr key={evaluation.id}>
-                            <td>{evaluation.adviserName}</td>
-                            <td>
-                              <span className={evaluation.status === "SUBMITTED" ? "completed" : "pending"}>
-                                {evaluation.status === "SUBMITTED" ? "Submitted" : "In Progress"}
-                              </span>
-                            </td>
-                            <td>
-                              {evaluation.submittedAt
-                                ? new Date(evaluation.submittedAt).toLocaleDateString()
-                                : "Not submitted"}
-                            </td>
-                            <td>
-                              {evaluation.status === "SUBMITTED" && (
-                                <button
-                                  className="btn"
-                                  onClick={() => viewEvaluationDetails(evaluation.id)}
-                                >
-                                  View Details
-                                </button>
-                              )}
-                            </td>
+                {selectedQuestionnaire.target === 'ADVISER' ? (
+                  <div style={{ marginBottom: '40px' }}>
+                    <h3 style={{ borderBottom: '1px solid rgba(255,255,255,0.1)', paddingBottom: '10px' }}>Adviser Evaluation</h3>
+                    {evaluations.filter(e => e.teamName === selectedTeamName).length === 0 ? (
+                      <p className="pending">No adviser evaluation for this team yet.</p>
+                    ) : (
+                      <table className="class-table">
+                        <thead>
+                          <tr>
+                            <th>Adviser Name</th>
+                            <th>Status</th>
+                            <th>Submitted Date</th>
+                            <th>Action</th>
                           </tr>
-                        ))}
-                      </tbody>
-                    </table>
-                  )}
-                </div>
+                        </thead>
+                        <tbody>
+                          {evaluations.filter(e => e.teamName === selectedTeamName).map((evaluation) => (
+                            <tr key={evaluation.id}>
+                              <td>{evaluation.adviserName}</td>
+                              <td>
+                                <span className={evaluation.status === "SUBMITTED" ? "completed" : "pending"}>
+                                  {evaluation.status === "SUBMITTED" ? "Submitted" : "In Progress"}
+                                </span>
+                              </td>
+                              <td>
+                                {evaluation.submittedAt
+                                  ? new Date(evaluation.submittedAt).toLocaleDateString()
+                                  : "Not submitted"}
+                              </td>
+                              <td>
+                                {evaluation.status === "SUBMITTED" && (
+                                  <button
+                                    className="btn"
+                                    onClick={() => viewEvaluationDetails(evaluation.id)}
+                                  >
+                                    View Details
+                                  </button>
+                                )}
+                              </td>
+                            </tr>
+                          ))}
+                        </tbody>
+                      </table>
+                    )}
+                  </div>
+                ) : (
+                  <>
+                    <div style={{ marginBottom: '40px' }}>
+                      <h3 style={{ borderBottom: '1px solid rgba(255,255,255,0.1)', paddingBottom: '10px' }}>Student Self-Evaluations</h3>
+                      {studentEvaluations.filter(e => e.teamName === selectedTeamName && e.isSelf).length === 0 ? (
+                        <p className="pending">No student self-evaluations for this team yet.</p>
+                      ) : (
+                        <table className="class-table">
+                          <thead>
+                            <tr>
+                              <th>Student Name</th>
+                              <th>Status</th>
+                              <th>Answers</th>
+                              <th>Avg Score</th>
+                              <th>Submitted Date</th>
+                              <th>Action</th>
+                            </tr>
+                          </thead>
+                          <tbody>
+                            {studentEvaluations.filter(e => e.teamName === selectedTeamName && e.isSelf).map((evaluation) => (
+                              <tr key={evaluation.id}>
+                                <td>{evaluation.evaluatorName}</td>
+                                <td>
+                                  <span className={evaluation.status === "SUBMITTED" ? "completed" : "pending"}>
+                                    {evaluation.status === "SUBMITTED" ? "Submitted" : "In Progress"}
+                                  </span>
+                                </td>
+                                <td>{evaluation.scoreCount}</td>
+                                <td>
+                                  {evaluation.averageScore !== null && evaluation.averageScore !== undefined 
+                                    ? <strong style={{color: 'var(--dtm-gold)'}}>{evaluation.averageScore}</strong> 
+                                    : "N/A"}
+                                </td>
+                                <td>
+                                  {evaluation.submittedAt
+                                    ? new Date(evaluation.submittedAt).toLocaleDateString()
+                                    : "Not submitted"}
+                                </td>
+                                <td>
+                                  {evaluation.status === "SUBMITTED" && (
+                                    <button
+                                      className="btn"
+                                      onClick={() => viewStudentEvaluationDetails(evaluation.id)}
+                                    >
+                                      View Details
+                                    </button>
+                                  )}
+                                </td>
+                              </tr>
+                            ))}
+                          </tbody>
+                        </table>
+                      )}
+                    </div>
 
-                <div style={{ marginBottom: '40px' }}>
-                  <h3 style={{ borderBottom: '1px solid rgba(255,255,255,0.1)', paddingBottom: '10px' }}>Student Self-Evaluations</h3>
-                  {studentEvaluations.filter(e => e.teamName === selectedTeamName && e.isSelf).length === 0 ? (
-                    <p className="pending">No student self-evaluations for this team yet.</p>
-                  ) : (
-                    <table className="class-table">
-                      <thead>
-                        <tr>
-                          <th>Student Name</th>
-                          <th>Status</th>
-                          <th>Answers</th>
-                          <th>Avg Score</th>
-                          <th>Submitted Date</th>
-                          <th>Action</th>
-                        </tr>
-                      </thead>
-                      <tbody>
-                        {studentEvaluations.filter(e => e.teamName === selectedTeamName && e.isSelf).map((evaluation) => (
-                          <tr key={evaluation.id}>
-                            <td>{evaluation.evaluatorName}</td>
-                            <td>
-                              <span className={evaluation.status === "SUBMITTED" ? "completed" : "pending"}>
-                                {evaluation.status === "SUBMITTED" ? "Submitted" : "In Progress"}
-                              </span>
-                            </td>
-                            <td>{evaluation.scoreCount}</td>
-                            <td>
-                              {evaluation.averageScore !== null && evaluation.averageScore !== undefined 
-                                ? <strong style={{color: 'var(--dtm-gold)'}}>{evaluation.averageScore}</strong> 
-                                : "N/A"}
-                            </td>
-                            <td>
-                              {evaluation.submittedAt
-                                ? new Date(evaluation.submittedAt).toLocaleDateString()
-                                : "Not submitted"}
-                            </td>
-                            <td>
-                              {evaluation.status === "SUBMITTED" && (
-                                <button
-                                  className="btn"
-                                  onClick={() => viewStudentEvaluationDetails(evaluation.id)}
-                                >
-                                  View Details
-                                </button>
-                              )}
-                            </td>
-                          </tr>
-                        ))}
-                      </tbody>
-                    </table>
-                  )}
-                </div>
-
-                <div>
-                  <h3 style={{ borderBottom: '1px solid rgba(255,255,255,0.1)', paddingBottom: '10px' }}>Student Peer Evaluations</h3>
-                  {studentEvaluations.filter(e => e.teamName === selectedTeamName && !e.isSelf).length === 0 ? (
-                    <p className="pending">No peer-to-peer evaluations for this team yet.</p>
-                  ) : (
-                    <table className="class-table">
-                      <thead>
-                        <tr>
-                          <th>Evaluator</th>
-                          <th>Evaluatee (Peer)</th>
-                          <th>Status</th>
-                          <th>Answers</th>
-                          <th>Avg Score</th>
-                          <th>Submitted Date</th>
-                          <th>Action</th>
-                        </tr>
-                      </thead>
-                      <tbody>
-                        {studentEvaluations.filter(e => e.teamName === selectedTeamName && !e.isSelf).map((evaluation) => (
-                          <tr key={evaluation.id}>
-                            <td>{evaluation.evaluatorName}</td>
-                            <td>{evaluation.evaluateeName}</td>
-                            <td>
-                              <span className={evaluation.status === "SUBMITTED" ? "completed" : "pending"}>
-                                {evaluation.status === "SUBMITTED" ? "Submitted" : "In Progress"}
-                              </span>
-                            </td>
-                            <td>{evaluation.scoreCount}</td>
-                            <td>
-                              {evaluation.averageScore !== null && evaluation.averageScore !== undefined 
-                                ? <strong style={{color: 'var(--dtm-gold)'}}>{evaluation.averageScore}</strong> 
-                                : "N/A"}
-                            </td>
-                            <td>
-                              {evaluation.submittedAt
-                                ? new Date(evaluation.submittedAt).toLocaleDateString()
-                                : "Not submitted"}
-                            </td>
-                            <td>
-                              {evaluation.status === "SUBMITTED" && (
-                                <button
-                                  className="btn"
-                                  onClick={() => viewStudentEvaluationDetails(evaluation.id)}
-                                >
-                                  View Details
-                                </button>
-                              )}
-                            </td>
-                          </tr>
-                        ))}
-                      </tbody>
-                    </table>
-                  )}
-                </div>
+                    <div>
+                      <h3 style={{ borderBottom: '1px solid rgba(255,255,255,0.1)', paddingBottom: '10px' }}>Student Peer Evaluations</h3>
+                      {studentEvaluations.filter(e => e.teamName === selectedTeamName && !e.isSelf).length === 0 ? (
+                        <p className="pending">No peer-to-peer evaluations for this team yet.</p>
+                      ) : (
+                        <table className="class-table">
+                          <thead>
+                            <tr>
+                              <th>Evaluator</th>
+                              <th>Evaluatee (Peer)</th>
+                              <th>Status</th>
+                              <th>Answers</th>
+                              <th>Avg Score</th>
+                              <th>Submitted Date</th>
+                              <th>Action</th>
+                            </tr>
+                          </thead>
+                          <tbody>
+                            {studentEvaluations.filter(e => e.teamName === selectedTeamName && !e.isSelf).map((evaluation) => (
+                              <tr key={evaluation.id}>
+                                <td>{evaluation.evaluatorName}</td>
+                                <td>{evaluation.evaluateeName}</td>
+                                <td>
+                                  <span className={evaluation.status === "SUBMITTED" ? "completed" : "pending"}>
+                                    {evaluation.status === "SUBMITTED" ? "Submitted" : "In Progress"}
+                                  </span>
+                                </td>
+                                <td>{evaluation.scoreCount}</td>
+                                <td>
+                                  {evaluation.averageScore !== null && evaluation.averageScore !== undefined 
+                                    ? <strong style={{color: 'var(--dtm-gold)'}}>{evaluation.averageScore}</strong> 
+                                    : "N/A"}
+                                </td>
+                                <td>
+                                  {evaluation.submittedAt
+                                    ? new Date(evaluation.submittedAt).toLocaleDateString()
+                                    : "Not submitted"}
+                                </td>
+                                <td>
+                                  {evaluation.status === "SUBMITTED" && (
+                                    <button
+                                      className="btn"
+                                      onClick={() => viewStudentEvaluationDetails(evaluation.id)}
+                                    >
+                                      View Details
+                                    </button>
+                                  )}
+                                </td>
+                              </tr>
+                            ))}
+                          </tbody>
+                        </table>
+                      )}
+                    </div>
+                  </>
+                )}
               </>
             )}
           </div>

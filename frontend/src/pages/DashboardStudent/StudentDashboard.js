@@ -47,6 +47,33 @@ const StudentDashboard = () => {
     navigate(`/student/evaluate/${q.id}`);
   };
 
+  const statusCounts = useMemo(() => {
+    const counts = { ALL: questionnaires.length, READY: 0, IN_PROGRESS: 0, SUBMITTED: 0 };
+    questionnaires.forEach(q => {
+      const isComplete = q.peerTasks?.every(t => t.status === 'SUBMITTED');
+      const isStarted = q.peerTasks?.some(t => t.status === 'SUBMITTED');
+      if (isComplete) counts.SUBMITTED++;
+      else if (isStarted) counts.IN_PROGRESS++;
+      else counts.READY++;
+    });
+    return counts;
+  }, [questionnaires]);
+
+  const [statusFilter, setStatusFilter] = useState("ALL");
+  const [searchTerm, setSearchTerm] = useState("");
+
+  const filteredQuestionnaires = useMemo(() => {
+    return questionnaires.filter(q => {
+      const isComplete = q.peerTasks?.every(t => t.status === 'SUBMITTED');
+      const isStarted = q.peerTasks?.some(t => t.status === 'SUBMITTED');
+      const status = isComplete ? 'SUBMITTED' : (isStarted ? 'IN_PROGRESS' : 'READY');
+      
+      if (statusFilter !== 'ALL' && status !== statusFilter) return false;
+      if (searchTerm && !q.title.toLowerCase().includes(searchTerm.toLowerCase())) return false;
+      return true;
+    });
+  }, [questionnaires, statusFilter, searchTerm]);
+
   const studentName = [currentUser?.firstName, currentUser?.lastName].filter(Boolean).join(" ") || "Student";
 
   return (
@@ -57,54 +84,119 @@ const StudentDashboard = () => {
 
         <section className="teacher-hero">
           <div>
-            <p className="teacher-hero-kicker">Your Portal</p>
+            <p className="teacher-hero-kicker">Student Evaluation Queue</p>
             <h2 className="teacher-hero-title">Welcome, {studentName}</h2>
             <p className="teacher-hero-text">
-              View and complete your assigned evaluations here.
+              Track your evaluation progress and complete pending tasks for your team.
             </p>
+          </div>
+          <div className="adviser-eval-metrics">
+            <span><strong>{statusCounts.ALL}</strong> total</span>
+            <span><strong>{statusCounts.IN_PROGRESS}</strong> in progress</span>
+            <span><strong>{statusCounts.SUBMITTED}</strong> completed</span>
           </div>
         </section>
 
+        <section className="section adviser-queue-controls">
+          <div className="adviser-status-tabs">
+            {[
+              { key: "ALL", label: "All" },
+              { key: "READY", label: "Ready" },
+              { key: "IN_PROGRESS", label: "In Progress" },
+              { key: "SUBMITTED", label: "Completed" },
+            ].map((tab) => (
+              <button
+                key={tab.key}
+                className={`adviser-status-tab ${statusFilter === tab.key ? "is-active" : ""}`}
+                onClick={() => setStatusFilter(tab.key)}
+              >
+                {tab.label}
+                <span className="adviser-status-tab-count">{statusCounts[tab.key] || 0}</span>
+              </button>
+            ))}
+          </div>
+
+          <input
+            type="text"
+            className="adviser-search-input"
+            placeholder="Search questionnaire title..."
+            value={searchTerm}
+            onChange={(e) => setSearchTerm(e.target.value)}
+          />
+        </section>
+
         <div className="section">
-          <h2>Peer Evaluations</h2>
+          <div className="section-header-row">
+            <h2>Your Evaluation Tasks</h2>
+          </div>
+          
           {loading ? (
             <p>Loading...</p>
           ) : questionnaires.length === 0 ? (
             <p style={{ marginTop: 20, color: 'var(--dtm-muted)' }}>You have no assigned questionnaires at this time.</p>
           ) : (
-            <div style={{ display: 'grid', gap: '20px' }}>
-              {questionnaires.map((q) => (
-                <div key={q.id} className="evaluation-response-item" style={{ background: 'rgba(255,255,255,0.03)', padding: '20px' }}>
-                  <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '16px', borderBottom: '1px solid rgba(255,255,255,0.1)', paddingBottom: '12px' }}>
-                    <div>
-                      <h3 style={{ color: 'var(--dtm-gold)', margin: 0 }}>{q.title}</h3>
-                      <p style={{ color: 'var(--dtm-muted)', fontSize: '0.9rem', margin: '4px 0 0 0' }}>{q.description}</p>
-                    </div>
-                    <div style={{ fontSize: '0.8rem', color: 'var(--dtm-muted)' }}>
-                      Assigned: {new Date(q.createdAt).toLocaleDateString()}
-                    </div>
-                  </div>
+            <table className="class-table">
+              <thead>
+                <tr>
+                  <th>#</th>
+                  <th>Title</th>
+                  <th>Description</th>
+                  <th>Status</th>
+                  <th>Progress</th>
+                  <th>Assigned Date</th>
+                  <th>Action</th>
+                </tr>
+              </thead>
+              <tbody>
+                {filteredQuestionnaires.map((q, idx) => {
+                  const completed = q.peerTasks?.filter(t => t.status === 'SUBMITTED').length || 0;
+                  const total = q.peerTasks?.length || 0;
+                  const isComplete = completed === total && total > 0;
+                  const isStarted = completed > 0;
+                  const progressPercent = total > 0 ? Math.round((completed / total) * 100) : 0;
 
-                  <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                    <div style={{ color: 'var(--dtm-muted)', fontSize: '0.9rem' }}>
-                      {q.peerTasks?.every(t => t.status === 'SUBMITTED') ? (
-                        <span style={{ color: '#4ade80', fontWeight: 600 }}>All evaluations completed ✓</span>
-                      ) : (
-                        <span>
-                          Progress: <strong>{q.peerTasks?.filter(t => t.status === 'SUBMITTED').length || 0} / {q.peerTasks?.length || 0}</strong> teammates evaluated
-                        </span>
-                      )}
-                    </div>
-                    <button 
-                      className={q.peerTasks?.every(t => t.status === 'SUBMITTED') ? 'btn-secondary' : 'btn'} 
-                      onClick={() => handleActionClick(q)}
-                    >
-                      {q.peerTasks?.every(t => t.status === 'SUBMITTED') ? 'View Responses' : 'Start/Continue Group Evaluation'}
-                    </button>
-                  </div>
-                </div>
-              ))}
-            </div>
+                  return (
+                    <tr key={q.id}>
+                      <td>{idx + 1}</td>
+                      <td><strong>{q.title}</strong></td>
+                      <td>{q.description || "No description"}</td>
+                      <td>
+                        {isComplete ? (
+                          <span className="status-badge status-active">Completed</span>
+                        ) : isStarted ? (
+                          <span className="status-badge adviser-status-progress">In Progress</span>
+                        ) : (
+                          <span className="status-badge status-active">Ready</span>
+                        )}
+                      </td>
+                      <td>
+                        <div className="adviser-progress-wrap">
+                          <div className="adviser-progress-track">
+                            <div className="adviser-progress-fill" style={{ width: `${progressPercent}%` }}></div>
+                          </div>
+                          <span className="adviser-progress-text">
+                            {progressPercent}% ({completed}/{total})
+                          </span>
+                        </div>
+                      </td>
+                      <td>{new Date(q.createdAt).toLocaleDateString()}</td>
+                      <td>
+                        {isComplete ? (
+                          <span style={{ color: '#4ade80', fontSize: '0.85rem', fontWeight: 600 }}>Submitted ✓</span>
+                        ) : (
+                          <button 
+                            className="btn btn-sm" 
+                            onClick={() => handleActionClick(q)}
+                          >
+                            {isStarted ? 'Resume' : 'Start'}
+                          </button>
+                        )}
+                      </td>
+                    </tr>
+                  );
+                })}
+              </tbody>
+            </table>
           )}
         </div>
       </div>

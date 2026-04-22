@@ -20,4 +20,8 @@ public interface StudentEvaluationRepository extends JpaRepository<StudentEvalua
     List<StudentEvaluation> findByStudentIdWithScores(@Param("studentId") Long studentId);
     
     List<StudentEvaluation> findByQuestionnaireId(Long questionnaireId);
+
+    List<StudentEvaluation> findByQuestionnaireIdAndEvaluateeId(Long questionnaireId, Long evaluateeId);
+
+    List<StudentEvaluation> findByEvaluateeIdAndStatus(Long evaluateeId, StudentEvaluation.EvaluationStatus status);
 }

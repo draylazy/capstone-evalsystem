@@ -9,6 +9,7 @@ import org.springframework.transaction.annotation.Transactional;
 
 import java.time.LocalDateTime;
 import java.util.*;
+import java.util.stream.Collectors;
 
 @Service
 @RequiredArgsConstructor
@@ -37,7 +38,7 @@ public class StudentEvaluationService {
 
         Set<Questionnaire> allQuestionnaires = new HashSet<>();
         for (SchoolClass schoolClass : classes) {
-            allQuestionnaires.addAll(questionnaireRepository.findByAssignedClassesContainingAndIsActiveTrue(schoolClass));
+            allQuestionnaires.addAll(questionnaireRepository.findByAssignedClassesContainingAndIsActiveTrueAndTarget(schoolClass, Questionnaire.QuestionnaireTarget.STUDENT));
         }
 
         return new ArrayList<>(allQuestionnaires);
@@ -202,5 +203,77 @@ public class StudentEvaluationService {
         } catch (Exception e) {
             return false;
         }
+    }
+
+
+    public group9.advisor_eval_system.dto.StudentReportSummaryDto getStudentReportSummary(Long studentId) {
+        Student student = studentRepository.findById(studentId)
+                .orElseThrow(() -> new RuntimeException("Student not found"));
+
+        String teamName = "No Team";
+        if (student.getTeamStudents() != null && !student.getTeamStudents().isEmpty()) {
+            teamName = student.getTeamStudents().get(0).getTeam().getName();
+        }
+
+        List<Questionnaire> questionnaires = getAssignedQuestionnaires(studentId);
+        List<group9.advisor_eval_system.dto.StudentReportSummaryDto.QuestionnaireSummary> summaries = new ArrayList<>();
+
+        for (Questionnaire q : questionnaires) {
+            // Find all peer evaluations WHERE this student is the evaluatee
+            List<StudentEvaluation> peerEvals = studentEvaluationRepository.findByQuestionnaireIdAndEvaluateeId(q.getId(), studentId);
+            
+            // Filter submitted only
+            List<StudentEvaluation> submittedPeerEvals = peerEvals.stream()
+                    .filter(e -> e.getStatus() == StudentEvaluation.EvaluationStatus.SUBMITTED)
+                    .collect(Collectors.toList());
+
+            if (submittedPeerEvals.isEmpty()) continue;
+
+            // Calculate aggregates
+            Map<String, List<Double>> categoryScores = new HashMap<>();
+            List<String> comments = new ArrayList<>();
+
+            for (StudentEvaluation eval : submittedPeerEvals) {
+                if (eval.getScores() != null) {
+                    for (StudentEvaluationScore score : eval.getScores()) {
+                        QuestionnaireItem item = score.getQuestionnaireItem();
+                        if (item == null) continue;
+
+                        String category = item.getSection() != null ? item.getSection().getSectionTitle() : "General";
+                        
+                        if (score.getNumericScore() != null) {
+                            categoryScores.computeIfAbsent(category, k -> new ArrayList<>()).add(score.getNumericScore());
+                        }
+                        if (score.getTextResponse() != null && !score.getTextResponse().trim().isEmpty()) {
+                            comments.add(score.getTextResponse());
+                        }
+                    }
+                }
+            }
+
+            List<group9.advisor_eval_system.dto.StudentReportSummaryDto.CategoryScore> catScores = categoryScores.entrySet().stream()
+                    .map(entry -> group9.advisor_eval_system.dto.StudentReportSummaryDto.CategoryScore.builder()
+                            .categoryName(entry.getKey())
+                            .averageScore(entry.getValue().stream().mapToDouble(Double::doubleValue).average().orElse(0.0))
+                            .responseCount(entry.getValue().size())
+                            .build())
+                    .collect(Collectors.toList());
+
+            double overallAvg = catScores.stream().mapToDouble(c -> c.getAverageScore()).average().orElse(0.0);
+
+            summaries.add(group9.advisor_eval_system.dto.StudentReportSummaryDto.QuestionnaireSummary.builder()
+                    .questionnaireId(q.getId())
+                    .questionnaireTitle(q.getTitle())
+                    .overallAverage(Math.round(overallAvg * 100.0) / 100.0)
+                    .categoryScores(catScores)
+                    .feedbackComments(comments)
+                    .build());
+        }
+
+        return group9.advisor_eval_system.dto.StudentReportSummaryDto.builder()
+                .studentName(student.getFirstName() + " " + student.getLastName())
+                .teamName(teamName)
+                .summaries(summaries)
+                .build();
     }
 }

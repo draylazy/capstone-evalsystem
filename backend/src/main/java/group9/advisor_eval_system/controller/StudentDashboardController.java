@@ -299,4 +299,15 @@ public class StudentDashboardController {
             return ResponseEntity.status(HttpStatus.BAD_REQUEST).body(Map.of("error", e.getMessage()));
         }
     }
+
+    @GetMapping("/reports/summary")
+    public ResponseEntity<?> getReportSummary(HttpServletRequest request) {
+        try {
+            Student student = getAuthenticatedStudent(request);
+            return ResponseEntity.ok(studentEvaluationService.getStudentReportSummary(student.getId()));
+        } catch (Exception e) {
+            log.error("Error fetching student report summary", e);
+            return ResponseEntity.status(HttpStatus.BAD_REQUEST).body(Map.of("error", e.getMessage()));
+        }
+    }
 }

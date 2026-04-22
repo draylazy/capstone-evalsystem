@@ -321,8 +321,9 @@ const Teacher = () => {
                 <table className="class-table" style={{ marginTop: "10px" }}>
                   <thead>
                     <tr>
-                      <th>Title</th>
+                      <th>Questionnaire Title</th>
                       <th>Description</th>
+                      <th>Target</th>
                       <th>Questions</th>
                       <th>Status</th>
                       <th>Created Date</th>
@@ -333,6 +334,18 @@ const Teacher = () => {
                       <tr key={questionnaire.id}>
                         <td>{questionnaire.title}</td>
                         <td>{questionnaire.description || "N/A"}</td>
+                        <td>
+                          <span style={{
+                            padding: '2px 8px',
+                            borderRadius: '10px',
+                            fontSize: '10px',
+                            fontWeight: '700',
+                            background: questionnaire.target === 'ADVISER' ? '#cce5ff' : '#fff3cd',
+                            color: questionnaire.target === 'ADVISER' ? '#004085' : '#856404',
+                          }}>
+                            {questionnaire.target === 'ADVISER' ? 'Adviser' : 'Student'}
+                          </span>
+                        </td>
                         <td>{questionnaire.questionCount}</td>
                         <td>{questionnaire.isActive ? "Active" : "Inactive"}</td>
                         <td>{new Date(questionnaire.createdAt).toLocaleDateString()}</td>

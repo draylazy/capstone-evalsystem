@@ -57,12 +57,15 @@ public class TeacherReportController {
                     .findByCreatedByTeacherIdAndIsActiveTrue(teacherId);
 
             List<Map<String, Object>> response = questionnaires.stream()
-                    .map(q -> Map.of(
-                            "id", (Object) q.getId(),
-                            "title", q.getTitle(),
-                            "description", q.getDescription() != null ? q.getDescription() : "",
-                            "createdAt", q.getCreatedAt().toString()
-                    ))
+                    .map(q -> {
+                        Map<String, Object> map = new HashMap<>();
+                        map.put("id", q.getId());
+                        map.put("title", q.getTitle());
+                        map.put("description", q.getDescription() != null ? q.getDescription() : "");
+                        map.put("target", q.getTarget() != null ? q.getTarget().toString() : "ADVISER");
+                        map.put("createdAt", q.getCreatedAt().toString());
+                        return map;
+                    })
                     .collect(Collectors.toList());
 
             return ResponseEntity.ok(response);

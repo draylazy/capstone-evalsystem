@@ -39,12 +39,19 @@ const StudentEvaluateForm = () => {
         if (!res.ok) throw new Error("Failed to load evaluation form");
         const data = await res.json();
         
+        if (data.status === 'SUBMITTED') {
+          toast.info("Evaluation already submitted.");
+          navigate('/student/dashboard');
+          return;
+        }
+
         setQuestionnaire(data.questionnaire);
         setMembers(data.members);
         setAnswers(data.answers || {});
         setStatus(data.status);
       } catch (err) {
         toast.error(err.message);
+        navigate('/student/dashboard');
       } finally {
         setLoading(false);
       }
