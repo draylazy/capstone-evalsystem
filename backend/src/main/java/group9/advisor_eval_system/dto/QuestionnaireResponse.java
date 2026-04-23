@@ -32,6 +32,7 @@ public class QuestionnaireResponse {
     private List<String> assignedClassNames;
     private Integer questionCount;
     private String target;
+    private LocalDateTime deadlineAt;
     private LocalDateTime createdAt;
     private LocalDateTime updatedAt;
 
@@ -46,6 +47,7 @@ public class QuestionnaireResponse {
         response.setIsLocked(questionnaire.getIsLocked() != null && questionnaire.getIsLocked());
         response.setLockedAt(questionnaire.getLockedAt());
         response.setTarget(questionnaire.getTarget() != null ? questionnaire.getTarget().name() : null);
+        response.setDeadlineAt(questionnaire.getDeadlineAt());
 
         if (questionnaire.getCreatedByTeacher() != null) {
             response.setCreatedByTeacherId(questionnaire.getCreatedByTeacher().getId());

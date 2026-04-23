@@ -16,6 +16,7 @@ const CreateQuestionnaire = () => {
   const [formData, setFormData] = useState({
     title: "",
     description: "",
+    deadlineAt: "",
     questions: [],
     sections: [
       {
@@ -98,9 +99,25 @@ const CreateQuestionnaire = () => {
       return;
     }
 
+    if (formData.deadlineAt) {
+      const deadline = new Date(formData.deadlineAt);
+      if (Number.isNaN(deadline.getTime())) {
+        toast.error('Please provide a valid deadline');
+        return;
+      }
+      if (deadline <= new Date()) {
+        toast.error('Deadline must be in the future');
+        return;
+      }
+    }
+
     try {
       toast.info('Creating questionnaire...');
-      await questionnaireAPI.createQuestionnaire(formData);
+      const payload = {
+        ...formData,
+        deadlineAt: formData.deadlineAt || null,
+      };
+      await questionnaireAPI.createQuestionnaire(payload);
       toast.success('Questionnaire created successfully!');
       navigate('/teacher/questionnaires');
     } catch (err) {
@@ -408,6 +425,20 @@ const CreateQuestionnaire = () => {
                   placeholder="What is this questionnaire about?"
                   style={{ fontSize: '11px' }}
                 />
+              </div>
+
+              <div className="form-group" style={{ marginBottom: '8px' }}>
+                <label>Deadline (Optional)</label>
+                <input
+                  type="datetime-local"
+                  value={formData.deadlineAt}
+                  min={new Date(Date.now() + 60000).toISOString().slice(0, 16)}
+                  onChange={(e) => setFormData({ ...formData, deadlineAt: e.target.value })}
+                  style={{ fontSize: '11px' }}
+                />
+                <small style={{ color: 'var(--dtm-muted)', fontSize: '10px' }}>
+                  Leave blank for no deadline. When reached, this questionnaire closes automatically.
+                </small>
               </div>
 
               {/* Questions Display */}

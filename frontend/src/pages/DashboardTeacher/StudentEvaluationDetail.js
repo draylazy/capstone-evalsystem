@@ -336,7 +336,13 @@ const StudentEvaluationDetail = () => {
   };
 
   const buildAiContext = (evalData) => {
-    const questionLines = buildQuestionAnswerRows(evalData).map((row, index) => {
+    const rows = buildQuestionAnswerRows(evalData);
+    const answeredRows = rows.filter((row) => row.isAnswered);
+    const unansweredRows = rows.filter((row) => !row.isAnswered);
+    const numericRows = rows.filter((row) => row.hasNumericAnswer);
+    const textRows = rows.filter((row) => row.hasTextAnswer);
+
+    const questionLines = answeredRows.map((row, index) => {
       const sectionLabel = row.sectionTitle ? ` [Section: ${row.sectionTitle}]` : "";
       return `${index + 1}. Question${sectionLabel}: ${row.questionText}\n   Answer: ${row.answerText}`;
     });
@@ -347,9 +353,14 @@ const StudentEvaluationDetail = () => {
       `Evaluator: ${evalData?.evaluatorName || "N/A"}`,
       `Evaluatee: ${evalData?.evaluateeName || "N/A"}`,
       `Type: ${evalData?.isSelf ? "Self-Evaluation" : "Peer-Evaluation"}`,
+      `Summary Metrics: answered=${answeredRows.length}/${rows.length}, numericAnswers=${numericRows.length}, textAnswers=${textRows.length}, unanswered=${unansweredRows.length}`,
+      `Computed Average Score: ${evalData?.averageScore !== null && evalData?.averageScore !== undefined ? evalData.averageScore : "Not enough data from responses"}`,
       "Important constraints: summarize only what is explicitly present in the answers; do not invent data; if evidence is insufficient, write 'Not enough data from responses'.",
-      "Responses:",
+      "Answered Responses:",
       questionLines.length ? questionLines.join("\n") : "No responses recorded.",
+      unansweredRows.length
+        ? `Unanswered Questions: ${unansweredRows.slice(0, 8).map((row) => row.questionText).join(" | ")}`
+        : "Unanswered Questions: None",
     ].join("\n\n");
   };
 
@@ -365,17 +376,20 @@ const StudentEvaluationDetail = () => {
           Authorization: `Bearer ${token}`,
         },
         body: JSON.stringify({
-          message: "Summarize this student evaluation using only the provided questionnaire answers. Use exactly these sections in this order: Overall Score, Performance Level, Key Strengths, Key Issues, Brief Summary, Suggested Actions.",
+          message: "Summarize this student evaluation using only the provided questionnaire answers. Do not invent data or unsupported claims. Use exactly these sections in this order: Overall Score, Performance Level, Key Strengths, Key Issues, Brief Summary, Suggested Actions.",
           contextType: "response_summary",
           context: buildAiContext(evalData),
           history: [],
         }),
       });
-      const data = await res.json();
-      if (!res.ok) throw new Error(data?.message || "Failed to generate AI feedback");
+      const data = await res.json().catch(() => null);
+      if (!res.ok) {
+        throw new Error(data?.message || data?.error || `Failed to generate AI feedback (HTTP ${res.status})`);
+      }
       setAiFeedback(data?.reply || "AI feedback unavailable.");
     } catch (err) {
-      setAiFeedbackError(err.message);
+      setAiFeedbackError(err.message || "Failed to generate AI feedback");
+      setAiFeedback("");
     } finally {
       setAiFeedbackLoading(false);
     }
@@ -488,6 +502,11 @@ const StudentEvaluationDetail = () => {
             {aiFeedbackLoading ? (
               <div className="evaluation-ai-feedback-box ai-feedback-skeleton-box">
                 <div className="ai-feedback-skeleton-card" /><div className="ai-feedback-skeleton-card" /><div className="ai-feedback-skeleton-card" />
+              </div>
+            ) : aiFeedbackError ? (
+              <div className="evaluation-ai-feedback-box">
+                <p style={{ color: "#f87171", margin: 0, fontWeight: 600 }}>AI feedback failed</p>
+                <p style={{ marginTop: "8px", marginBottom: 0 }}>{aiFeedbackError}</p>
               </div>
             ) : aiFeedback ? (
               <div className="evaluation-ai-feedback-box">

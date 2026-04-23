@@ -8,7 +8,9 @@ import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
+import org.springframework.scheduling.annotation.Scheduled;
 
+import java.time.LocalDateTime;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Set;
@@ -33,7 +35,8 @@ public class QuestionnaireService {
     public Questionnaire createQuestionnaire(Long teacherId, String title, String description,
                                            List<QuestionnaireItem> questions,
                                            List<CreateQuestionnaireRequest.QuestionnaireSectionInputDto> sections,
-                                           String targetRole) {
+                                           String targetRole,
+                                           LocalDateTime deadlineAt) {
         User teacher = userRepository.findById(teacherId)
                 .orElseThrow(() -> new RuntimeException("Teacher not found"));
 
@@ -95,6 +98,7 @@ public class QuestionnaireService {
         questionnaire.setGoogleFormUrl(googleForm.getResponderUri());
         questionnaire.setCreatedByTeacher(teacher);
         questionnaire.setIsActive(true);
+        questionnaire.setDeadlineAt(normalizeAndValidateDeadline(deadlineAt));
 
         // Set target audience
         if (targetRole != null) {
@@ -158,13 +162,80 @@ public class QuestionnaireService {
     @Transactional
     public Questionnaire createQuestionnaire(Long teacherId, String title, String description,
             List<QuestionnaireItem> questions) {
-        return createQuestionnaire(teacherId, title, description, questions, List.of(), "ADVISER");
+        return createQuestionnaire(teacherId, title, description, questions, List.of(), "ADVISER", null);
+    }
+
+    private LocalDateTime normalizeAndValidateDeadline(LocalDateTime deadlineAt) {
+        if (deadlineAt == null) {
+            return null;
+        }
+        if (!deadlineAt.isAfter(LocalDateTime.now())) {
+            throw new RuntimeException("Deadline must be in the future");
+        }
+        return deadlineAt.withSecond(0).withNano(0);
+    }
+
+    @Transactional
+    public int closeExpiredQuestionnaires() {
+        List<Questionnaire> expired = questionnaireRepository.findByIsActiveTrueAndDeadlineAtBefore(LocalDateTime.now());
+        if (expired.isEmpty()) {
+            return 0;
+        }
+
+        LocalDateTime closedAt = LocalDateTime.now();
+        for (Questionnaire questionnaire : expired) {
+            questionnaire.setIsActive(false);
+            questionnaire.setIsLocked(true);
+            if (questionnaire.getLockedAt() == null) {
+                questionnaire.setLockedAt(closedAt);
+            }
+        }
+        questionnaireRepository.saveAll(expired);
+        log.info("Auto-closed {} expired questionnaire(s)", expired.size());
+        return expired.size();
+    }
+
+    @Scheduled(fixedDelay = 60000)
+    public void closeExpiredQuestionnairesOnSchedule() {
+        try {
+            closeExpiredQuestionnaires();
+        } catch (Exception e) {
+            log.error("Failed to auto-close expired questionnaires", e);
+        }
+    }
+
+    @Transactional
+    public void ensureQuestionnaireOpenForResponses(Long questionnaireId) {
+        Questionnaire questionnaire = questionnaireRepository.findById(questionnaireId)
+                .orElseThrow(() -> new RuntimeException("Questionnaire not found"));
+        ensureQuestionnaireOpenForResponses(questionnaire);
+    }
+
+    @Transactional
+    public void ensureQuestionnaireOpenForResponses(Questionnaire questionnaire) {
+        LocalDateTime deadlineAt = questionnaire.getDeadlineAt();
+        if (deadlineAt != null && !deadlineAt.isAfter(LocalDateTime.now())) {
+            if (Boolean.TRUE.equals(questionnaire.getIsActive())) {
+                questionnaire.setIsActive(false);
+                questionnaire.setIsLocked(true);
+                if (questionnaire.getLockedAt() == null) {
+                    questionnaire.setLockedAt(LocalDateTime.now());
+                }
+                questionnaireRepository.save(questionnaire);
+            }
+            throw new RuntimeException("This questionnaire is closed because the deadline has passed");
+        }
+
+        if (!Boolean.TRUE.equals(questionnaire.getIsActive())) {
+            throw new RuntimeException("This questionnaire is not active");
+        }
     }
 
     /**
      * Get all questionnaires created by a teacher
      */
     public List<Questionnaire> getQuestionnairesByTeacher(Long teacherId) {
+        closeExpiredQuestionnaires();
         User teacher = userRepository.findById(teacherId)
                 .orElseThrow(() -> new RuntimeException("Teacher not found"));
 
@@ -241,6 +312,7 @@ public class QuestionnaireService {
      * Get questionnaires available to an adviser through their assigned teams
      */
     public List<Questionnaire> getQuestionnairesForAdviser(Long adviserId) {
+        closeExpiredQuestionnaires();
         User adviser = userRepository.findById(adviserId)
                 .orElseThrow(() -> new RuntimeException("Adviser not found"));
 
@@ -272,6 +344,7 @@ public class QuestionnaireService {
      * Get questionnaires for a specific class
      */
     public List<Questionnaire> getQuestionnairesByClass(Long classId) {
+        closeExpiredQuestionnaires();
         SchoolClass schoolClass = schoolClassRepository.findById(classId).orElse(null);
         List<Questionnaire> questionnaires = new ArrayList<>();
         if (schoolClass != null) {
@@ -284,6 +357,7 @@ public class QuestionnaireService {
      * Get questionnaires for a specific class for teachers (includes inactive)
      */
     public List<Questionnaire> getQuestionnairesByClassForTeacher(Long classId, Long teacherId) {
+        closeExpiredQuestionnaires();
         SchoolClass schoolClass = schoolClassRepository.findById(classId)
                 .orElseThrow(() -> new RuntimeException("Class not found"));
 

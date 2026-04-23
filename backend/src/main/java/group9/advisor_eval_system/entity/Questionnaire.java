@@ -50,6 +50,9 @@ public class Questionnaire {
     @Column(nullable = true)
     private LocalDateTime lockedAt; // When questionnaire was locked
 
+    @Column(nullable = true)
+    private LocalDateTime deadlineAt; // Optional close time
+
     public enum QuestionnaireTarget {
         ADVISER,
         STUDENT

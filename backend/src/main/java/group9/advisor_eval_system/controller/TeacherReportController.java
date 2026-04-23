@@ -224,7 +224,7 @@ public class TeacherReportController {
                         .body(Map.of("error", "Only teachers can access reports"));
             }
 
-            StudentEvaluation evaluation = studentEvaluationRepository.findById(evaluationId)
+            StudentEvaluation evaluation = studentEvaluationRepository.findByIdWithDetails(evaluationId)
                     .orElseThrow(() -> new RuntimeException("Student evaluation not found"));
 
             if (!evaluation.getQuestionnaire().getCreatedByTeacher().getId().equals(teacherId)) {
