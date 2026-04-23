@@ -75,7 +75,7 @@ const Questionnaires = () => {
       // Filter classes for this teacher only
       const user = JSON.parse(localStorage.getItem('user'));
       if (user && user.id) {
-        const teacherClasses = data.filter(c => c.teacherId === user.id);
+        const teacherClasses = data.filter(c => String(c.teacherId) === String(user.id));
         setClasses(teacherClasses);
       } else {
         setClasses(data);
@@ -157,6 +157,17 @@ const Questionnaires = () => {
     return new Date(dateString).toLocaleDateString();
   };
 
+  const formatDeadline = (dateTimeString) => {
+    if (!dateTimeString) return 'No deadline';
+    return new Date(dateTimeString).toLocaleString([], {
+      year: 'numeric',
+      month: 'short',
+      day: 'numeric',
+      hour: '2-digit',
+      minute: '2-digit',
+    });
+  };
+
   return (
     <div className="teacher-container">
       <TeacherSidebar />
@@ -195,7 +206,9 @@ const Questionnaires = () => {
                   <th>Description</th>
                   <th>Questions</th>
                   <th>Assigned Classes</th>
+                  <th>Target</th>
                   <th>Created Date</th>
+                  <th>Deadline</th>
                   <th>Status</th>
                   <th>Actions</th>
                 </tr>
@@ -211,7 +224,22 @@ const Questionnaires = () => {
                         ? q.assignedClassNames.join(', ')
                         : 'Not assigned'}
                     </td>
+                    <td>
+                      <span style={{
+                        padding: '3px 10px',
+                        borderRadius: '12px',
+                        fontSize: '11px',
+                        fontWeight: '700',
+                        background: q.target === 'ADVISER' ? '#cce5ff' : '#fff3cd',
+                        color: q.target === 'ADVISER' ? '#004085' : '#856404',
+                      }}>
+                        {q.target === 'ADVISER' ? 'Adviser' : 'Student'}
+                      </span>
+                    </td>
                     <td>{formatDate(q.createdAt)}</td>
+                    <td style={{ whiteSpace: 'nowrap', color: q.deadlineAt ? 'inherit' : 'var(--dtm-muted)' }}>
+                      {formatDeadline(q.deadlineAt)}
+                    </td>
                     <td>
                       <button
                         type="button"
@@ -224,22 +252,22 @@ const Questionnaires = () => {
                     </td>
                     <td>
                       <div className="action-buttons">
-                        <button 
-                          className="btn btn-sm" 
+                        <button
+                          className="btn btn-sm"
                           onClick={() => window.open(q.googleFormUrl, '_blank')}
                         >
                           View Form
                         </button>
-                        <button 
-                          className="btn btn-sm btn-assign" 
+                        <button
+                          className="btn btn-sm btn-assign"
                           onClick={() => openAssignModal(q)}
                           disabled={q.isLocked}
                           title={q.isLocked ? "Cannot assign - questionnaire is locked" : "Assign to classes"}
                         >
                           Assign
                         </button>
-                        <button 
-                          className="btn btn-sm btn-danger" 
+                        <button
+                          className="btn btn-sm btn-danger"
                           onClick={() => handleDeleteQuestionnaire(q.id)}
                           disabled={q.isLocked}
                           title={q.isLocked ? "Cannot delete - questionnaire is locked" : "Delete"}
@@ -261,7 +289,7 @@ const Questionnaires = () => {
             <div className="modal-content" onClick={(e) => e.stopPropagation()}>
               <h2 className="assign-modal-title">Assign Questionnaire to Classes</h2>
               <p className="assign-modal-subtitle"><strong>{selectedQuestionnaire.title}</strong></p>
-              
+
               <div className="form-group">
                 <div className="assign-toolbar">
                   <label>Select Classes</label>
