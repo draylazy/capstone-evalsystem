@@ -1,5 +1,5 @@
 import React, { useEffect, useMemo, useRef, useState } from "react";
-import { useNavigate } from "react-router-dom";
+import { useLocation, useNavigate } from "react-router-dom";
 import TeacherSidebar from "../../components/Sidebar/TeacherSidebar";
 import { teacherReportAPI } from "../../services/api";
 import { useToast } from "../../contexts/ToastContext";
@@ -9,6 +9,7 @@ const API_BASE_URL = process.env.REACT_APP_API_BASE_URL || 'http://localhost:808
 
 const Reports = () => {
   const navigate = useNavigate();
+  const location = useLocation();
   const toast = useToast();
   const [questionnaires, setQuestionnaires] = useState([]);
   const [selectedQuestionnaire, setSelectedQuestionnaire] = useState(null);
@@ -25,6 +26,7 @@ const Reports = () => {
   const [aiLoading, setAiLoading] = useState(false);
   const [isAiOpen, setIsAiOpen] = useState(false);
   const aiMessagesEndRef = useRef(null);
+  const restoreHandledRef = useRef(false);
 
   const token = useMemo(() => {
     try {
@@ -94,8 +96,37 @@ const Reports = () => {
   };
 
   const viewStudentEvaluationDetails = (evaluationId) => {
-    navigate(`/teacher/reports/student-evaluation/${evaluationId}`);
+    navigate(`/teacher/reports/student-evaluation/${evaluationId}`, {
+      state: {
+        questionnaireId: selectedQuestionnaire?.id ?? null,
+        teamName: selectedTeamName ?? null,
+      },
+    });
   };
+
+  useEffect(() => {
+    const restoreState = location.state;
+    if (restoreHandledRef.current || !restoreState?.questionnaireId || !restoreState?.teamName) {
+      return;
+    }
+    if (!questionnaires || questionnaires.length === 0) {
+      return;
+    }
+
+    const questionnaire = questionnaires.find(
+      (q) => String(q.id) === String(restoreState.questionnaireId)
+    );
+    if (!questionnaire) {
+      restoreHandledRef.current = true;
+      return;
+    }
+
+    restoreHandledRef.current = true;
+    (async () => {
+      await viewQuestionnaireEvaluations(questionnaire);
+      setSelectedTeamName(restoreState.teamName);
+    })();
+  }, [location.state, questionnaires]);
 
   const sendAiMessage = async () => {
     const trimmed = aiInput.trim();
