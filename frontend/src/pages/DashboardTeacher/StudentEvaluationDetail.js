@@ -1,5 +1,5 @@
 import React, { useEffect, useMemo, useRef, useState } from "react";
-import { useParams, useNavigate } from "react-router-dom";
+import { useParams, useNavigate, useLocation } from "react-router-dom";
 import TeacherSidebar from "../../components/Sidebar/TeacherSidebar";
 import { teacherReportAPI } from "../../services/api";
 import { useToast } from "../../contexts/ToastContext";
@@ -78,6 +78,7 @@ const parseAiFeedbackSections = (feedbackText) => {
 const StudentEvaluationDetail = () => {
   const { evaluationId } = useParams();
   const navigate = useNavigate();
+  const location = useLocation();
   const toast = useToast();
   
   const [evaluation, setEvaluation] = useState(null);
@@ -97,6 +98,22 @@ const StudentEvaluationDetail = () => {
       return null;
     }
   }, []);
+
+  const handleBackToTeamDetails = () => {
+    const questionnaireId = location.state?.questionnaireId;
+    const teamName = location.state?.teamName;
+
+    if (questionnaireId && teamName) {
+      navigate("/teacher/reports", {
+        state: {
+          questionnaireId,
+          teamName,
+        },
+      });
+      return;
+    }
+    navigate("/teacher/reports");
+  };
 
   useEffect(() => {
     loadEvaluation();
@@ -410,7 +427,7 @@ const StudentEvaluationDetail = () => {
         <TeacherSidebar />
         <div className="teacher-content">
           <div className="error-message">{error || "Evaluation not found"}</div>
-          <button className="btn-secondary" onClick={() => navigate("/teacher/reports")}>Back to Reports</button>
+          <button className="btn-secondary" onClick={handleBackToTeamDetails}>Back to Team Details</button>
         </div>
       </div>
     );
@@ -423,7 +440,7 @@ const StudentEvaluationDetail = () => {
       <TeacherSidebar />
       <div className="teacher-content">
         <div style={{ marginBottom: "20px" }}>
-          <button className="btn-secondary" onClick={() => navigate("/teacher/reports")}>← Back to Reports</button>
+          <button className="btn-secondary" onClick={handleBackToTeamDetails}>← Back to Team Details</button>
         </div>
 
         <h1>Student Evaluation Details</h1>
