@@ -1,6 +1,7 @@
 import React, { useState, useEffect, useRef } from "react";
 import { useLocation, useNavigate } from "react-router-dom";
 import { authAPI } from "../../services/api";
+import { LayoutDashboard, CheckCircle } from "lucide-react";
 import "./Sidebar.css";
 
 const AdviserSidebar = () => {
@@ -44,8 +45,8 @@ const AdviserSidebar = () => {
   };
 
   const menuItems = [
-    { label: "Dashboard", icon: "⌂", path: "/adviser/dashboard", navigatePath: "/adviser/dashboard" },
-    { label: "Completed", icon: "✓", path: "/adviser/completed", navigatePath: "/adviser/completed" },
+    { label: "Dashboard", icon: LayoutDashboard, path: "/adviser/dashboard", navigatePath: "/adviser/dashboard" },
+    { label: "Completed", icon: CheckCircle, path: "/adviser/completed", navigatePath: "/adviser/completed" },
   ];
 
   return (
@@ -58,7 +59,7 @@ const AdviserSidebar = () => {
             className={location.pathname.startsWith(item.path) ? "is-active" : ""}
             onClick={() => handleNavigate(item.navigatePath)}
           >
-            <span className="nav-icon" aria-hidden="true">{item.icon}</span>
+            <item.icon size={18} className="nav-icon" aria-hidden="true" />
             <span>{item.label}</span>
           </li>
         ))}
