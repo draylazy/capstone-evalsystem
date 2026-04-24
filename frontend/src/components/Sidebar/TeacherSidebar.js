@@ -1,6 +1,7 @@
 import React, { useState, useEffect, useRef } from "react";
 import { useLocation, useNavigate } from "react-router-dom";
 import { authAPI } from "../../services/api";
+import { LayoutDashboard, GraduationCap, UserCheck, ClipboardList, BarChart2, Users } from "lucide-react";
 import "./Sidebar.css";
 
 const TeacherSidebar = () => {
@@ -44,12 +45,12 @@ const TeacherSidebar = () => {
   };
 
   const menuItems = [
-    { label: "Dashboard", icon: "⌂", path: "/teacher/dashboard" },
-    { label: "Students", icon: "◉", path: "/teacher/students" },
-    { label: "Advisers", icon: "◎", path: "/teacher/advisers" },
-    { label: "Questionnaires", icon: "▣", path: "/teacher/questionnaires" },
-    { label: "Reports", icon: "◫", path: "/teacher/reports" },
-    { label: "User Management", icon: "⚙", path: "/teacher/user-management" },
+    { label: "Dashboard", icon: LayoutDashboard, path: "/teacher/dashboard" },
+    { label: "Students", icon: GraduationCap, path: "/teacher/students" },
+    { label: "Advisers", icon: UserCheck, path: "/teacher/advisers" },
+    { label: "Questionnaires", icon: ClipboardList, path: "/teacher/questionnaires" },
+    { label: "Reports", icon: BarChart2, path: "/teacher/reports" },
+    { label: "User Management", icon: Users, path: "/teacher/user-management" },
   ];
 
   return (
@@ -62,7 +63,7 @@ const TeacherSidebar = () => {
             className={location.pathname.startsWith(item.path) ? "is-active" : ""}
             onClick={() => handleNavigate(item.path)}
           >
-            <span className="nav-icon" aria-hidden="true">{item.icon}</span>
+            <item.icon size={18} className="nav-icon" aria-hidden="true" />
             <span>{item.label}</span>
           </li>
         ))}

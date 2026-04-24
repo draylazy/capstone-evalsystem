@@ -128,7 +128,7 @@ public class AdviserEvaluationController {
                         evaluation.getStatus() == Evaluation.EvaluationStatus.REVIEWED) {
                     queueStatus = "SUBMITTED";
                 } else if (evaluation.getQuestionnaire() != null
-                        && Boolean.TRUE.equals(evaluation.getQuestionnaire().getIsLocked())) {
+                        && !Boolean.TRUE.equals(evaluation.getQuestionnaire().getIsActive())) {
                     queueStatus = "LOCKED";
                 } else if (answeredCount > 0) {
                     queueStatus = "IN_PROGRESS";

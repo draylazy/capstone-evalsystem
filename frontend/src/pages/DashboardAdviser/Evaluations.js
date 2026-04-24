@@ -60,7 +60,7 @@ const Evaluations = () => {
     if (statusRow?.status) {
       return statusRow.status;
     }
-    if (questionnaire.isLocked) {
+    if (questionnaire.isActive === false) {
       return "LOCKED";
     }
     return "READY";

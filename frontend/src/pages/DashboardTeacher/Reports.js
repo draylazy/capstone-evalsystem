@@ -1,5 +1,5 @@
 import React, { useEffect, useMemo, useRef, useState } from "react";
-import { useLocation, useNavigate } from "react-router-dom";
+import { useNavigate } from "react-router-dom";
 import TeacherSidebar from "../../components/Sidebar/TeacherSidebar";
 import { teacherReportAPI } from "../../services/api";
 import { useToast } from "../../contexts/ToastContext";
@@ -64,13 +64,13 @@ const Reports = () => {
       setSelectedQuestionnaire(questionnaire);
       setSelectedTeamName(null); // Reset team selection
       setLoading(true);
-      
+
       // Fetch both types of evaluations in parallel
       const [adviserData, studentData] = await Promise.all([
         teacherReportAPI.getQuestionnaireEvaluations(questionnaire.id),
         teacherReportAPI.getStudentQuestionnaireEvaluations(questionnaire.id)
       ]);
-      
+
       setEvaluations(adviserData);
       setStudentEvaluations(studentData);
     } catch (err) {
@@ -157,18 +157,18 @@ const Reports = () => {
           .join('\n');
       }
 
-      const currentAdviserEvals = selectedTeamName 
+      const currentAdviserEvals = selectedTeamName
         ? evaluations.filter(e => e.teamName === selectedTeamName)
         : evaluations;
-      
-      const currentStudentEvals = selectedTeamName 
+
+      const currentStudentEvals = selectedTeamName
         ? studentEvaluations.filter(e => e.teamName === selectedTeamName)
         : studentEvaluations;
 
       const total = currentAdviserEvals.length + currentStudentEvals.length;
-      const submitted = currentAdviserEvals.filter((e) => e.status === 'SUBMITTED').length + 
-                       currentStudentEvals.filter(e => e.status === 'SUBMITTED').length;
-      
+      const submitted = currentAdviserEvals.filter((e) => e.status === 'SUBMITTED').length +
+        currentStudentEvals.filter(e => e.status === 'SUBMITTED').length;
+
       const inProgress = total - submitted;
       const progressRate = total > 0 ? ((submitted / total) * 100).toFixed(1) : '0.0';
 
@@ -288,7 +288,7 @@ const Reports = () => {
             </div>
 
             <h2>{selectedQuestionnaire.title} - Select a Team</h2>
-            
+
             {loading ? (
               <p>Loading teams...</p>
             ) : (
@@ -306,11 +306,12 @@ const Reports = () => {
                     const adviserCount = evaluations.filter(e => e.teamName === teamName && e.status === 'SUBMITTED').length;
                     const studentCount = studentEvaluations.filter(e => e.teamName === teamName && e.status === 'SUBMITTED').length;
                     const totalCount = studentEvaluations.filter(e => e.teamName === teamName).length;
+                    const adviserSubmitted = adviserCount > 0;
 
                     return (
-                      <div 
-                        key={teamName} 
-                        className="evaluation-response-item" 
+                      <div
+                        key={teamName}
+                        className="evaluation-response-item"
                         style={{ cursor: 'pointer', background: 'rgba(255,255,255,0.05)', padding: '24px', transition: 'transform 0.2s' }}
                         onClick={() => setSelectedTeamName(teamName)}
                         onMouseEnter={(e) => e.currentTarget.style.transform = 'translateY(-4px)'}
@@ -319,9 +320,18 @@ const Reports = () => {
                         <h3 style={{ margin: '0 0 12px 0', color: 'var(--dtm-gold)' }}>{teamName}</h3>
                         <div style={{ fontSize: '0.85rem', color: 'var(--dtm-muted)' }}>
                           {selectedQuestionnaire.target === 'ADVISER' ? (
-                            <p style={{ margin: '4px 0' }}>Adviser Eval: {adviserCount > 0 ? '✅ Submitted' : '🕒 Pending'}</p>
+                            <p className={`report-team-status ${adviserSubmitted ? 'is-submitted' : 'is-pending'}`}>
+                              <span className="report-team-status-label">Adviser Eval</span>
+                              <span className="report-team-status-value">
+                                {adviserSubmitted ? <CheckCircle2 size={14} aria-hidden="true" /> : <Clock3 size={14} aria-hidden="true" />}
+                                {adviserSubmitted ? 'Submitted' : 'Pending'}
+                              </span>
+                            </p>
                           ) : (
-                            <p style={{ margin: '4px 0' }}>Student Evals: {studentCount}/{totalCount} Submitted</p>
+                            <p className="report-team-status">
+                              <span className="report-team-status-label">Student Evals</span>
+                              <span className="report-team-status-value">{studentCount}/{totalCount} Submitted</span>
+                            </p>
                           )}
                         </div>
                         <button className="btn btn-assign" style={{ marginTop: '16px', width: '100%', fontSize: '0.85rem' }}>
@@ -428,8 +438,8 @@ const Reports = () => {
                                 </td>
                                 <td>{evaluation.scoreCount}</td>
                                 <td>
-                                  {evaluation.averageScore !== null && evaluation.averageScore !== undefined 
-                                    ? <strong style={{color: 'var(--dtm-gold)'}}>{evaluation.averageScore}</strong> 
+                                  {evaluation.averageScore !== null && evaluation.averageScore !== undefined
+                                    ? <strong style={{ color: 'var(--dtm-gold)' }}>{evaluation.averageScore}</strong>
                                     : "N/A"}
                                 </td>
                                 <td>
@@ -483,8 +493,8 @@ const Reports = () => {
                                 </td>
                                 <td>{evaluation.scoreCount}</td>
                                 <td>
-                                  {evaluation.averageScore !== null && evaluation.averageScore !== undefined 
-                                    ? <strong style={{color: 'var(--dtm-gold)'}}>{evaluation.averageScore}</strong> 
+                                  {evaluation.averageScore !== null && evaluation.averageScore !== undefined
+                                    ? <strong style={{ color: 'var(--dtm-gold)' }}>{evaluation.averageScore}</strong>
                                     : "N/A"}
                                 </td>
                                 <td>
