@@ -211,6 +211,63 @@ public class GoogleFormsService {
     }
 
     /**
+     * Overwrite an existing Google Form by updating its info and replacing all items.
+     */
+    public void overwriteGoogleForm(Long teacherId, String formId, String title, String description,
+                                    List<QuestionnaireItem> questions,
+                                    List<QuestionnaireSection> sections) {
+        try {
+            String accessToken = googleAuthService.getValidAccessToken(teacherId);
+            Forms formsService = getFormsService(accessToken);
+
+            // 1. Get the current form to know how many items to delete
+            Form form = formsService.forms().get(formId).execute();
+            List<Request> batchRequests = new ArrayList<>();
+
+            // 2. Update Form Info (Title and Description)
+            Info info = new Info();
+            info.setTitle(title);
+            info.setDocumentTitle(title);
+            if (description != null) {
+                info.setDescription(description);
+            }
+            UpdateFormInfoRequest updateInfo = new UpdateFormInfoRequest()
+                    .setInfo(info)
+                    .setUpdateMask(description != null ? "title,documentTitle,description" : "title,documentTitle");
+            batchRequests.add(new Request().setUpdateFormInfo(updateInfo));
+
+            // 3. Delete all existing items
+            if (form.getItems() != null && !form.getItems().isEmpty()) {
+                // Delete from highest index down to 0 to avoid index shifting
+                for (int i = form.getItems().size() - 1; i >= 0; i--) {
+                    DeleteItemRequest deleteReq = new DeleteItemRequest()
+                            .setLocation(new Location().setIndex(i));
+                    batchRequests.add(new Request().setDeleteItem(deleteReq));
+                }
+            }
+
+            // Execute the deletion and update info first
+            if (!batchRequests.isEmpty()) {
+                BatchUpdateFormRequest batchUpdateRequest = new BatchUpdateFormRequest()
+                        .setRequests(batchRequests);
+                formsService.forms().batchUpdate(formId, batchUpdateRequest).execute();
+                log.info("Deleted old items and updated info for form {}", formId);
+            }
+
+            // 4. Add the new items using our existing logic
+            if ((sections != null && !sections.isEmpty()) || (questions != null && !questions.isEmpty())) {
+                addQuestionsAndSectionsToForm(formsService, formId, questions, sections);
+            }
+
+            log.info("Successfully overwritten Google Form {}", formId);
+
+        } catch (Exception e) {
+            log.error("Error overwriting Google Form", e);
+            throw new RuntimeException("Failed to sync updates to Google Form: " + e.getMessage(), e);
+        }
+    }
+
+    /**
      * Add questions to an existing Google Form
      */
     private void addQuestionsToForm(Forms formsService, String formId, List<QuestionnaireItem> questions) {
@@ -266,7 +323,9 @@ public class GoogleFormsService {
 
                     // Add questions in this section
                     if (section.getItems() != null && !section.getItems().isEmpty()) {
-                        for (QuestionnaireItem item : section.getItems()) {
+                        List<QuestionnaireItem> sortedItems = new ArrayList<>(section.getItems());
+                        sortedItems.sort(java.util.Comparator.comparing(QuestionnaireItem::getOrderIndex));
+                        for (QuestionnaireItem item : sortedItems) {
                             Request request = createQuestionRequest(item, itemIndex++);
                             requests.add(request);
                         }
