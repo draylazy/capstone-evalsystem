@@ -232,6 +232,34 @@
   border: 1px solid rgba(255, 255, 255, 0.12);
 }
 
+.report-team-status {
+  margin: 4px 0;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+}
+
+.report-team-status-label {
+  color: var(--dtm-muted);
+  font-weight: 500;
+}
+
+.report-team-status-value {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  font-weight: 700;
+}
+
+.report-team-status.is-submitted .report-team-status-value {
+  color: #7ee4b2;
+}
+
+.report-team-status.is-pending .report-team-status-value {
+  color: #f5d780;
+}
+
 .evaluation-response-question {
   margin-bottom: 8px;
   color: var(--dtm-text);
