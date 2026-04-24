@@ -1,5 +1,6 @@
 import React, { useEffect, useMemo, useRef, useState } from "react";
-import { useNavigate } from "react-router-dom";
+import { useNavigate, useLocation } from "react-router-dom";
+import { CheckCircle2, Clock3 } from "lucide-react";
 import TeacherSidebar from "../../components/Sidebar/TeacherSidebar";
 import { teacherReportAPI } from "../../services/api";
 import { useToast } from "../../contexts/ToastContext";

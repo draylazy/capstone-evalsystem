@@ -1,6 +1,7 @@
 import React, { useState, useEffect, useRef } from "react";
 import { useLocation, useNavigate } from "react-router-dom";
 import { authAPI } from "../../services/api";
+import { LayoutDashboard, Users } from "lucide-react";
 import "./Sidebar.css";
 
 const StudentSidebar = () => {
@@ -49,8 +50,8 @@ const StudentSidebar = () => {
   };
 
   const menuItems = [
-    { label: "Dashboard", icon: "⌂", path: "/student/dashboard" },
-    { label: "My Team", icon: "☍", path: "/student/team" }
+    { label: "Dashboard", icon: LayoutDashboard, path: "/student/dashboard" },
+    { label: "My Team", icon: Users, path: "/student/team" }
   ];
 
   return (
@@ -63,7 +64,7 @@ const StudentSidebar = () => {
             className={location.pathname.startsWith(item.path) ? "is-active" : ""}
             onClick={() => handleNavigate(item.path)}
           >
-            <span className="nav-icon" aria-hidden="true">{item.icon}</span>
+            <item.icon size={18} className="nav-icon" aria-hidden="true" />
             <span>{item.label}</span>
           </li>
         ))}
