@@ -1,5 +1,6 @@
 import React, { useEffect, useMemo, useRef, useState } from "react";
 import { useNavigate } from "react-router-dom";
+import { CheckCircle2, Clock3 } from "lucide-react";
 import TeacherSidebar from "../../components/Sidebar/TeacherSidebar";
 import { teacherReportAPI } from "../../services/api";
 import { useToast } from "../../contexts/ToastContext";
@@ -275,6 +276,7 @@ const Reports = () => {
                     const adviserCount = evaluations.filter(e => e.teamName === teamName && e.status === 'SUBMITTED').length;
                     const studentCount = studentEvaluations.filter(e => e.teamName === teamName && e.status === 'SUBMITTED').length;
                     const totalCount = studentEvaluations.filter(e => e.teamName === teamName).length;
+                    const adviserSubmitted = adviserCount > 0;
 
                     return (
                       <div 
@@ -288,9 +290,18 @@ const Reports = () => {
                         <h3 style={{ margin: '0 0 12px 0', color: 'var(--dtm-gold)' }}>{teamName}</h3>
                         <div style={{ fontSize: '0.85rem', color: 'var(--dtm-muted)' }}>
                           {selectedQuestionnaire.target === 'ADVISER' ? (
-                            <p style={{ margin: '4px 0' }}>Adviser Eval: {adviserCount > 0 ? '✅ Submitted' : '🕒 Pending'}</p>
+                            <p className={`report-team-status ${adviserSubmitted ? 'is-submitted' : 'is-pending'}`}>
+                              <span className="report-team-status-label">Adviser Eval</span>
+                              <span className="report-team-status-value">
+                                {adviserSubmitted ? <CheckCircle2 size={14} aria-hidden="true" /> : <Clock3 size={14} aria-hidden="true" />}
+                                {adviserSubmitted ? 'Submitted' : 'Pending'}
+                              </span>
+                            </p>
                           ) : (
-                            <p style={{ margin: '4px 0' }}>Student Evals: {studentCount}/{totalCount} Submitted</p>
+                            <p className="report-team-status">
+                              <span className="report-team-status-label">Student Evals</span>
+                              <span className="report-team-status-value">{studentCount}/{totalCount} Submitted</span>
+                            </p>
                           )}
                         </div>
                         <button className="btn btn-assign" style={{ marginTop: '16px', width: '100%', fontSize: '0.85rem' }}>
