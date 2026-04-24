@@ -209,17 +209,7 @@ const EvaluateForm = () => {
                   <div style={{ flex: 1 }}>
                     {currentItem.questionType === "TEXT" ? (
                       <textarea
-                        style={{
-                          width: '100%',
-                          minHeight: '100px',
-                          padding: '12px',
-                          borderRadius: '8px',
-                          background: 'rgba(255,255,255,0.05)',
-                          border: '1px solid rgba(255,255,255,0.1)',
-                          color: '#fff',
-                          fontFamily: 'inherit',
-                          resize: 'vertical'
-                        }}
+                        className="custom-textarea"
                         placeholder="Enter response..."
                         value={answers[currentItem.id] || ""}
                         onChange={(e) => handleChange(currentItem.id, e.target.value)}

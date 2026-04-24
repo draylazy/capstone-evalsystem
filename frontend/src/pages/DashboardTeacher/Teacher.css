@@ -1859,6 +1859,32 @@
   }
 }
 
+/* Custom Textarea for Evaluations */
+.custom-textarea {
+  width: 100%;
+  min-height: 80px;
+  padding: 1px;
+  border-radius: 8px;
+  background: rgba(255, 255, 255, 0.05);
+  border: 1px solid rgba(255, 255, 255, 0.2);
+  color: var(--dtm-text);
+  font-family: inherit;
+  font-size: 14px;
+  resize: none;
+  transition: all 0.2s ease;
+}
+
+.custom-textarea:focus {
+  outline: none;
+  border-color: var(--dtm-gold);
+  background: rgba(255, 255, 255, 0.08);
+  box-shadow: 0 0 0 2px rgba(242, 201, 76, 0.2);
+}
+
+.custom-textarea::placeholder {
+  color: rgba(255, 255, 255, 0.4);
+}
+
 /* Questionnaire Detail Modal Specifics */
 .questionnaire-detail-modal {
   background: linear-gradient(160deg, rgba(58, 36, 42, 0.95), rgba(43, 24, 29, 0.95));

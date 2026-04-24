@@ -131,6 +131,27 @@ const StudentEvaluateForm = () => {
   };
 
   const handleSubmit = async () => {
+    // Validation
+    let isComplete = true;
+    for (const page of pages) {
+      for (const item of page.items) {
+        for (const member of members) {
+          const val = answers[member.evaluationId]?.[item.id];
+          if (val === undefined || val === null || val === "") {
+            isComplete = false;
+            break;
+          }
+        }
+        if (!isComplete) break;
+      }
+      if (!isComplete) break;
+    }
+
+    if (!isComplete) {
+      toast.error("Please answer all questions for all team members before submitting.");
+      return;
+    }
+
     if (!window.confirm("Are you sure you want to submit all evaluations? You cannot edit them after submission.")) return;
     
     setSubmitting(true);
@@ -242,17 +263,7 @@ const StudentEvaluateForm = () => {
                           <div style={{ flex: 1 }}>
                             {item.questionType === "TEXT" ? (
                               <textarea
-                                style={{
-                                  width: '100%',
-                                  minHeight: '80px',
-                                  padding: '12px',
-                                  borderRadius: '8px',
-                                  background: 'rgba(255,255,255,0.05)',
-                                  border: '1px solid rgba(255,255,255,0.1)',
-                                  color: '#fff',
-                                  fontFamily: 'inherit',
-                                  resize: 'vertical'
-                                }}
+                                className="custom-textarea"
                                 placeholder={`Enter response for ${member.name}...`}
                                 value={answers[member.evaluationId]?.[item.id] || ""}
                                 onChange={(e) => handleScoreChange(member.evaluationId, item.id, e.target.value)}
