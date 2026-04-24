@@ -4,6 +4,7 @@ import TeacherSidebar from "../../components/Sidebar/TeacherSidebar";
 import { questionnaireAPI, classAPI } from "../../services/api";
 import { useToast } from "../../contexts/ToastContext";
 import ConfirmModal from "../../components/ConfirmModal/ConfirmModal";
+import QuestionnaireDetailModal from "./QuestionnaireDetailModal";
 import "./Teacher.css";
 
 const API_BASE_URL = (process.env.REACT_APP_API_BASE_URL || 'http://localhost:8080/api').replace(/\/api\/?$/, '');
@@ -25,6 +26,8 @@ const Questionnaires = () => {
   const [selectedQuestionnaire, setSelectedQuestionnaire] = useState(null);
   const [googleLinked, setGoogleLinked] = useState(false);
   const [selectedClasses, setSelectedClasses] = useState([]);
+  const [showDetailsModal, setShowDetailsModal] = useState(false);
+  const [selectedQuestionnaireId, setSelectedQuestionnaireId] = useState(null);
 
   useEffect(() => {
     fetchQuestionnaires();
@@ -153,6 +156,11 @@ const Questionnaires = () => {
     setShowAssignModal(true);
   };
 
+  const openDetailsModal = (id) => {
+    setSelectedQuestionnaireId(id);
+    setShowDetailsModal(true);
+  };
+
   const formatDate = (dateString) => {
     return new Date(dateString).toLocaleDateString();
   };
@@ -203,9 +211,7 @@ const Questionnaires = () => {
               <thead>
                 <tr>
                   <th>Title</th>
-                  <th>Description</th>
-                  <th>Questions</th>
-                  <th>Assigned Classes</th>
+                  <th>Assigned Class</th>
                   <th>Target</th>
                   <th>Created Date</th>
                   <th>Deadline</th>
@@ -217,8 +223,6 @@ const Questionnaires = () => {
                 {questionnaires.map((q) => (
                   <tr key={q.id}>
                     <td>{q.title}</td>
-                    <td>{q.description || 'N/A'}</td>
-                    <td>{q.questionCount}</td>
                     <td>
                       {q.assignedClassNames && q.assignedClassNames.length > 0
                         ? q.assignedClassNames.join(', ')
@@ -254,9 +258,9 @@ const Questionnaires = () => {
                       <div className="action-buttons">
                         <button
                           className="btn btn-sm"
-                          onClick={() => window.open(q.googleFormUrl, '_blank')}
+                          onClick={() => openDetailsModal(q.id)}
                         >
-                          View Form
+                          View Details
                         </button>
                         <button
                           className="btn btn-sm btn-assign"
@@ -359,6 +363,14 @@ const Questionnaires = () => {
           onConfirm={confirmModal.onConfirm}
           onCancel={() => setConfirmModal({ ...confirmModal, isOpen: false })}
           isDanger={true}
+        />
+
+        {/* Questionnaire Details & Edit Modal */}
+        <QuestionnaireDetailModal
+          isOpen={showDetailsModal}
+          onClose={() => setShowDetailsModal(false)}
+          questionnaireId={selectedQuestionnaireId}
+          onUpdate={fetchQuestionnaires}
         />
       </div>
 

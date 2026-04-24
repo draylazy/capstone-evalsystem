@@ -1,5 +1,5 @@
 import React, { useEffect, useMemo, useRef, useState } from "react";
-import { useNavigate } from "react-router-dom";
+import { useNavigate, useLocation } from "react-router-dom";
 import { CheckCircle2, Clock3 } from "lucide-react";
 import TeacherSidebar from "../../components/Sidebar/TeacherSidebar";
 import { teacherReportAPI } from "../../services/api";
@@ -10,6 +10,7 @@ const API_BASE_URL = process.env.REACT_APP_API_BASE_URL || 'http://localhost:808
 
 const Reports = () => {
   const navigate = useNavigate();
+  const location = useLocation();
   const toast = useToast();
   const [questionnaires, setQuestionnaires] = useState([]);
   const [selectedQuestionnaire, setSelectedQuestionnaire] = useState(null);
@@ -26,6 +27,7 @@ const Reports = () => {
   const [aiLoading, setAiLoading] = useState(false);
   const [isAiOpen, setIsAiOpen] = useState(false);
   const aiMessagesEndRef = useRef(null);
+  const restoreHandledRef = useRef(false);
 
   const token = useMemo(() => {
     try {
@@ -63,13 +65,13 @@ const Reports = () => {
       setSelectedQuestionnaire(questionnaire);
       setSelectedTeamName(null); // Reset team selection
       setLoading(true);
-      
+
       // Fetch both types of evaluations in parallel
       const [adviserData, studentData] = await Promise.all([
         teacherReportAPI.getQuestionnaireEvaluations(questionnaire.id),
         teacherReportAPI.getStudentQuestionnaireEvaluations(questionnaire.id)
       ]);
-      
+
       setEvaluations(adviserData);
       setStudentEvaluations(studentData);
     } catch (err) {
@@ -95,8 +97,37 @@ const Reports = () => {
   };
 
   const viewStudentEvaluationDetails = (evaluationId) => {
-    navigate(`/teacher/reports/student-evaluation/${evaluationId}`);
+    navigate(`/teacher/reports/student-evaluation/${evaluationId}`, {
+      state: {
+        questionnaireId: selectedQuestionnaire?.id ?? null,
+        teamName: selectedTeamName ?? null,
+      },
+    });
   };
+
+  useEffect(() => {
+    const restoreState = location.state;
+    if (restoreHandledRef.current || !restoreState?.questionnaireId || !restoreState?.teamName) {
+      return;
+    }
+    if (!questionnaires || questionnaires.length === 0) {
+      return;
+    }
+
+    const questionnaire = questionnaires.find(
+      (q) => String(q.id) === String(restoreState.questionnaireId)
+    );
+    if (!questionnaire) {
+      restoreHandledRef.current = true;
+      return;
+    }
+
+    restoreHandledRef.current = true;
+    (async () => {
+      await viewQuestionnaireEvaluations(questionnaire);
+      setSelectedTeamName(restoreState.teamName);
+    })();
+  }, [location.state, questionnaires]);
 
   const sendAiMessage = async () => {
     const trimmed = aiInput.trim();
@@ -127,18 +158,18 @@ const Reports = () => {
           .join('\n');
       }
 
-      const currentAdviserEvals = selectedTeamName 
+      const currentAdviserEvals = selectedTeamName
         ? evaluations.filter(e => e.teamName === selectedTeamName)
         : evaluations;
-      
-      const currentStudentEvals = selectedTeamName 
+
+      const currentStudentEvals = selectedTeamName
         ? studentEvaluations.filter(e => e.teamName === selectedTeamName)
         : studentEvaluations;
 
       const total = currentAdviserEvals.length + currentStudentEvals.length;
-      const submitted = currentAdviserEvals.filter((e) => e.status === 'SUBMITTED').length + 
-                       currentStudentEvals.filter(e => e.status === 'SUBMITTED').length;
-      
+      const submitted = currentAdviserEvals.filter((e) => e.status === 'SUBMITTED').length +
+        currentStudentEvals.filter(e => e.status === 'SUBMITTED').length;
+
       const inProgress = total - submitted;
       const progressRate = total > 0 ? ((submitted / total) * 100).toFixed(1) : '0.0';
 
@@ -258,7 +289,7 @@ const Reports = () => {
             </div>
 
             <h2>{selectedQuestionnaire.title} - Select a Team</h2>
-            
+
             {loading ? (
               <p>Loading teams...</p>
             ) : (
@@ -279,9 +310,9 @@ const Reports = () => {
                     const adviserSubmitted = adviserCount > 0;
 
                     return (
-                      <div 
-                        key={teamName} 
-                        className="evaluation-response-item" 
+                      <div
+                        key={teamName}
+                        className="evaluation-response-item"
                         style={{ cursor: 'pointer', background: 'rgba(255,255,255,0.05)', padding: '24px', transition: 'transform 0.2s' }}
                         onClick={() => setSelectedTeamName(teamName)}
                         onMouseEnter={(e) => e.currentTarget.style.transform = 'translateY(-4px)'}
@@ -408,8 +439,8 @@ const Reports = () => {
                                 </td>
                                 <td>{evaluation.scoreCount}</td>
                                 <td>
-                                  {evaluation.averageScore !== null && evaluation.averageScore !== undefined 
-                                    ? <strong style={{color: 'var(--dtm-gold)'}}>{evaluation.averageScore}</strong> 
+                                  {evaluation.averageScore !== null && evaluation.averageScore !== undefined
+                                    ? <strong style={{ color: 'var(--dtm-gold)' }}>{evaluation.averageScore}</strong>
                                     : "N/A"}
                                 </td>
                                 <td>
@@ -463,8 +494,8 @@ const Reports = () => {
                                 </td>
                                 <td>{evaluation.scoreCount}</td>
                                 <td>
-                                  {evaluation.averageScore !== null && evaluation.averageScore !== undefined 
-                                    ? <strong style={{color: 'var(--dtm-gold)'}}>{evaluation.averageScore}</strong> 
+                                  {evaluation.averageScore !== null && evaluation.averageScore !== undefined
+                                    ? <strong style={{ color: 'var(--dtm-gold)' }}>{evaluation.averageScore}</strong>
                                     : "N/A"}
                                 </td>
                                 <td>

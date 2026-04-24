@@ -125,7 +125,10 @@ public class QuestionnaireController {
             getUserFromAuthentication(authentication);
 
             Questionnaire questionnaire = questionnaireService.getQuestionnaireById(id);
-            return ResponseEntity.ok(QuestionnaireResponse.fromEntity(questionnaire));
+            QuestionnaireResponse response = QuestionnaireResponse.fromEntity(questionnaire);
+            long count = questionnaireItemRepository.countByQuestionnaireId(id);
+            response.setQuestionCount((int) count);
+            return ResponseEntity.ok(response);
 
         } catch (Exception e) {
             log.error("Error fetching questionnaire", e);
@@ -302,8 +305,7 @@ public class QuestionnaireController {
 
             Questionnaire questionnaire = questionnaireService.updateQuestionnaire(
                     id,
-                    request.getTitle(),
-                    request.getDescription(),
+                    request,
                     user.getId());
 
             return ResponseEntity.ok(QuestionnaireResponse.fromEntity(questionnaire));

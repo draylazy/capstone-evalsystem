@@ -391,7 +391,7 @@ public class QuestionnaireService {
      * Update questionnaire details (not the form itself)
      */
     @Transactional
-    public Questionnaire updateQuestionnaire(Long questionnaireId, String title, String description, Long teacherId) {
+    public Questionnaire updateQuestionnaire(Long questionnaireId, CreateQuestionnaireRequest request, Long teacherId) {
         Questionnaire questionnaire = questionnaireRepository.findById(questionnaireId)
                 .orElseThrow(() -> new RuntimeException("Questionnaire not found"));
 
@@ -405,14 +405,90 @@ public class QuestionnaireService {
             throw new RuntimeException("Cannot edit locked questionnaire. It has been answered by advisers.");
         }
 
-        if (title != null && !title.isEmpty()) {
-            questionnaire.setTitle(title);
+        if (request.getTitle() != null && !request.getTitle().isEmpty()) {
+            questionnaire.setTitle(request.getTitle());
         }
-        if (description != null) {
-            questionnaire.setDescription(description);
+        if (request.getDescription() != null) {
+            questionnaire.setDescription(request.getDescription());
+        }
+        if (request.getTarget() != null) {
+            try {
+                questionnaire.setTarget(Questionnaire.QuestionnaireTarget.valueOf(request.getTarget().toUpperCase()));
+            } catch (IllegalArgumentException e) {
+                // Ignore invalid target
+            }
+        }
+        
+        // Update deadline if provided, else keep as is or clear if explicitly requested? 
+        // We'll update it to the new value if provided in request, assuming the request passes the full state.
+        if (request.getDeadlineAt() != null) {
+            questionnaire.setDeadlineAt(normalizeAndValidateDeadline(request.getDeadlineAt()));
+        } else {
+            questionnaire.setDeadlineAt(null);
+        }
+
+        // Update items and sections
+        questionnaireItemRepository.deleteAll(questionnaire.getItems());
+        questionnaireSectionRepository.deleteAll(questionnaire.getSections());
+        questionnaire.getItems().clear();
+        questionnaire.getSections().clear();
+
+        if (request.getSections() != null && !request.getSections().isEmpty()) {
+            for (CreateQuestionnaireRequest.QuestionnaireSectionInputDto sectionDto : request.getSections()) {
+                QuestionnaireSection section = new QuestionnaireSection();
+                section.setSectionTitle(sectionDto.getSectionTitle());
+                section.setSectionDescription(sectionDto.getSectionDescription());
+                section.setOrderIndex(sectionDto.getOrderIndex() != null ? sectionDto.getOrderIndex() : 0);
+                section.setQuestionnaire(questionnaire);
+
+                QuestionnaireSection savedSection = questionnaireSectionRepository.save(section);
+
+                if (sectionDto.getItems() != null && !sectionDto.getItems().isEmpty()) {
+                    for (int i = 0; i < sectionDto.getItems().size(); i++) {
+                        QuestionnaireItem item = sectionDto.getItems().get(i).toEntity();
+                        item.setQuestionnaire(questionnaire);
+                        item.setSection(savedSection);
+                        item.setOrderIndex(i);
+                        questionnaireItemRepository.save(item);
+                        questionnaire.getItems().add(item);
+                    }
+                }
+                questionnaire.getSections().add(savedSection);
+            }
+        } else if (request.getQuestions() != null && !request.getQuestions().isEmpty()) {
+            for (int i = 0; i < request.getQuestions().size(); i++) {
+                QuestionnaireItem item = request.getQuestions().get(i).toEntity();
+                item.setQuestionnaire(questionnaire);
+                item.setOrderIndex(i);
+                questionnaireItemRepository.save(item);
+                questionnaire.getItems().add(item);
+            }
         }
 
         Questionnaire saved = questionnaireRepository.save(questionnaire);
+
+        // Synchronize with Google Forms API
+        if (saved.getGoogleFormId() != null) {
+            try {
+                // Prepare sorted lists
+                List<QuestionnaireItem> allQuestions = new ArrayList<>(saved.getItems());
+                allQuestions.sort(java.util.Comparator.comparing(QuestionnaireItem::getOrderIndex));
+                List<QuestionnaireSection> allSections = new ArrayList<>(saved.getSections());
+                allSections.sort(java.util.Comparator.comparing(QuestionnaireSection::getOrderIndex));
+                
+                // For loose questions vs sectioned questions, check if we have sections
+                List<QuestionnaireItem> looseQuestions = new ArrayList<>();
+                if (allSections.isEmpty()) {
+                    looseQuestions = allQuestions;
+                }
+                
+                googleFormsService.overwriteGoogleForm(teacherId, saved.getGoogleFormId(), 
+                        saved.getTitle(), saved.getDescription(),
+                        looseQuestions, allSections);
+            } catch (Exception e) {
+                log.error("Failed to sync updates to Google Form. The local database was updated.", e);
+            }
+        }
 
         log.info("Updated questionnaire {}", questionnaireId);
 

@@ -13,6 +13,9 @@ import java.util.List;
 import java.util.Set;
 import java.util.stream.Collectors;
 
+import group9.advisor_eval_system.dto.QuestionnaireSectionDto;
+import group9.advisor_eval_system.dto.QuestionnaireItemDto;
+
 @Data
 @NoArgsConstructor
 @AllArgsConstructor
@@ -35,6 +38,10 @@ public class QuestionnaireResponse {
     private LocalDateTime deadlineAt;
     private LocalDateTime createdAt;
     private LocalDateTime updatedAt;
+    
+    // Additional fields for questions
+    private List<QuestionnaireItemDto> items;
+    private List<QuestionnaireSectionDto> sections;
 
     public static QuestionnaireResponse fromEntity(Questionnaire questionnaire) {
         QuestionnaireResponse response = new QuestionnaireResponse();
@@ -79,6 +86,46 @@ public class QuestionnaireResponse {
 
         response.setCreatedAt(questionnaire.getCreatedAt());
         response.setUpdatedAt(questionnaire.getUpdatedAt());
+
+        // Convert sections if present
+        if (questionnaire.getSections() != null && !questionnaire.getSections().isEmpty()) {
+            try {
+                response.setSections(
+                    questionnaire.getSections().stream()
+                        .filter(section -> section != null)
+                        .map(QuestionnaireSectionDto::fromEntity)
+                        .sorted((a, b) -> Integer.compare(
+                            a.getOrderIndex() != null ? a.getOrderIndex() : 0,
+                            b.getOrderIndex() != null ? b.getOrderIndex() : 0
+                        ))
+                        .collect(Collectors.toList())
+                );
+            } catch (Exception e) {
+                response.setSections(new ArrayList<>());
+            }
+        } else {
+            response.setSections(new ArrayList<>());
+        }
+
+        // Convert items to DTOs (items not in sections)
+        try {
+            if (questionnaire.getItems() != null && !questionnaire.getItems().isEmpty()) {
+                response.setItems(
+                    questionnaire.getItems().stream()
+                        .filter(item -> item != null && item.getSection() == null)
+                        .map(QuestionnaireItemDto::fromEntity)
+                        .sorted((a, b) -> Integer.compare(
+                            a.getOrderIndex() != null ? a.getOrderIndex() : 0,
+                            b.getOrderIndex() != null ? b.getOrderIndex() : 0
+                        ))
+                        .collect(Collectors.toList())
+                );
+            } else {
+                response.setItems(new ArrayList<>());
+            }
+        } catch (Exception e) {
+            response.setItems(new ArrayList<>());
+        }
 
         return response;
     }
