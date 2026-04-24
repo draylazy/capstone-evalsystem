@@ -97,12 +97,28 @@ function UserManagement() {
   };
 
   const exportData = async () => {
-    const headers = importType === 'STUDENT'
+    const defaultHeaders = importType === 'STUDENT'
       ? ['CLASS', 'TEAMCODE', 'MEMBER#', 'STUDENTID', 'LASTNAME', 'FIRSTNAME', 'EMAIL', 'ADVISOREMAIL']
       : ['LASTNAME', 'FIRSTNAME', 'EMAIL', 'ADVISOREMAIL'];
 
     try {
       const exportRows = await userManagementAPI.getExportData(importType);
+      
+      // For student export, dynamically detect all headers (including questionnaire columns)
+      let headers = defaultHeaders;
+      if (importType === 'STUDENT' && exportRows.length > 0) {
+        // Get all unique keys from the data to support dynamic questionnaire columns
+        const allKeys = new Set();
+        defaultHeaders.forEach(h => allKeys.add(h));
+        exportRows.forEach(row => {
+          Object.keys(row).forEach(key => allKeys.add(key));
+        });
+        // Keep default headers first, then add questionnaire columns
+        headers = [...defaultHeaders];
+        const additionalKeys = Array.from(allKeys).filter(key => !defaultHeaders.includes(key));
+        headers = headers.concat(additionalKeys);
+      }
+      
       const rows = exportRows.map((row) => headers.map((header) => row[header] || ''));
 
       const csvContent = [

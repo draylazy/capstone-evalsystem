@@ -103,6 +103,22 @@ public class UserManagementService {
     private List<Map<String, String>> getStudentExportRows() {
         List<Map<String, String>> rows = new ArrayList<>();
         List<Student> students = studentRepository.findAll();
+        
+        // First pass: collect all unique questionnaires that have evaluations (answered)
+        java.util.Set<Long> questionnaireIds = new java.util.LinkedHashSet<>();
+        java.util.Map<Long, Questionnaire> questionnaireMap = new java.util.LinkedHashMap<>();
+        
+        List<Evaluation> allEvaluations = evaluationRepository.findAll();
+        for (Evaluation evaluation : allEvaluations) {
+            if (evaluation.getQuestionnaire() != null) {
+                questionnaireIds.add(evaluation.getQuestionnaire().getId());
+                questionnaireMap.put(evaluation.getQuestionnaire().getId(), evaluation.getQuestionnaire());
+            }
+        }
+        
+        // Sort questionnaires by ID for consistent ordering
+        List<Questionnaire> sortedQuestionnaires = new ArrayList<>(questionnaireMap.values());
+        sortedQuestionnaires.sort((q1, q2) -> q1.getId().compareTo(q2.getId()));
 
         for (Student student : students) {
             Map<String, String> row = new LinkedHashMap<>();
@@ -115,14 +131,15 @@ public class UserManagementService {
             String teamCode = "";
             String memberNumber = "";
             String adviserEmail = "";
+            Team studentTeam = null;
             List<TeamStudent> memberships = teamStudentRepository.findByStudentId(student.getId());
             if (!memberships.isEmpty()) {
                 TeamStudent membership = memberships.get(0);
                 if (membership.getTeam() != null) {
-                    Team team = membership.getTeam();
-                    teamCode = team.getName() == null ? "" : team.getName();
-                    if (team.getAdvisers() != null && !team.getAdvisers().isEmpty()) {
-                        User adviser = team.getAdvisers().get(0);
+                    studentTeam = membership.getTeam();
+                    teamCode = studentTeam.getName() == null ? "" : studentTeam.getName();
+                    if (studentTeam.getAdvisers() != null && !studentTeam.getAdvisers().isEmpty()) {
+                        User adviser = studentTeam.getAdvisers().get(0);
                         adviserEmail = adviser.getEmail() == null ? "" : adviser.getEmail();
                     }
                 }
@@ -137,6 +154,50 @@ public class UserManagementService {
             row.put("FIRSTNAME", student.getFirstName() == null ? "" : student.getFirstName());
             row.put("EMAIL", student.getEmail() == null ? "" : student.getEmail());
             row.put("ADVISOREMAIL", adviserEmail);
+            
+            // Add questionnaire scores for this student's team
+            if (studentTeam != null) {
+                for (Questionnaire questionnaire : sortedQuestionnaires) {
+                    String scoreValue = "";
+                    
+                    // Find evaluation for this team and questionnaire
+                    List<Evaluation> teamEvaluations = evaluationRepository.findByTeamId(studentTeam.getId());
+                    for (Evaluation evaluation : teamEvaluations) {
+                        if (evaluation.getQuestionnaire() != null && 
+                            evaluation.getQuestionnaire().getId().equals(questionnaire.getId())) {
+                            
+                            if (evaluation.getScores() != null && !evaluation.getScores().isEmpty()) {
+                                // Calculate total score from numeric scores
+                                double totalScore = 0;
+                                int numericScoreCount = 0;
+                                
+                                for (group9.advisor_eval_system.entity.EvaluationScore score : evaluation.getScores()) {
+                                    if (score.getNumericScore() != null) {
+                                        totalScore += score.getNumericScore();
+                                        numericScoreCount++;
+                                    }
+                                }
+                                
+                                if (numericScoreCount > 0) {
+                                    // Calculate average
+                                    double average = totalScore / numericScoreCount;
+                                    scoreValue = String.format("%.2f", average);
+                                } else {
+                                    // If no numeric scores, just mark as answered
+                                    scoreValue = "Answered";
+                                }
+                            } else {
+                                // Evaluation exists but no scores yet
+                                scoreValue = "In Progress";
+                            }
+                            break; // Use first evaluation for this team+questionnaire
+                        }
+                    }
+                    
+                    row.put(questionnaire.getTitle(), scoreValue);
+                }
+            }
+            
             rows.add(row);
         }
 
