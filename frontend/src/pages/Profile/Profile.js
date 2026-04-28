@@ -12,12 +12,9 @@ const Profile = () => {
   const [user, setUser] = useState(null);
   const [loading, setLoading] = useState(true);
 
-  const [googleStatus, setGoogleStatus] = useState({
-    loading: false,
-    isLinked: false,
-    googleEmail: null,
-    message: null,
-  });
+  const [googleSheetsUrl, setGoogleSheetsUrl] = useState('');
+  const [sheetsUrlLoading, setSheetsUrlLoading] = useState(false);
+  const [sheetsUrlEditing, setSheetsUrlEditing] = useState(false);
 
   useEffect(() => {
     fetchUserProfile();
@@ -25,7 +22,7 @@ const Profile = () => {
 
   useEffect(() => {
     if (user?.role === 'TEACHER') {
-      fetchGoogleLinkStatus();
+      fetchGoogleSheetsUrl();
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [user?.role]);
@@ -50,13 +47,12 @@ const Profile = () => {
     }
   };
 
-  const fetchGoogleLinkStatus = async () => {
+  const fetchGoogleSheetsUrl = async () => {
     const token = getToken();
     if (!token) return;
 
     try {
-      setGoogleStatus((prev) => ({ ...prev, loading: true }));
-      const res = await fetch(`${API_BASE_URL}/api/google-auth/status`, {
+      const res = await fetch(`${API_BASE_URL}/api/user-management/google-sheets/url`, {
         method: 'GET',
         headers: {
           Authorization: `Bearer ${token}`,
@@ -64,96 +60,48 @@ const Profile = () => {
       });
 
       const data = await res.json().catch(() => null);
-      if (!res.ok) {
-        throw new Error(data?.message || `Failed to load Google link status (HTTP ${res.status})`);
+      if (res.ok && data?.googleSheetsUrl) {
+        setGoogleSheetsUrl(data.googleSheetsUrl);
       }
-
-      setGoogleStatus({
-        loading: false,
-        isLinked: !!data?.isLinked,
-        googleEmail: data?.googleEmail || null,
-        message: data?.message || null,
-      });
     } catch (e) {
-      setGoogleStatus((prev) => ({ ...prev, loading: false }));
-      toast.error(e.message || 'Failed to load Google link status');
+      // Silent fail for now, user can still input URL
     }
   };
 
-  const startGoogleLink = async () => {
+  const handleSaveGoogleSheetsUrl = async () => {
     const token = getToken();
     if (!token) {
-      toast.error('You are not authenticated. Please log in again.');
+      toast.error('You are not authenticated');
+      return;
+    }
+
+    if (!googleSheetsUrl.trim()) {
+      toast.error('Please enter a Google Sheets URL');
       return;
     }
 
     try {
-      setGoogleStatus((prev) => ({ ...prev, loading: true }));
-
-      const res = await fetch(`${API_BASE_URL}/api/google-auth/authorization-url`, {
-        method: 'GET',
+      setSheetsUrlLoading(true);
+      const res = await fetch(`${API_BASE_URL}/api/user-management/google-sheets/url`, {
+        method: 'POST',
         headers: {
+          'Content-Type': 'application/json',
           Authorization: `Bearer ${token}`,
         },
+        body: JSON.stringify({ googleSheetsUrl: googleSheetsUrl.trim() }),
       });
 
       const data = await res.json().catch(() => null);
       if (!res.ok) {
-        throw new Error(data?.message || `Failed to start Google linking (HTTP ${res.status})`);
+        throw new Error(data?.message || 'Failed to save Google Sheets URL');
       }
 
-      const authUrl = data?.authUrl;
-      if (!authUrl) {
-        throw new Error('Missing authUrl from server');
-      }
-
-      const width = 520;
-      const height = 640;
-      const left = window.screenX + (window.outerWidth - width) / 2;
-      const top = window.screenY + (window.outerHeight - height) / 2;
-      const popup = window.open(
-        authUrl,
-        'Google Link',
-        `width=${width},height=${height},left=${left},top=${top}`
-      );
-
-      if (!popup) {
-        throw new Error('Popup was blocked. Please allow popups and try again.');
-      }
-
-      const onMessage = async (event) => {
-        if (event.origin !== window.location.origin) return;
-        if (event.data?.type !== 'GOOGLE_OAUTH_CODE') return;
-
-        window.removeEventListener('message', onMessage);
-
-        try {
-          const cbRes = await fetch(`${API_BASE_URL}/api/google-auth/callback`, {
-            method: 'POST',
-            headers: {
-              'Content-Type': 'application/json',
-              Authorization: `Bearer ${token}`,
-            },
-            body: JSON.stringify({ code: event.data.code }),
-          });
-
-          const cbData = await cbRes.json().catch(() => null);
-          if (!cbRes.ok) {
-            throw new Error(cbData?.message || `Failed to link Google account (HTTP ${cbRes.status})`);
-          }
-
-          toast.success('Google account linked successfully');
-          await fetchGoogleLinkStatus();
-        } catch (err) {
-          toast.error(err.message || 'Failed to link Google account');
-          setGoogleStatus((prev) => ({ ...prev, loading: false }));
-        }
-      };
-
-      window.addEventListener('message', onMessage);
+      setSheetsUrlEditing(false);
+      toast.success('Google Sheets URL saved successfully');
     } catch (e) {
-      setGoogleStatus((prev) => ({ ...prev, loading: false }));
-      toast.error(e.message || 'Failed to start Google linking');
+      toast.error(e.message || 'Failed to save Google Sheets URL');
+    } finally {
+      setSheetsUrlLoading(false);
     }
   };
 
@@ -191,22 +139,64 @@ const Profile = () => {
 
         {user?.role === 'TEACHER' && (
           <div className="profile-section google-section">
-            <h2>Google Account</h2>
+            <h2>Google Sheets Auto-Export</h2>
+            <p style={{ fontSize: '13px', color: '#888', marginBottom: '16px' }}>
+              Configure a Google Sheet to automatically receive updates whenever student data changes (new students, evaluations, etc.)
+            </p>
 
-            <div className="google-link-status">
-              {googleStatus.googleEmail && (
-                <div className="linked-email">
-                  <label>Google email</label>
-                  <span>{googleStatus.googleEmail}</span>
+            {sheetsUrlEditing ? (
+              <div className="form-group">
+                <label>Google Sheets URL *</label>
+                <input
+                  type="text"
+                  placeholder="https://docs.google.com/spreadsheets/d/YOUR_SHEET_ID/edit"
+                  value={googleSheetsUrl}
+                  onChange={(e) => setGoogleSheetsUrl(e.target.value)}
+                  style={{ marginBottom: '12px' }}
+                />
+                <p style={{ fontSize: '11px', color: '#888', marginBottom: '12px' }}>
+                  Share the spreadsheet with your Google account (the one you logged in with) before entering the link
+                </p>
+                <div style={{ display: 'flex', gap: '8px' }}>
+                  <button 
+                    className="btn" 
+                    onClick={handleSaveGoogleSheetsUrl} 
+                    disabled={sheetsUrlLoading}
+                    style={{ padding: '8px 16px', fontSize: '12px' }}
+                  >
+                    {sheetsUrlLoading ? 'Saving...' : 'Save'}
+                  </button>
+                  <button 
+                    className="btn-secondary" 
+                    onClick={() => setSheetsUrlEditing(false)}
+                    disabled={sheetsUrlLoading}
+                    style={{ padding: '8px 16px', fontSize: '12px' }}
+                  >
+                    Cancel
+                  </button>
                 </div>
-              )}
-
-              {!googleStatus.isLinked ? (
-                <button className="btn-link-google" onClick={startGoogleLink} disabled={googleStatus.loading}>
-                  Link Google Account
+              </div>
+            ) : (
+              <div>
+                {googleSheetsUrl ? (
+                  <div className="linked-email" style={{ marginBottom: '12px' }}>
+                    <label>Connected Sheet</label>
+                    <span style={{ wordBreak: 'break-all' }}>{googleSheetsUrl}</span>
+                  </div>
+                ) : (
+                  <p style={{ fontSize: '13px', color: '#999', fontStyle: 'italic' }}>
+                    No Google Sheet configured yet
+                  </p>
+                )}
+                <button 
+                  className="btn" 
+                  onClick={() => setSheetsUrlEditing(true)}
+                  style={{ padding: '8px 16px', fontSize: '12px' }}
+                >
+                  {googleSheetsUrl ? 'Update' : 'Configure'} Sheet
                 </button>
-              ) : null}
-            </div>
+              </div>
+            )}
           </div>
         )}
       </div>
