@@ -45,12 +45,14 @@ public class UserManagementController {
             return ResponseEntity.status(HttpStatus.BAD_REQUEST).body(new MessageResponse(errorMsg));
         } catch (Exception e) {
             String errorMsg = e.getMessage() != null ? e.getMessage() : e.getClass().getSimpleName();
-            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body(new MessageResponse("Error: " + errorMsg));
+            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
+                    .body(new MessageResponse("Error: " + errorMsg));
         }
     }
 
     @PostMapping(value = "/upload-students", consumes = "multipart/form-data")
-    public ResponseEntity<?> uploadStudentSheet(@RequestParam("file") MultipartFile file, Authentication authentication) {
+    public ResponseEntity<?> uploadStudentSheet(@RequestParam("file") MultipartFile file,
+            Authentication authentication) {
         if (file.isEmpty()) {
             return ResponseEntity.badRequest().body(new MessageResponse("File is empty"));
         }
@@ -58,8 +60,8 @@ public class UserManagementController {
         String filename = file.getOriginalFilename();
         if (filename == null ||
                 (!filename.toLowerCase().endsWith(".xlsx") &&
-                 !filename.toLowerCase().endsWith(".xls") &&
-                 !filename.toLowerCase().endsWith(".csv"))) {
+                        !filename.toLowerCase().endsWith(".xls") &&
+                        !filename.toLowerCase().endsWith(".csv"))) {
             return ResponseEntity.badRequest()
                     .body(new MessageResponse("File must be .xlsx, .xls, or .csv"));
         }
@@ -101,8 +103,8 @@ public class UserManagementController {
         String filename = file.getOriginalFilename();
         if (filename == null ||
                 (!filename.toLowerCase().endsWith(".xlsx") &&
-                 !filename.toLowerCase().endsWith(".xls") &&
-                 !filename.toLowerCase().endsWith(".csv"))) {
+                        !filename.toLowerCase().endsWith(".xls") &&
+                        !filename.toLowerCase().endsWith(".csv"))) {
             return ResponseEntity.badRequest()
                     .body(new MessageResponse("File must be .xlsx, .xls, or .csv"));
         }
@@ -184,31 +186,188 @@ public class UserManagementController {
 
     public static class MessageResponse {
         private String message;
-        public MessageResponse(String message) { this.message = message; }
-        public String getMessage() { return message; }
+
+        public MessageResponse(String message) {
+            this.message = message;
+        }
+
+        public String getMessage() {
+            return message;
+        }
     }
 
     public static class UploadResponse {
         private String message;
         private UserManagementService.UploadResult result;
+
         public UploadResponse(String message, UserManagementService.UploadResult result) {
             this.message = message;
             this.result = result;
         }
-        public String getMessage() { return message; }
-        public UserManagementService.UploadResult getResult() { return result; }
+
+        public String getMessage() {
+            return message;
+        }
+
+        public UserManagementService.UploadResult getResult() {
+            return result;
+        }
     }
 
     public static class GoogleSheetsUrlRequest {
         private String googleSheetsUrl;
-        public GoogleSheetsUrlRequest() {}
-        public String getGoogleSheetsUrl() { return googleSheetsUrl; }
-        public void setGoogleSheetsUrl(String googleSheetsUrl) { this.googleSheetsUrl = googleSheetsUrl; }
+
+        public GoogleSheetsUrlRequest() {
+        }
+
+        public String getGoogleSheetsUrl() {
+            return googleSheetsUrl;
+        }
+
+        public void setGoogleSheetsUrl(String googleSheetsUrl) {
+            this.googleSheetsUrl = googleSheetsUrl;
+        }
     }
 
     public static class GoogleSheetsUrlResponse {
         private String googleSheetsUrl;
-        public GoogleSheetsUrlResponse(String googleSheetsUrl) { this.googleSheetsUrl = googleSheetsUrl; }
-        public String getGoogleSheetsUrl() { return googleSheetsUrl; }
+
+        public GoogleSheetsUrlResponse(String googleSheetsUrl) {
+            this.googleSheetsUrl = googleSheetsUrl;
+        }
+
+        public String getGoogleSheetsUrl() {
+            return googleSheetsUrl;
+        }
+    }
+
+    // ------------------------------------------------------------------
+    // AI Key endpoints
+    // ------------------------------------------------------------------
+
+    @PostMapping("/ai-key")
+    public ResponseEntity<?> setAiKey(
+            @RequestBody AiKeyRequest request,
+            Authentication authentication) {
+        try {
+            if (authentication == null || authentication.getPrincipal() == null) {
+                return ResponseEntity.status(HttpStatus.UNAUTHORIZED)
+                        .body(new MessageResponse("User not authenticated"));
+            }
+
+            Long userId = (Long) authentication.getPrincipal();
+            User teacher = userManagementService.findById(userId);
+            if (teacher == null || !teacher.getRole().equals(User.UserRole.TEACHER)) {
+                return ResponseEntity.status(HttpStatus.FORBIDDEN)
+                        .body(new MessageResponse("Only teachers can configure AI keys"));
+            }
+
+            String provider = request.getAiProvider();
+            if (provider == null
+                    || !java.util.List.of("gemini", "openai", "anthropic").contains(provider.toLowerCase())) {
+                return ResponseEntity.badRequest()
+                        .body(new MessageResponse("Unsupported AI provider. Choose: gemini, openai, or anthropic"));
+            }
+
+            teacher.setAiApiKey(request.getAiApiKey());
+            teacher.setAiProvider(provider.toLowerCase());
+            userManagementService.saveUser(teacher);
+
+            return ResponseEntity.ok(new MessageResponse("AI API key saved successfully"));
+        } catch (Exception e) {
+            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
+                    .body(new MessageResponse("Error saving AI key: " + e.getMessage()));
+        }
+    }
+
+    @GetMapping("/ai-key")
+    public ResponseEntity<?> getAiKey(Authentication authentication) {
+        try {
+            if (authentication == null || authentication.getPrincipal() == null) {
+                return ResponseEntity.status(HttpStatus.UNAUTHORIZED)
+                        .body(new MessageResponse("User not authenticated"));
+            }
+
+            Long userId = (Long) authentication.getPrincipal();
+            User teacher = userManagementService.findById(userId);
+            if (teacher == null || !teacher.getRole().equals(User.UserRole.TEACHER)) {
+                return ResponseEntity.status(HttpStatus.FORBIDDEN)
+                        .body(new MessageResponse("Only teachers can access AI settings"));
+            }
+
+            boolean hasKey = teacher.getAiApiKey() != null && !teacher.getAiApiKey().isBlank();
+            return ResponseEntity.ok(new AiKeyResponse(teacher.getAiProvider(), hasKey));
+        } catch (Exception e) {
+            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
+                    .body(new MessageResponse("Error retrieving AI key info: " + e.getMessage()));
+        }
+    }
+
+    @DeleteMapping("/ai-key")
+    public ResponseEntity<?> deleteAiKey(Authentication authentication) {
+        try {
+            if (authentication == null || authentication.getPrincipal() == null) {
+                return ResponseEntity.status(HttpStatus.UNAUTHORIZED)
+                        .body(new MessageResponse("User not authenticated"));
+            }
+
+            Long userId = (Long) authentication.getPrincipal();
+            User teacher = userManagementService.findById(userId);
+            if (teacher == null || !teacher.getRole().equals(User.UserRole.TEACHER)) {
+                return ResponseEntity.status(HttpStatus.FORBIDDEN)
+                        .body(new MessageResponse("Only teachers can modify AI settings"));
+            }
+
+            teacher.setAiApiKey(null);
+            teacher.setAiProvider(null);
+            userManagementService.saveUser(teacher);
+
+            return ResponseEntity.ok(new MessageResponse("AI API key removed successfully"));
+        } catch (Exception e) {
+            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
+                    .body(new MessageResponse("Error removing AI key: " + e.getMessage()));
+        }
+    }
+
+    public static class AiKeyRequest {
+        private String aiApiKey;
+        private String aiProvider;
+
+        public AiKeyRequest() {
+        }
+
+        public String getAiApiKey() {
+            return aiApiKey;
+        }
+
+        public void setAiApiKey(String aiApiKey) {
+            this.aiApiKey = aiApiKey;
+        }
+
+        public String getAiProvider() {
+            return aiProvider;
+        }
+
+        public void setAiProvider(String aiProvider) {
+            this.aiProvider = aiProvider;
+        }
+    }
+
+    public static class AiKeyResponse {
+        private String aiProvider;
+        private boolean hasKey;
+
+        public AiKeyResponse(String aiProvider, boolean hasKey) {
+            this.aiProvider = aiProvider;
+            this.hasKey = hasKey;
+        }
+
+        public String getAiProvider() {
+            return aiProvider;
+        }
+
+        public boolean isHasKey() {
+            return hasKey;
+        }
     }
 }
