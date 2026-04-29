@@ -889,7 +889,26 @@ public class UserManagementService {
         if (cell == null) return "";
         switch (cell.getCellType()) {
             case STRING: return cell.getStringCellValue().trim();
-            case NUMERIC: return String.valueOf((long) cell.getNumericCellValue());
+            case NUMERIC: 
+                double numericValue = cell.getNumericCellValue();
+                // Check if it's a whole number
+                if (numericValue == (long) numericValue) {
+                    return String.valueOf((long) numericValue);
+                } else {
+                    return String.valueOf(numericValue);
+                }
+            case FORMULA:
+                // Handle formula cells by evaluating them as numeric
+                try {
+                    double formulaValue = cell.getNumericCellValue();
+                    if (formulaValue == (long) formulaValue) {
+                        return String.valueOf((long) formulaValue);
+                    } else {
+                        return String.valueOf(formulaValue);
+                    }
+                } catch (Exception e) {
+                    return cell.getStringCellValue().trim();
+                }
             default: return "";
         }
     }

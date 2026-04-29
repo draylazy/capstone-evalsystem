@@ -1,7 +1,6 @@
 package group9.advisor_eval_system.service;
 
 import group9.advisor_eval_system.entity.User;
-import group9.advisor_eval_system.repository.UserRepository;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.http.HttpEntity;
 import org.springframework.http.HttpHeaders;
@@ -24,12 +23,12 @@ public class GoogleSheetsService {
     private static final String SHEETS_API_URL = "https://sheets.googleapis.com/v4/spreadsheets";
     private static final String SHEET_NAME = "Sheet1";
     
-    private final UserRepository userRepository;
+    private final GoogleAuthService googleAuthService;
     private final RestTemplate restTemplate;
     private final ObjectMapper objectMapper;
 
-    public GoogleSheetsService(UserRepository userRepository, RestTemplate restTemplate, ObjectMapper objectMapper) {
-        this.userRepository = userRepository;
+    public GoogleSheetsService(GoogleAuthService googleAuthService, RestTemplate restTemplate, ObjectMapper objectMapper) {
+        this.googleAuthService = googleAuthService;
         this.restTemplate = restTemplate;
         this.objectMapper = objectMapper;
     }
@@ -58,7 +57,8 @@ public class GoogleSheetsService {
      */
     public void writeDataToSheet(User teacher, List<String> headers, List<List<String>> rows) {
         try {
-            validateTeacherAndSheet(teacher);
+            validateTeacherAndSavedSheet(teacher);
+            String accessToken = googleAuthService.getValidAccessToken(teacher.getId());
 
             String sheetId = extractSheetIdFromUrl(teacher.getGoogleSheetsUrl());
 
@@ -85,7 +85,7 @@ public class GoogleSheetsService {
             String url = String.format("%s/%s/values/%s!A1?valueInputOption=RAW", 
                     SHEETS_API_URL, sheetId, SHEET_NAME);
             
-            callSheetsApi(teacher, url, HttpMethod.PUT, requestBody.toString());
+                callSheetsApi(accessToken, url, HttpMethod.PUT, requestBody.toString());
             log.info("Successfully wrote {} rows to Google Sheet", rows.size());
 
         } catch (Exception e) {
@@ -99,7 +99,8 @@ public class GoogleSheetsService {
      */
     public void appendDataToSheet(User teacher, List<String> headers, List<List<String>> rowsToAppend) {
         try {
-            validateTeacherAndSheet(teacher);
+            validateTeacherAndSavedSheet(teacher);
+            String accessToken = googleAuthService.getValidAccessToken(teacher.getId());
 
             String sheetId = extractSheetIdFromUrl(teacher.getGoogleSheetsUrl());
 
@@ -125,7 +126,7 @@ public class GoogleSheetsService {
             String url = String.format("%s/%s/values/%s!A1:append?valueInputOption=RAW", 
                     SHEETS_API_URL, sheetId, SHEET_NAME);
             
-            callSheetsApi(teacher, url, HttpMethod.POST, requestBody.toString());
+                callSheetsApi(accessToken, url, HttpMethod.POST, requestBody.toString());
             log.info("Successfully appended {} rows to Google Sheet", rowsToAppend.size());
 
         } catch (Exception e) {
@@ -143,14 +144,15 @@ public class GoogleSheetsService {
                 return false;
             }
 
-            validateTeacherAndSheet(teacher);
+            validateTeacherHasGoogleAccess(teacher);
+            String accessToken = googleAuthService.getValidAccessToken(teacher.getId());
             String sheetId = extractSheetIdFromUrl(sheetsUrl);
 
             // Try to get basic sheet info
             String url = String.format("%s/%s?fields=spreadsheetId,properties.title", 
                     SHEETS_API_URL, sheetId);
             
-            String response = callSheetsApi(teacher, url, HttpMethod.GET, null);
+                String response = callSheetsApi(accessToken, url, HttpMethod.GET, null);
             JsonNode jsonNode = objectMapper.readTree(response);
             return jsonNode.has("spreadsheetId") && !jsonNode.get("spreadsheetId").asText().isEmpty();
 
@@ -163,10 +165,10 @@ public class GoogleSheetsService {
     /**
      * Make HTTP call to Google Sheets API with OAuth token
      */
-    private String callSheetsApi(User user, String url, HttpMethod method, String body) {
+    private String callSheetsApi(String accessToken, String url, HttpMethod method, String body) {
         try {
             HttpHeaders headers = new HttpHeaders();
-            headers.set("Authorization", "Bearer " + user.getGoogleAccessToken());
+            headers.set("Authorization", "Bearer " + accessToken);
             headers.set("Content-Type", "application/json");
 
             HttpEntity<String> entity = new HttpEntity<>(body, headers);
@@ -186,13 +188,20 @@ public class GoogleSheetsService {
     }
 
     /**
-     * Validate teacher has required Google account and sheet URL
+     * Validate teacher has required Google account and saved sheet URL
      */
-    private void validateTeacherAndSheet(User teacher) {
+    private void validateTeacherAndSavedSheet(User teacher) {
+        validateTeacherHasGoogleAccess(teacher);
+
         if (teacher.getGoogleSheetsUrl() == null || teacher.getGoogleSheetsUrl().isEmpty()) {
             throw new IllegalStateException("Google Sheets URL not configured for this teacher");
         }
+    }
 
+    /**
+     * Validate teacher has required Google linkage and token
+     */
+    private void validateTeacherHasGoogleAccess(User teacher) {
         if (!teacher.getIsGoogleLinked() || teacher.getGoogleAccessToken() == null) {
             throw new IllegalStateException("Google account not linked. Please link your Google account first.");
         }

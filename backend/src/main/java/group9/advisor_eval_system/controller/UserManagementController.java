@@ -65,7 +65,19 @@ public class UserManagementController {
         }
 
         try {
-            String teacherEmail = (authentication != null) ? (String) authentication.getPrincipal() : null;
+            if (authentication == null || authentication.getPrincipal() == null) {
+                return ResponseEntity.status(HttpStatus.UNAUTHORIZED)
+                        .body(new MessageResponse("User not authenticated"));
+            }
+
+            Long userId = (Long) authentication.getPrincipal();
+            User teacher = userManagementService.findById(userId);
+            if (teacher == null) {
+                return ResponseEntity.status(HttpStatus.NOT_FOUND)
+                        .body(new MessageResponse("User not found"));
+            }
+
+            String teacherEmail = teacher.getEmail();
             UserManagementService.UploadResult result = userManagementService.uploadStudentSheet(file, teacherEmail);
             String message = "Added: " + result.getAdded()
                     + ", Updated: " + result.getUpdated()
