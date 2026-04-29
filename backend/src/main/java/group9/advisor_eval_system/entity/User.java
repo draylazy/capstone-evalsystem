@@ -63,6 +63,10 @@ public class User {
     @Column(nullable = false)
     private Boolean isGoogleLinked = false;
     
+    // Google Sheets URL for teachers to configure automatic data export
+    @Column(nullable = true, length = 2000)
+    private String googleSheetsUrl;
+    
     @CreationTimestamp
     @Column(updatable = false)
     private LocalDateTime createdAt;

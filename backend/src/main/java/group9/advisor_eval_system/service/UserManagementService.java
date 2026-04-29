@@ -69,6 +69,9 @@ public class UserManagementService {
     @Autowired
     private TeamStudentRepository teamStudentRepository;
 
+    @Autowired
+    private GoogleSheetsService googleSheetsService;
+
     public static class UploadResult {
         private int added;
         private int updated;
@@ -337,6 +340,85 @@ public class UserManagementService {
     }
 
     /**
+     * Find user by email
+     */
+    public User findByEmail(String email) {
+        Optional<User> user = userRepository.findByEmail(email);
+        return user.orElse(null);
+    }
+
+    /**
+     * Save user
+     */
+    public User saveUser(User user) {
+        return userRepository.save(user);
+    }
+
+    /**
+     * Find user by ID
+     */
+    public User findById(Long id) {
+        Optional<User> user = userRepository.findById(id);
+        return user.orElse(null);
+    }
+
+    /**
+     * Sync student data to Google Sheets for a teacher
+     * Called automatically after student data changes
+     */
+    public void syncStudentDataToGoogleSheets(String teacherEmail) {
+        try {
+            User teacher = findByEmail(teacherEmail);
+            if (teacher == null || !teacher.getRole().equals(User.UserRole.TEACHER)) {
+                logger.warn("Teacher not found or invalid role: {}", teacherEmail);
+                return;
+            }
+
+            if (teacher.getGoogleSheetsUrl() == null || teacher.getGoogleSheetsUrl().isEmpty()) {
+                logger.info("Google Sheets URL not configured for teacher: {}", teacherEmail);
+                return;
+            }
+
+            if (!teacher.getIsGoogleLinked()) {
+                logger.warn("Google account not linked for teacher: {}", teacherEmail);
+                return;
+            }
+
+            // Get student export data
+            List<Map<String, String>> exportRows = getStudentExportRows();
+            
+            if (exportRows.isEmpty()) {
+                logger.info("No student data to sync for teacher: {}", teacherEmail);
+                return;
+            }
+
+            // Extract headers from first row
+            List<String> headers = new ArrayList<>();
+            if (!exportRows.isEmpty()) {
+                headers.addAll(exportRows.get(0).keySet());
+            }
+
+            // Convert rows to list format
+            List<List<String>> rows = new ArrayList<>();
+            for (Map<String, String> row : exportRows) {
+                List<String> rowData = new ArrayList<>();
+                for (String header : headers) {
+                    rowData.add(row.getOrDefault(header, ""));
+                }
+                rows.add(rowData);
+            }
+
+            // Write to Google Sheets
+            googleSheetsService.writeDataToSheet(teacher, headers, rows);
+            logger.info("Successfully synced student data to Google Sheets for teacher: {}", teacherEmail);
+
+        } catch (Exception e) {
+            logger.error("Error syncing student data to Google Sheets for teacher: {}", teacherEmail, e);
+            // Don't throw - we want upload to succeed even if sync fails
+        }
+    }
+
+    /**
      * Upload users from CSV/Excel file
      * Expected columns: Email, FirstName, LastName, Role, PhoneNumber(optional), Department(optional)
      */
@@ -509,7 +591,7 @@ public class UserManagementService {
      * Upload students from CSV/Excel file
      * Expected columns: CLASS, TEAMCODE, MEMBER#, STUDENTID, LASTNAME, FIRSTNAME, EMAIL, ADVISOREMAIL (in any order)
      */
-    public UploadResult uploadStudentSheet(MultipartFile file) throws IOException {
+    public UploadResult uploadStudentSheet(MultipartFile file, String teacherEmail) throws IOException {
         String filename = file.getOriginalFilename();
         List<String[]> rows;
 
@@ -694,6 +776,11 @@ public class UserManagementService {
             }
         }
 
+        // Auto-sync to Google Sheets if students were added or updated
+        if ((added > 0 || updated > 0) && teacherEmail != null && !teacherEmail.isEmpty()) {
+            syncStudentDataToGoogleSheets(teacherEmail);
+        }
+
         return new UploadResult(added, updated, skipped, errors);
     }
 
@@ -802,7 +889,26 @@ public class UserManagementService {
         if (cell == null) return "";
         switch (cell.getCellType()) {
             case STRING: return cell.getStringCellValue().trim();
-            case NUMERIC: return String.valueOf((long) cell.getNumericCellValue());
+            case NUMERIC: 
+                double numericValue = cell.getNumericCellValue();
+                // Check if it's a whole number
+                if (numericValue == (long) numericValue) {
+                    return String.valueOf((long) numericValue);
+                } else {
+                    return String.valueOf(numericValue);
+                }
+            case FORMULA:
+                // Handle formula cells by evaluating them as numeric
+                try {
+                    double formulaValue = cell.getNumericCellValue();
+                    if (formulaValue == (long) formulaValue) {
+                        return String.valueOf((long) formulaValue);
+                    } else {
+                        return String.valueOf(formulaValue);
+                    }
+                } catch (Exception e) {
+                    return cell.getStringCellValue().trim();
+                }
             default: return "";
         }
     }
