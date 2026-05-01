@@ -332,8 +332,9 @@ const Profile = () => {
                     </div>
                   ) : (
                     <p style={{ fontSize: '13px', color: '#999', fontStyle: 'italic', marginBottom: '12px' }}>
-                      No AI API key configured. The AI Assistant will not work until you add one.
+                      No AI API key configured yet
                     </p>
+                   
                   )}
                   <div style={{ display: 'flex', gap: '8px' }}>
                     <button
