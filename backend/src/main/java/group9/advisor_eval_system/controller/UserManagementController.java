@@ -147,16 +147,19 @@ public class UserManagementController {
                         .body(new MessageResponse("Please link your Google account first"));
             }
 
-            // Validate the URL
-            if (!googleSheetsService.validateSheetsUrl(teacher, request.getGoogleSheetsUrl())) {
+            // Validate URL format only (not API accessibility)
+            String sheetsUrl = request.getGoogleSheetsUrl();
+            try {
+                googleSheetsService.extractSheetIdFromUrl(sheetsUrl);
+            } catch (IllegalArgumentException e) {
                 return ResponseEntity.badRequest()
-                        .body(new MessageResponse("Invalid Google Sheets URL or insufficient permissions"));
+                        .body(new MessageResponse("Invalid Google Sheets URL format. Use: https://docs.google.com/spreadsheets/d/{SHEET_ID}/edit..."));
             }
 
-            teacher.setGoogleSheetsUrl(request.getGoogleSheetsUrl());
+            teacher.setGoogleSheetsUrl(sheetsUrl);
             userManagementService.saveUser(teacher);
 
-            return ResponseEntity.ok(new MessageResponse("Google Sheets URL saved successfully"));
+            return ResponseEntity.ok(new MessageResponse("Google Sheets URL saved successfully. Data will be validated when you push it to the sheet."));
         } catch (Exception e) {
             return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
                     .body(new MessageResponse("Error saving Google Sheets URL: " + e.getMessage()));
