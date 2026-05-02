@@ -23,6 +23,13 @@
   color: var(--dtm-text);
   position: relative;
   overflow-x: hidden;
+  box-sizing: border-box;
+}
+
+.teacher-container *,
+.teacher-container *::before,
+.teacher-container *::after {
+  box-sizing: border-box;
 }
 
 .teacher-container::before {
@@ -3612,7 +3619,7 @@
 /* Small tablets / large phones */
 @media (max-width: 768px) {
   .teacher-content {
-    padding: 16px 14px;
+    padding: 64px 14px 16px;
     margin-left: 0;
   }
 
@@ -3624,6 +3631,8 @@
 
   .teacher-hero {
     padding: 14px;
+    flex-direction: column;
+    align-items: stretch;
   }
 
   .teacher-hero-title {

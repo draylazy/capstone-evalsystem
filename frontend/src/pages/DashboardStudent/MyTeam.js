@@ -2,6 +2,7 @@ import React, { useEffect, useState } from "react";
 import StudentSidebar from "../../components/Sidebar/StudentSidebar";
 import { useToast } from "../../contexts/ToastContext";
 import "../DashboardTeacher/Teacher.css";
+import "./StudentResponsive.css";
 
 const API_BASE_URL = "http://localhost:8080";
 
@@ -76,8 +77,9 @@ const MyTeam = () => {
                             </div>
                         </div>
 
-                        <table className="class-table">
-                            <thead>
+                        <div className="table-responsive">
+                            <table className="class-table">
+                                <thead>
                                 <tr>
                                     <th>Name</th>
                                     <th>Email</th>
@@ -88,19 +90,20 @@ const MyTeam = () => {
                             <tbody>
                                 {team.members?.map((member) => (
                                     <tr key={member.id} style={member.isMe ? { background: 'rgba(242, 201, 76, 0.05)' } : {}}>
-                                        <td>
+                                        <td data-label="Name">
                                             <div style={{ display: 'flex', alignItems: 'center', gap: '10px', justifyContent: 'center' }}>
                                                 {member.name}
                                                 {member.isMe && <span className="status-badge status-active" style={{ fontSize: '10px', padding: '2px 6px' }}>YOU</span>}
                                             </div>
                                         </td>
-                                        <td>{member.email}</td>
-                                        <td>{member.position || "Member"}</td>
-                                        <td>Student</td>
+                                        <td data-label="Email">{member.email}</td>
+                                        <td data-label="Position">{member.position || "Member"}</td>
+                                        <td data-label="Role">Student</td>
                                     </tr>
                                 ))}
-                            </tbody>
-                        </table>
+                                </tbody>
+                            </table>
+                        </div>
                     </div>
                 )}
             </div>
