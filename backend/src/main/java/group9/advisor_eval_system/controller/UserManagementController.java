@@ -295,7 +295,33 @@ public class UserManagementController {
             }
 
             // Push to Google Sheets
-            googleSheetsService.writeDataToSheet(teacher, headers, rows);
+            if (type.equalsIgnoreCase("STUDENT")) {
+                googleSheetsService.writeDataToSheet(teacher, headers, rows, "Adviser Evaluation Data");
+
+                List<Map<String, String>> reportRows = userManagementService.getStudentReportsExportRows();
+                if (!reportRows.isEmpty()) {
+                    List<String> reportHeaders = new ArrayList<>();
+                    for (Map<String, String> row : reportRows) {
+                        for (String key : row.keySet()) {
+                            if (!reportHeaders.contains(key)) {
+                                reportHeaders.add(key);
+                            }
+                        }
+                    }
+                    
+                    List<List<String>> reportData = new ArrayList<>();
+                    for (Map<String, String> row : reportRows) {
+                        List<String> rowData = new ArrayList<>();
+                        for (String header : reportHeaders) {
+                            rowData.add(row.getOrDefault(header, ""));
+                        }
+                        reportData.add(rowData);
+                    }
+                    googleSheetsService.writeDataToSheet(teacher, reportHeaders, reportData, "Student Reports");
+                }
+            } else {
+                googleSheetsService.writeDataToSheet(teacher, headers, rows, "Advisers");
+            }
 
             return ResponseEntity.ok(new MessageResponse("Data pushed to Google Sheets successfully. " + exportRows.size() + " rows updated."));
         } catch (Exception e) {

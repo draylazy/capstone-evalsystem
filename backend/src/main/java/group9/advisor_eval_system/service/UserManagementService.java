@@ -72,6 +72,9 @@ public class UserManagementService {
     @Autowired
     private GoogleSheetsService googleSheetsService;
 
+    @Autowired
+    private StudentEvaluationService studentEvaluationService;
+
     public static class UploadResult {
         private int added;
         private int updated;
@@ -204,6 +207,59 @@ public class UserManagementService {
             rows.add(row);
         }
 
+        return rows;
+    }
+
+    public List<Map<String, String>> getStudentReportsExportRows() {
+        List<Map<String, String>> rows = new ArrayList<>();
+        List<Student> students = studentRepository.findAll();
+        
+        for (Student student : students) {
+            Map<String, String> row = new LinkedHashMap<>();
+            String className = "";
+            if (student.getClasses() != null && !student.getClasses().isEmpty()) {
+                className = student.getClasses().get(0).getName() == null ? "" : student.getClasses().get(0).getName();
+            }
+            
+            String teamCode = "";
+            String adviserEmail = "";
+            String memberNumber = "";
+            List<TeamStudent> memberships = teamStudentRepository.findByStudentId(student.getId());
+            if (!memberships.isEmpty()) {
+                TeamStudent membership = memberships.get(0);
+                memberNumber = membership.getPosition() == null ? "" : String.valueOf(membership.getPosition());
+                if (membership.getTeam() != null) {
+                    Team studentTeam = membership.getTeam();
+                    teamCode = studentTeam.getName() == null ? "" : studentTeam.getName();
+                    if (studentTeam.getAdvisers() != null && !studentTeam.getAdvisers().isEmpty()) {
+                        User adviser = studentTeam.getAdvisers().get(0);
+                        adviserEmail = adviser.getEmail() == null ? "" : adviser.getEmail();
+                    }
+                }
+            }
+            
+            row.put("CLASS", className);
+            row.put("TEAMCODE", teamCode);
+            row.put("MEMBER#", memberNumber);
+            row.put("STUDENTID", student.getStudentId() == null ? "" : student.getStudentId());
+            row.put("LASTNAME", student.getLastName() == null ? "" : student.getLastName());
+            row.put("FIRSTNAME", student.getFirstName() == null ? "" : student.getFirstName());
+            row.put("EMAIL", student.getEmail() == null ? "" : student.getEmail());
+            row.put("ADVISOREMAIL", adviserEmail);
+
+            try {
+                group9.advisor_eval_system.dto.StudentReportSummaryDto summary = studentEvaluationService.getStudentReportSummary(student.getId());
+                if (summary != null && summary.getSummaries() != null) {
+                    for (var qSummary : summary.getSummaries()) {
+                        row.put(qSummary.getQuestionnaireTitle() + " (Peer Average)", String.format("%.2f", qSummary.getOverallAverage()));
+                    }
+                }
+            } catch (Exception e) {
+                logger.warn("Could not generate student report summary for export: " + e.getMessage());
+            }
+            
+            rows.add(row);
+        }
         return rows;
     }
 
@@ -409,7 +465,7 @@ public class UserManagementService {
             }
 
             // Write to Google Sheets
-            googleSheetsService.writeDataToSheet(teacher, headers, rows);
+            googleSheetsService.writeDataToSheet(teacher, headers, rows, "Students Questionnaire");
             logger.info("Successfully synced student data to Google Sheets for teacher: {}", teacherEmail);
 
         } catch (Exception e) {

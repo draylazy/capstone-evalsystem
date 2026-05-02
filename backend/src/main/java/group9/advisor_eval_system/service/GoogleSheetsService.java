@@ -20,9 +20,7 @@ import java.util.regex.Pattern;
 @Slf4j
 public class GoogleSheetsService {
 
-    private static final String SHEETS_API_URL = "https://sheets.googleapis.com/v4/spreadsheets";
-    private static final String SHEET_NAME = "Sheet1";
-    
+    private static final String SHEETS_API_URL = "https://sheets.googleapis.com/v4/spreadsheets";    
     private final GoogleAuthService googleAuthService;
     private final RestTemplate restTemplate;
     private final ObjectMapper objectMapper;
@@ -55,12 +53,13 @@ public class GoogleSheetsService {
     /**
      * Write data to Google Sheets using REST API
      */
-    public void writeDataToSheet(User teacher, List<String> headers, List<List<String>> rows) {
+    public void writeDataToSheet(User teacher, List<String> headers, List<List<String>> rows, String sheetName) {
         try {
             validateTeacherAndSavedSheet(teacher);
             String accessToken = googleAuthService.getValidAccessToken(teacher.getId());
 
             String sheetId = extractSheetIdFromUrl(teacher.getGoogleSheetsUrl());
+            ensureSheetExists(accessToken, sheetId, sheetName);
 
             // Prepare data with headers
             List<List<Object>> data = new ArrayList<>();
@@ -82,8 +81,8 @@ public class GoogleSheetsService {
             requestBody.set("values", valuesArray);
 
             // Make API call to update sheet
-            String url = String.format("%s/%s/values/%s!A1?valueInputOption=RAW", 
-                    SHEETS_API_URL, sheetId, SHEET_NAME);
+            String url = String.format("%s/%s/values/'%s'!A1?valueInputOption=RAW", 
+                    SHEETS_API_URL, sheetId, sheetName);
             
                 callSheetsApi(accessToken, url, HttpMethod.PUT, requestBody.toString());
             log.info("Successfully wrote {} rows to Google Sheet", rows.size());
@@ -97,12 +96,13 @@ public class GoogleSheetsService {
     /**
      * Append data to Google Sheets using REST API
      */
-    public void appendDataToSheet(User teacher, List<String> headers, List<List<String>> rowsToAppend) {
+    public void appendDataToSheet(User teacher, List<String> headers, List<List<String>> rowsToAppend, String sheetName) {
         try {
             validateTeacherAndSavedSheet(teacher);
             String accessToken = googleAuthService.getValidAccessToken(teacher.getId());
 
             String sheetId = extractSheetIdFromUrl(teacher.getGoogleSheetsUrl());
+            ensureSheetExists(accessToken, sheetId, sheetName);
 
             // Prepare data to append
             List<List<Object>> data = new ArrayList<>();
@@ -123,8 +123,8 @@ public class GoogleSheetsService {
             requestBody.set("values", valuesArray);
 
             // Make API call to append to sheet
-            String url = String.format("%s/%s/values/%s!A1:append?valueInputOption=RAW", 
-                    SHEETS_API_URL, sheetId, SHEET_NAME);
+            String url = String.format("%s/%s/values/'%s'!A1:append?valueInputOption=RAW", 
+                    SHEETS_API_URL, sheetId, sheetName);
             
                 callSheetsApi(accessToken, url, HttpMethod.POST, requestBody.toString());
             log.info("Successfully appended {} rows to Google Sheet", rowsToAppend.size());
@@ -184,6 +184,76 @@ public class GoogleSheetsService {
         } catch (Exception e) {
             log.error("Error calling Google Sheets API: {}", e.getMessage());
             throw new RuntimeException("Failed to call Google Sheets API: " + e.getMessage(), e);
+        }
+    }
+
+    /**
+     * Ensure a sheet exists with the given name, and create it if not.
+     */
+    private void ensureSheetExists(String accessToken, String sheetId, String sheetName) {
+        try {
+            // First check if sheet exists
+            String getUrl = String.format("%s/%s?fields=sheets.properties(title,sheetId)", SHEETS_API_URL, sheetId);
+            String response = callSheetsApi(accessToken, getUrl, HttpMethod.GET, null);
+            JsonNode rootNode = objectMapper.readTree(response);
+            JsonNode sheetsNode = rootNode.get("sheets");
+            
+            Integer sheet1Id = null;
+            
+            if (sheetsNode != null && sheetsNode.isArray()) {
+                for (JsonNode sheet : sheetsNode) {
+                    String title = sheet.get("properties").get("title").asText();
+                    if (sheetName.equals(title)) {
+                        return; // Sheet exists
+                    }
+                    if ("Sheet1".equals(title)) {
+                        sheet1Id = sheet.get("properties").get("sheetId").asInt();
+                    }
+                }
+            }
+
+            ObjectNode requestBody = objectMapper.createObjectNode();
+            ArrayNode requestsArray = objectMapper.createArrayNode();
+
+            // If "Sheet1" exists, let's rename it to the requested sheetName to avoid leaving an empty default sheet.
+            // Or if they specifically requested Student Reports, it handles that too.
+            if (sheet1Id != null && "Student Reports".equalsIgnoreCase(sheetName)) {
+                ObjectNode updateSheetPropertiesRequest = objectMapper.createObjectNode();
+                ObjectNode updateSheetProperties = objectMapper.createObjectNode();
+                ObjectNode properties = objectMapper.createObjectNode();
+                
+                properties.put("sheetId", sheet1Id);
+                properties.put("title", sheetName);
+                updateSheetProperties.set("properties", properties);
+                updateSheetProperties.put("fields", "title");
+                updateSheetPropertiesRequest.set("updateSheetProperties", updateSheetProperties);
+                requestsArray.add(updateSheetPropertiesRequest);
+                
+                requestBody.set("requests", requestsArray);
+                String batchUpdateUrl = String.format("%s/%s:batchUpdate", SHEETS_API_URL, sheetId);
+                callSheetsApi(accessToken, batchUpdateUrl, HttpMethod.POST, requestBody.toString());
+                
+                log.info("Renamed 'Sheet1' to '{}' in spreadsheet {}", sheetName, sheetId);
+                return;
+            }
+
+            // Sheet does not exist and no Sheet1 to rename (or not Student Reports), create it
+            ObjectNode addSheetRequest = objectMapper.createObjectNode();
+            ObjectNode addSheet = objectMapper.createObjectNode();
+            ObjectNode properties = objectMapper.createObjectNode();
+            
+            properties.put("title", sheetName);
+            addSheet.set("properties", properties);
+            addSheetRequest.set("addSheet", addSheet);
+            requestsArray.add(addSheetRequest);
+            requestBody.set("requests", requestsArray);
+
+            String batchUpdateUrl = String.format("%s/%s:batchUpdate", SHEETS_API_URL, sheetId);
+            callSheetsApi(accessToken, batchUpdateUrl, HttpMethod.POST, requestBody.toString());
+            
+            log.info("Created new sheet '{}' in spreadsheet {}", sheetName, sheetId);
+        } catch (Exception e) {
+            log.warn("Failed to check or create sheet '{}': {}", sheetName, e.getMessage());
         }
     }
 
