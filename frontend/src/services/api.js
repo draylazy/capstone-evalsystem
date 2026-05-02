@@ -986,6 +986,18 @@ export const userManagementAPI = {
     }
     return await response.json();
   },
+
+  pushDataToSheets: async (type) => {
+    const response = await fetch(`${API_BASE_URL}/user-management/push-to-sheets?type=${encodeURIComponent(type)}`, {
+      method: 'POST',
+      headers: getHeaders(),
+    });
+    if (!response.ok) {
+      const err = await response.json().catch(() => null);
+      throw new Error(err?.message || 'Failed to push data to Google Sheets');
+    }
+    return await response.json();
+  },
 };
 
 export default {

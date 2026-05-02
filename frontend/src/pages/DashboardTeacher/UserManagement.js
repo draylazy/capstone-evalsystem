@@ -18,6 +18,8 @@ function UserManagement() {
   const [importType, setImportType] = useState('STUDENT'); // 'STUDENT' or 'ADVISER'
   const [showExportModal, setShowExportModal] = useState(false);
   const [filterRole, setFilterRole] = useState('ALL');
+  const [pushing, setPushing] = useState(false);
+  const [pushError, setPushError] = useState('');
 
   useEffect(() => {
     fetchUsers();
@@ -139,6 +141,21 @@ function UserManagement() {
       toast.success('Data exported successfully');
     } catch (err) {
       toast.error('Export failed: ' + err.message);
+    }
+  };
+
+  const pushDataToSheets = async () => {
+    setPushing(true);
+    setPushError('');
+    try {
+      const response = await userManagementAPI.pushDataToSheets(importType);
+      toast.success(response.message || 'Data pushed to Google Sheets successfully');
+      setShowExportModal(false);
+    } catch (err) {
+      setPushError('Failed to push data: ' + err.message);
+      toast.error('Failed to push data: ' + err.message);
+    } finally {
+      setPushing(false);
     }
   };
 
@@ -366,7 +383,9 @@ function UserManagement() {
               Choose what you'd like to export:
             </p>
 
-            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '16px', marginBottom: '24px' }}>
+            {pushError && <div className="error-message" style={{ marginBottom: '16px' }}>{pushError}</div>}
+
+            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: '16px', marginBottom: '24px' }}>
               <div 
                 style={{
                   padding: '20px',
@@ -374,7 +393,9 @@ function UserManagement() {
                   borderRadius: '10px',
                   cursor: 'pointer',
                   transition: 'all 0.3s ease',
-                  backgroundColor: 'rgba(138, 21, 31, 0.1)'
+                  backgroundColor: 'rgba(138, 21, 31, 0.1)',
+                  opacity: pushing ? 0.6 : 1,
+                  pointerEvents: pushing ? 'none' : 'auto'
                 }}
                 onClick={downloadTemplate}
                 onMouseEnter={(e) => {
@@ -402,7 +423,9 @@ function UserManagement() {
                   borderRadius: '10px',
                   cursor: 'pointer',
                   transition: 'all 0.3s ease',
-                  backgroundColor: 'rgba(138, 21, 31, 0.1)'
+                  backgroundColor: 'rgba(138, 21, 31, 0.1)',
+                  opacity: pushing ? 0.6 : 1,
+                  pointerEvents: pushing ? 'none' : 'auto'
                 }}
                 onClick={exportData}
                 onMouseEnter={(e) => {
@@ -420,6 +443,38 @@ function UserManagement() {
                 </h3>
                 <p style={{ margin: '0', fontSize: '12px', color: '#a09890' }}>
                   Export current {importType === 'STUDENT' ? 'students' : 'advisers'} data
+                </p>
+              </div>
+
+              <div 
+                style={{
+                  padding: '20px',
+                  border: '1px solid rgba(138, 21, 31, 0.3)',
+                  borderRadius: '10px',
+                  cursor: 'pointer',
+                  transition: 'all 0.3s ease',
+                  backgroundColor: 'rgba(138, 21, 31, 0.1)',
+                  opacity: pushing ? 0.6 : 1,
+                  pointerEvents: pushing ? 'none' : 'auto'
+                }}
+                onClick={pushDataToSheets}
+                onMouseEnter={(e) => {
+                  if (!pushing) {
+                    e.currentTarget.style.borderColor = 'rgba(138, 21, 31, 0.6)';
+                    e.currentTarget.style.backgroundColor = 'rgba(138, 21, 31, 0.2)';
+                  }
+                }}
+                onMouseLeave={(e) => {
+                  e.currentTarget.style.borderColor = 'rgba(138, 21, 31, 0.3)';
+                  e.currentTarget.style.backgroundColor = 'rgba(138, 21, 31, 0.1)';
+                }}
+              >
+                <div style={{ fontSize: '20px', marginBottom: '8px' }}>☁️</div>
+                <h3 style={{ margin: '0 0 8px 0', color: '#f5f0eb', fontSize: '14px', fontWeight: '600' }}>
+                  {pushing ? 'Uploading...' : 'Upload to Sheets'}
+                </h3>
+                <p style={{ margin: '0', fontSize: '12px', color: '#a09890' }}>
+                  Push {importType === 'STUDENT' ? 'students' : 'advisers'} data to linked Google Sheet
                 </p>
               </div>
             </div>

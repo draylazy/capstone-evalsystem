@@ -11,6 +11,7 @@ import org.springframework.web.bind.annotation.*;
 import org.springframework.web.multipart.MultipartFile;
 
 import java.io.IOException;
+import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
 
@@ -238,6 +239,66 @@ public class UserManagementController {
 
         public String getGoogleSheetsUrl() {
             return googleSheetsUrl;
+        }
+    }
+
+    @PostMapping("/push-to-sheets")
+    public ResponseEntity<?> pushDataToSheets(
+            @RequestParam(name = "type", defaultValue = "STUDENT") String type,
+            Authentication authentication) {
+        try {
+            if (authentication == null || authentication.getPrincipal() == null) {
+                return ResponseEntity.status(HttpStatus.UNAUTHORIZED)
+                        .body(new MessageResponse("User not authenticated"));
+            }
+
+            Long userId = (Long) authentication.getPrincipal();
+            User teacher = userManagementService.findById(userId);
+            if (teacher == null || !teacher.getRole().equals(User.UserRole.TEACHER)) {
+                return ResponseEntity.status(HttpStatus.FORBIDDEN)
+                        .body(new MessageResponse("Only teachers can push data to Google Sheets"));
+            }
+
+            if (teacher.getGoogleSheetsUrl() == null || teacher.getGoogleSheetsUrl().isEmpty()) {
+                return ResponseEntity.badRequest()
+                        .body(new MessageResponse("Google Sheets URL is not configured. Please set it up in settings."));
+            }
+
+            if (!teacher.getIsGoogleLinked()) {
+                return ResponseEntity.badRequest()
+                        .body(new MessageResponse("Google account is not linked. Please link your Google account first."));
+            }
+
+            // Get the export data
+            List<Map<String, String>> exportRows = userManagementService.getExportRows(type);
+            
+            if (exportRows.isEmpty()) {
+                return ResponseEntity.badRequest()
+                        .body(new MessageResponse("No data available to push to Google Sheets."));
+            }
+
+            // Get headers from first row
+            Map<String, String> firstRow = exportRows.get(0);
+            List<String> headers = new ArrayList<>(firstRow.keySet());
+            
+            // Convert rows to List<List<String>>
+            List<List<String>> rows = new ArrayList<>();
+            for (Map<String, String> row : exportRows) {
+                List<String> rowData = new ArrayList<>();
+                for (String header : headers) {
+                    rowData.add(row.getOrDefault(header, ""));
+                }
+                rows.add(rowData);
+            }
+
+            // Push to Google Sheets
+            googleSheetsService.writeDataToSheet(teacher, headers, rows);
+
+            return ResponseEntity.ok(new MessageResponse("Data pushed to Google Sheets successfully. " + exportRows.size() + " rows updated."));
+        } catch (Exception e) {
+            String errorMsg = e.getMessage() != null ? e.getMessage() : "Failed to push data to Google Sheets";
+            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
+                    .body(new MessageResponse("Error pushing data: " + errorMsg));
         }
     }
 
