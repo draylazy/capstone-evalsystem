@@ -85,7 +85,7 @@ const Adviser = () => {
                   <th>Team</th>
                   <th>Members</th>
                   <th>Status</th>
-                  <th>Action</th>
+                  <th>Actions</th>
                 </tr>
               </thead>
               <tbody>
@@ -100,12 +100,20 @@ const Adviser = () => {
                       </span>
                     </td>
                     <td>
-                      <button
-                        className="btn adviser-open-btn"
-                        onClick={() => navigate(`/adviser/evaluations/${team.id}`)}
-                      >
-                        Open Evaluations
-                      </button>
+                      <div style={{ display: "flex", gap: "8px", justifyContent: "center" }}>
+                        <button
+                          className="btn adviser-open-btn"
+                          onClick={() => navigate(`/adviser/evaluations/${team.id}`)}
+                        >
+                          Team Evaluations
+                        </button>
+                        <button
+                          className="btn-secondary adviser-open-btn"
+                          onClick={() => navigate(`/adviser/student-evaluations/${team.id}`)}
+                        >
+                          Student Evaluations
+                        </button>
+                      </div>
                     </td>
                   </tr>
                 ))}
