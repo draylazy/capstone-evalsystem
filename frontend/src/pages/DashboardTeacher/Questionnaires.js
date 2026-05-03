@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import TeacherSidebar from "../../components/Sidebar/TeacherSidebar";
-import { questionnaireAPI, classAPI } from "../../services/api";
+import { questionnaireAPI } from "../../services/api";
 import { useToast } from "../../contexts/ToastContext";
 import ConfirmModal from "../../components/ConfirmModal/ConfirmModal";
 import QuestionnaireDetailModal from "./QuestionnaireDetailModal";
@@ -25,7 +25,6 @@ const Questionnaires = () => {
   const toast = useToast();
   const navigate = useNavigate();
   const [questionnaires, setQuestionnaires] = useState([]);
-  const [classes, setClasses] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
   const [confirmModal, setConfirmModal] = useState({
@@ -34,16 +33,12 @@ const Questionnaires = () => {
     message: "",
     onConfirm: null
   });
-  const [showAssignModal, setShowAssignModal] = useState(false);
-  const [selectedQuestionnaire, setSelectedQuestionnaire] = useState(null);
   const [googleLinked, setGoogleLinked] = useState(false);
-  const [selectedClasses, setSelectedClasses] = useState([]);
   const [showDetailsModal, setShowDetailsModal] = useState(false);
   const [selectedQuestionnaireId, setSelectedQuestionnaireId] = useState(null);
 
   useEffect(() => {
     fetchQuestionnaires();
-    fetchClasses();
     checkGoogleLink();
   }, []);
 
@@ -81,22 +76,6 @@ const Questionnaires = () => {
       setError(err.message);
     } finally {
       setLoading(false);
-    }
-  };
-
-  const fetchClasses = async () => {
-    try {
-      const data = await classAPI.getAllClasses();
-      // Filter classes for this teacher only
-      const user = JSON.parse(localStorage.getItem('user'));
-      if (user && user.id) {
-        const teacherClasses = data.filter(c => String(c.teacherId) === String(user.id));
-        setClasses(teacherClasses);
-      } else {
-        setClasses(data);
-      }
-    } catch (err) {
-      toast.error('Error fetching classes');
     }
   };
 
@@ -139,29 +118,6 @@ const Questionnaires = () => {
     });
   };
 
-  const handleAssignToClasses = async () => {
-    try {
-      const existingClassIds = selectedQuestionnaire?.assignedClassIds || [];
-      const toAdd = selectedClasses.filter(id => !existingClassIds.includes(id));
-      const toRemove = existingClassIds.filter(id => !selectedClasses.includes(id));
-
-      if (toAdd.length > 0) {
-        await questionnaireAPI.assignToClasses(selectedQuestionnaire.id, toAdd);
-      }
-
-      if (toRemove.length > 0) {
-        await questionnaireAPI.unassignFromClasses(selectedQuestionnaire.id, toRemove);
-      }
-
-      toast.success('Class assignments updated successfully!');
-      setShowAssignModal(false);
-      setSelectedClasses([]);
-      await fetchQuestionnaires();
-    } catch (err) {
-      toast.error('Error updating class assignments: ' + err.message);
-    }
-  };
-
   const handleDuplicateQuestionnaire = async (questionnaire) => {
     try {
       await questionnaireAPI.duplicateQuestionnaire(questionnaire.id);
@@ -170,12 +126,6 @@ const Questionnaires = () => {
     } catch (err) {
       toast.error('Error duplicating questionnaire: ' + err.message);
     }
-  };
-
-  const openAssignModal = (questionnaire) => {
-    setSelectedQuestionnaire(questionnaire);
-    setSelectedClasses(questionnaire.assignedClassIds || []);
-    setShowAssignModal(true);
   };
 
   const openDetailsModal = (id) => {
@@ -291,14 +241,6 @@ const Questionnaires = () => {
                           Duplicate
                         </button>
                         <button
-                          className="btn btn-sm btn-assign"
-                          onClick={() => openAssignModal(q)}
-                          disabled={q.isLocked}
-                          title={q.isLocked ? "Cannot assign - questionnaire is locked" : "Assign to classes"}
-                        >
-                          Assign
-                        </button>
-                        <button
                           className="btn btn-sm btn-danger"
                           onClick={() => handleDeleteQuestionnaire(q.id)}
                           disabled={q.isLocked}
@@ -314,74 +256,6 @@ const Questionnaires = () => {
             </table>
           )}
         </div>
-
-        {/* Assign to Classes Modal */}
-        {showAssignModal && selectedQuestionnaire && (
-          <div className="modal-overlay" onClick={() => setShowAssignModal(false)}>
-            <div className="modal-content" onClick={(e) => e.stopPropagation()}>
-              <h2 className="assign-modal-title">Assign Questionnaire to Classes</h2>
-              <p className="assign-modal-subtitle"><strong>{selectedQuestionnaire.title}</strong></p>
-
-              <div className="form-group">
-                <div className="assign-toolbar">
-                  <label>Select Classes</label>
-                  <div className="assign-toolbar-actions">
-                    <span className="selection-count">{selectedClasses.length} selected</span>
-                    <button
-                      type="button"
-                      className="link-btn"
-                      onClick={() => setSelectedClasses(classes.map((c) => c.id))}
-                    >
-                      Select all
-                    </button>
-                    <button
-                      type="button"
-                      className="link-btn"
-                      onClick={() => setSelectedClasses([])}
-                    >
-                      Clear
-                    </button>
-                  </div>
-                </div>
-                {classes.length === 0 ? (
-                  <p>No classes available. Please create classes first.</p>
-                ) : (
-                  <div className="class-checklist">
-                    {classes.map((cls) => (
-                      <div key={cls.id} className="class-check-item">
-                        <label className="class-check-label">
-                          <input
-                            type="checkbox"
-                            checked={selectedClasses.includes(cls.id)}
-                            onChange={(e) => {
-                              if (e.target.checked) {
-                                setSelectedClasses([...selectedClasses, cls.id]);
-                              } else {
-                                setSelectedClasses(selectedClasses.filter(id => id !== cls.id));
-                              }
-                            }}
-                            className="class-checkbox"
-                          />
-                          <span className="class-check-text">
-                            <span className="class-check-name">{cls.name} {cls.section ? `- ${cls.section}` : ''}</span>
-                            <span className="class-check-meta">School Year: {cls.schoolYear}</span>
-                          </span>
-                        </label>
-                      </div>
-                    ))}
-                  </div>
-                )}
-              </div>
-
-              <div className="form-actions">
-                <button onClick={handleAssignToClasses} className="btn btn-primary">Save Class Assignments</button>
-                <button onClick={() => { setShowAssignModal(false); setSelectedClasses([]); }} className="btn btn-secondary">
-                  Cancel
-                </button>
-              </div>
-            </div>
-          </div>
-        )}
 
         {/* Confirm Modal */}
         <ConfirmModal

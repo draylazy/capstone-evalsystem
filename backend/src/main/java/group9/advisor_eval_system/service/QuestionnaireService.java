@@ -121,6 +121,13 @@ public class QuestionnaireService {
 
         Questionnaire savedQuestionnaire = questionnaireRepository.save(questionnaire);
 
+        // Auto-assign to all existing classes belonging to this teacher
+        List<SchoolClass> teacherClasses = schoolClassRepository.findByTeacherId(teacherId);
+        if (!teacherClasses.isEmpty()) {
+            savedQuestionnaire.getAssignedClasses().addAll(teacherClasses);
+            savedQuestionnaire = questionnaireRepository.save(savedQuestionnaire);
+        }
+
         // Save sections and their questions
         if (sections != null && !sections.isEmpty()) {
             for (CreateQuestionnaireRequest.QuestionnaireSectionInputDto sectionDto : sections) {

@@ -747,7 +747,16 @@ public class UserManagementService {
         newClass.setTeacher(teacher);
         newClass.setSchoolYear("2025-2026");
         newClass.setIsActive(true);
-        return schoolClassRepository.save(newClass);
+        SchoolClass savedClass = schoolClassRepository.save(newClass);
+
+        // Auto-assign all existing questionnaires by this teacher to the new class
+        List<Questionnaire> teacherQuestionnaires = questionnaireRepository.findByCreatedByTeacherId(teacher.getId());
+        for (Questionnaire q : teacherQuestionnaires) {
+            q.getAssignedClasses().add(savedClass);
+            questionnaireRepository.save(q);
+        }
+
+        return savedClass;
     }
 
     /**
