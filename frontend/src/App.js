@@ -20,6 +20,8 @@ import Adviser from './pages/DashboardAdviser/Adviser';
 import Evaluations from './pages/DashboardAdviser/Evaluations';
 import Completed from './pages/DashboardAdviser/Completed';
 import EvaluateForm from './pages/DashboardAdviser/EvaluateForm';
+import AdviserStudentEvaluations from './pages/DashboardAdviser/AdviserStudentEvaluations';
+import AdviserStudentEvaluateForm from './pages/DashboardAdviser/AdviserStudentEvaluateForm';
 
 // Student Pages
 import StudentDashboard from './pages/DashboardStudent/StudentDashboard';
@@ -117,6 +119,18 @@ function App() {
         <Route path="/adviser/completed" element={
           <ProtectedRoute allowedRoles={['ADVISER']}>
             <Completed />
+          </ProtectedRoute>
+        } />
+
+        <Route path="/adviser/student-evaluations/:teamId" element={
+          <ProtectedRoute allowedRoles={['ADVISER']}>
+            <AdviserStudentEvaluations />
+          </ProtectedRoute>
+        } />
+
+        <Route path="/adviser/student-evaluate/:teamId/:studentId/:questionnaireId" element={
+          <ProtectedRoute allowedRoles={['ADVISER']}>
+            <AdviserStudentEvaluateForm />
           </ProtectedRoute>
         } />
 

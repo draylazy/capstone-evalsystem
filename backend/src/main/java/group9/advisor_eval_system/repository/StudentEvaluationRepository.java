@@ -11,14 +11,18 @@ import java.util.Optional;
 
 @Repository
 public interface StudentEvaluationRepository extends JpaRepository<StudentEvaluation, Long> {
-    
-    Optional<StudentEvaluation> findByStudentIdAndQuestionnaireIdAndEvaluateeId(Long studentId, Long questionnaireId, Long evaluateeId);
-    
-    Optional<StudentEvaluation> findByStudentIdAndQuestionnaireIdAndEvaluateeIsNull(Long studentId, Long questionnaireId);
-    
+
+    // --- Existing peer-to-peer queries ---
+
+    Optional<StudentEvaluation> findByStudentIdAndQuestionnaireIdAndEvaluateeId(
+            Long studentId, Long questionnaireId, Long evaluateeId);
+
+    Optional<StudentEvaluation> findByStudentIdAndQuestionnaireIdAndEvaluateeIsNull(
+            Long studentId, Long questionnaireId);
+
     @Query("SELECT e FROM StudentEvaluation e LEFT JOIN FETCH e.scores WHERE e.student.id = :studentId")
     List<StudentEvaluation> findByStudentIdWithScores(@Param("studentId") Long studentId);
-    
+
     List<StudentEvaluation> findByQuestionnaireId(Long questionnaireId);
 
     List<StudentEvaluation> findByQuestionnaireIdAndEvaluateeId(Long questionnaireId, Long evaluateeId);
@@ -40,4 +44,15 @@ public interface StudentEvaluationRepository extends JpaRepository<StudentEvalua
             WHERE e.id = :id
             """)
     Optional<StudentEvaluation> findByIdWithDetails(@Param("id") Long id);
+
+    // --- New adviser-student eval queries ---
+
+    Optional<StudentEvaluation> findByAdviserIdAndEvaluateeIdAndQuestionnaireIdAndTeamId(
+            Long adviserId, Long evaluateeId, Long questionnaireId, Long teamId);
+
+    List<StudentEvaluation> findByAdviserIdAndTeamId(Long adviserId, Long teamId);
+
+    List<StudentEvaluation> findByAdviserIdAndEvaluateeId(Long adviserId, Long evaluateeId);
+
+    List<StudentEvaluation> findByAdviserIdAndStatus(Long adviserId, StudentEvaluation.EvaluationStatus status);
 }

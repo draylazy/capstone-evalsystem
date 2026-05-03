@@ -344,7 +344,7 @@ public class QuestionnaireService {
         }
 
         // Get questionnaires assigned to those classes with target ADVISER
-        return questionnaireRepository.findByAssignedClassesIdInAndIsActiveTrueAndTarget(new ArrayList<>(classIds), Questionnaire.QuestionnaireTarget.ADVISER);
+        return questionnaireRepository.findByAssignedClassesIdInAndIsActiveTrue(new ArrayList<>(classIds));
     }
 
     /**
@@ -355,7 +355,10 @@ public class QuestionnaireService {
         SchoolClass schoolClass = schoolClassRepository.findById(classId).orElse(null);
         List<Questionnaire> questionnaires = new ArrayList<>();
         if (schoolClass != null) {
-            questionnaires.addAll(questionnaireRepository.findByAssignedClassesContainingAndIsActiveTrueAndTarget(schoolClass, Questionnaire.QuestionnaireTarget.ADVISER));
+            // Return ALL active questionnaires for this class regardless of target
+            // Frontend will filter by target (ADVISER vs ADVISER_STUDENT vs STUDENT)
+            questionnaires.addAll(questionnaireRepository
+                .findByAssignedClassesContainingAndIsActiveTrue(schoolClass));
         }
         return questionnaires;
     }
