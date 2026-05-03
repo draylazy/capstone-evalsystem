@@ -31,6 +31,10 @@ public class QuestionnaireService {
     private final UserRepository userRepository;
     private final SchoolClassRepository schoolClassRepository;
     private final GoogleFormsService googleFormsService;
+    private final EvaluationRepository evaluationRepository;
+    private final StudentEvaluationRepository studentEvaluationRepository;
+    private final EvaluationScoreRepository evaluationScoreRepository;
+    private final StudentEvaluationScoreRepository studentEvaluationScoreRepository;
 
     /**
      * Create a new questionnaire with Google Form
@@ -379,7 +383,7 @@ public class QuestionnaireService {
     }
 
     /**
-     * Soft delete questionnaire
+     * Hard delete questionnaire (preserves evaluations and scores by disconnecting FKs)
      */
     @Transactional
     public void deleteQuestionnaire(Long questionnaireId, Long teacherId) {
@@ -391,10 +395,39 @@ public class QuestionnaireService {
             throw new RuntimeException("You can only delete your own questionnaires");
         }
 
-        questionnaire.setIsActive(false);
-        questionnaireRepository.save(questionnaire);
+        // Disconnect all evaluation scores from questionnaire items
+        List<EvaluationScore> evaluationScores = evaluationScoreRepository.findByQuestionnaireId(questionnaireId);
+        for (EvaluationScore score : evaluationScores) {
+            score.setQuestionnaireItem(null);
+        }
+        evaluationScoreRepository.saveAll(evaluationScores);
 
-        log.info("Soft deleted questionnaire {}", questionnaireId);
+        // Disconnect all student evaluation scores from questionnaire items
+        List<StudentEvaluationScore> studentEvaluationScores = studentEvaluationScoreRepository.findByQuestionnaireId(questionnaireId);
+        for (StudentEvaluationScore score : studentEvaluationScores) {
+            score.setQuestionnaireItem(null);
+        }
+        studentEvaluationScoreRepository.saveAll(studentEvaluationScores);
+
+        // Disconnect all evaluations from this questionnaire
+        List<Evaluation> evaluations = evaluationRepository.findByQuestionnaireId(questionnaireId);
+        for (Evaluation evaluation : evaluations) {
+            evaluation.setQuestionnaire(null);
+        }
+        evaluationRepository.saveAll(evaluations);
+
+        // Disconnect all student evaluations from this questionnaire
+        List<StudentEvaluation> studentEvaluations = studentEvaluationRepository.findByQuestionnaireId(questionnaireId);
+        for (StudentEvaluation studentEvaluation : studentEvaluations) {
+            studentEvaluation.setQuestionnaire(null);
+        }
+        studentEvaluationRepository.saveAll(studentEvaluations);
+
+        // Hard delete the questionnaire (cascades to items and sections)
+        questionnaireRepository.deleteById(questionnaireId);
+
+        log.info("Hard deleted questionnaire {} and disconnected {} evaluations, {} student evaluations, {} evaluation scores, and {} student evaluation scores",
+                questionnaireId, evaluations.size(), studentEvaluations.size(), evaluationScores.size(), studentEvaluationScores.size());
     }
 
     /**
