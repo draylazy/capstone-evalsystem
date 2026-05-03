@@ -6,6 +6,7 @@ import group9.advisor_eval_system.dto.QuestionnaireWithItemsDto;
 import group9.advisor_eval_system.entity.*;
 import group9.advisor_eval_system.repository.EvaluationRepository;
 import group9.advisor_eval_system.repository.EvaluationScoreRepository;
+import group9.advisor_eval_system.repository.StudentEvaluationRepository;
 import group9.advisor_eval_system.repository.QuestionnaireRepository;
 import group9.advisor_eval_system.service.EvaluationService;
 import group9.advisor_eval_system.service.QuestionnaireService;
@@ -34,6 +35,7 @@ public class AdviserEvaluationController {
     private final EvaluationRepository evaluationRepository;
     private final EvaluationScoreRepository evaluationScoreRepository;
     private final QuestionnaireRepository questionnaireRepository;
+    private final StudentEvaluationRepository studentEvaluationRepository;
 
     private Long getAdviserId(HttpServletRequest request) {
         String authHeader = request.getHeader("Authorization");
@@ -385,6 +387,35 @@ public class AdviserEvaluationController {
                     "submittedAt", submitted.getSubmittedAt()));
         } catch (Exception e) {
             log.error("Error submitting student evaluation: {}", e.getMessage(), e);
+            return ResponseEntity.status(HttpStatus.BAD_REQUEST)
+                    .body(Map.of("error", getErrorMessage(e)));
+        }
+    }
+
+    @GetMapping("/student-evaluations/completed")
+    public ResponseEntity<?> getCompletedStudentEvaluations(HttpServletRequest request) {
+        try {
+            Long adviserId = getAdviserId(request);
+
+            List<StudentEvaluation> evaluations = studentEvaluationRepository
+                    .findByAdviserIdAndStatus(adviserId, StudentEvaluation.EvaluationStatus.SUBMITTED);
+
+            List<Map<String, Object>> result = evaluations.stream().map(eval -> {
+                Map<String, Object> map = new HashMap<>();
+                map.put("id", eval.getId());
+                map.put("evaluateeFirstName", eval.getEvaluatee() != null ? eval.getEvaluatee().getFirstName() : "");
+                map.put("evaluateeLastName", eval.getEvaluatee() != null ? eval.getEvaluatee().getLastName() : "");
+                map.put("studentNumber", eval.getEvaluatee() != null ? eval.getEvaluatee().getStudentId() : "");
+                map.put("teamName", eval.getTeam() != null ? eval.getTeam().getName() : "");
+                map.put("questionnaire", eval.getQuestionnaire() != null ? eval.getQuestionnaire().getTitle() : "");
+                map.put("submittedAt", eval.getSubmittedAt());
+                map.put("status", eval.getStatus().name());
+                return map;
+            }).collect(Collectors.toList());
+
+            return ResponseEntity.ok(result);
+        } catch (Exception e) {
+            log.error("Error fetching completed student evaluations: {}", e.getMessage(), e);
             return ResponseEntity.status(HttpStatus.BAD_REQUEST)
                     .body(Map.of("error", getErrorMessage(e)));
         }

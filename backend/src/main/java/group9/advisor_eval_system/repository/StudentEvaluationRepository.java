@@ -53,4 +53,6 @@ public interface StudentEvaluationRepository extends JpaRepository<StudentEvalua
     List<StudentEvaluation> findByAdviserIdAndTeamId(Long adviserId, Long teamId);
 
     List<StudentEvaluation> findByAdviserIdAndEvaluateeId(Long adviserId, Long evaluateeId);
+
+    List<StudentEvaluation> findByAdviserIdAndStatus(Long adviserId, StudentEvaluation.EvaluationStatus status);
 }

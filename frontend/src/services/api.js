@@ -798,6 +798,16 @@ export const adviserAPI = {
     if (!response.ok) await throwApiError(response, 'Failed to submit student evaluation');
     return await response.json();
   },
+
+  // Get completed individual student evaluations
+  getCompletedStudentEvaluations: async () => {
+    const response = await fetch(`${API_BASE_URL}/adviser/student-evaluations/completed`, {
+      method: 'GET',
+      headers: getHeaders(),
+    });
+    if (!response.ok) await throwApiError(response, 'Failed to fetch completed student evaluations');
+    return await response.json();
+  },
 };
 
 // Teacher Report API
