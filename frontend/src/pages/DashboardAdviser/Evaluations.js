@@ -33,7 +33,8 @@ const Evaluations = () => {
           return;
         }
 
-        const questionnairesData = await questionnaireAPI.getQuestionnairesByClass(team.classId);
+        const allQuestionnaires = await questionnaireAPI.getQuestionnairesByClass(team.classId);
+        const questionnairesData = allQuestionnaires.filter(q => q.target === 'ADVISER');
         const statusRows = await adviserAPI.getTeamEvaluationStatuses(teamId);
 
         const statusMap = {};

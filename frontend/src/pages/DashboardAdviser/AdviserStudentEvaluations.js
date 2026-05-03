@@ -22,10 +22,11 @@ const AdviserStudentEvaluations = () => {
         const team = await teamAPI.getTeamById(teamId);
         setTeamName(team?.name || "");
 
-        const [studentsData, questionnairesData] = await Promise.all([
+        const [studentsData, allQuestionnaires] = await Promise.all([
           adviserAPI.getTeamStudents(teamId),
           questionnaireAPI.getQuestionnairesByClass(team.classId),
         ]);
+        const questionnairesData = allQuestionnaires.filter(q => q.target === 'ADVISER_STUDENT');
 
         setStudents(studentsData);
         setQuestionnaires(questionnairesData);

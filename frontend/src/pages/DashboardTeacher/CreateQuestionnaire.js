@@ -406,8 +406,9 @@ const CreateQuestionnaire = () => {
                     onChange={(e) => setFormData({ ...formData, target: e.target.value })}
                     style={{ fontSize: '11px' }}
                   >
-                    <option value="ADVISER">Adviser</option>
-                    <option value="STUDENT">Student</option>
+                    <option value="ADVISER">Adviser (Team)</option>
+                    <option value="ADVISER_STUDENT">Adviser (Individual Student)</option>
+                    <option value="STUDENT">Student (Peer-to-Peer)</option>
                   </select>
                 </div>
                 <button
