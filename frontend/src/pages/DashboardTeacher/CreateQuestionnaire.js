@@ -159,9 +159,9 @@ const CreateQuestionnaire = () => {
 
     setNewQuestion({
       questionText: "",
-      questionType: "NUMERIC_SCALE",
+      questionType: formData.target === 'STUDENT' ? "RATING" : "NUMERIC_SCALE",
       minScore: 1,
-      maxScore: 5,
+      maxScore: formData.target === 'STUDENT' ? 10 : 5,
       choices: [],
       correctAnswer: "",
       pointsValue: 1,
@@ -403,7 +403,13 @@ const CreateQuestionnaire = () => {
                   <label>Questionnaire For</label>
                   <select
                     value={formData.target}
-                    onChange={(e) => setFormData({ ...formData, target: e.target.value })}
+                    onChange={(e) => {
+                      const newTarget = e.target.value;
+                      setFormData({ ...formData, target: newTarget });
+                      if (newTarget === 'STUDENT' && !['RATING', 'TEXT'].includes(newQuestion.questionType)) {
+                        setNewQuestion({ ...newQuestion, questionType: 'RATING', maxScore: 10 });
+                      }
+                    }}
                     style={{ fontSize: '11px' }}
                   >
                     <option value="ADVISER">Adviser (Team)</option>
@@ -465,16 +471,32 @@ const CreateQuestionnaire = () => {
                             style={{ fontSize: '11px', flex: 1 }}
                           />
 
-                          <select
-                            value={newQuestion.questionType}
-                            onChange={(e) => setNewQuestion({ ...newQuestion, questionType: e.target.value })}
-                            style={{ fontSize: '11px', minWidth: '140px' }}
-                          >
-                            <option value="NUMERIC_SCALE">Numeric Scale</option>
-                            <option value="RATING">Rating</option>
-                            <option value="TEXT">Text Response</option>
-                            <option value="MULTIPLE_CHOICE">Multiple Choice</option>
-                          </select>
+                            <select
+                              value={newQuestion.questionType}
+                              onChange={(e) => {
+                                const qType = e.target.value;
+                                setNewQuestion({ 
+                                  ...newQuestion, 
+                                  questionType: qType,
+                                  maxScore: qType === 'RATING' && formData.target === 'STUDENT' ? 10 : newQuestion.maxScore
+                                });
+                              }}
+                              style={{ fontSize: '11px', minWidth: '140px' }}
+                            >
+                              {formData.target === 'STUDENT' ? (
+                                <>
+                                  <option value="RATING">Rating</option>
+                                  <option value="TEXT">Text Response</option>
+                                </>
+                              ) : (
+                                <>
+                                  <option value="NUMERIC_SCALE">Numeric Scale</option>
+                                  <option value="RATING">Rating</option>
+                                  <option value="TEXT">Text Response</option>
+                                  <option value="MULTIPLE_CHOICE">Multiple Choice</option>
+                                </>
+                              )}
+                            </select>
                         </div>
 
                         <div style={{ display: 'flex', gap: '8px', alignItems: 'center' }}>
@@ -608,31 +630,35 @@ const CreateQuestionnaire = () => {
                           <option value="OPTIONAL">Optional</option>
                         </select>
                       </div>
-                      <div style={{ display: 'flex', gap: '8px', alignItems: 'flex-start', marginBottom: '4px' }}>
-                        <div className="form-group" style={{ flex: 1, margin: 0 }}>
-                          <label style={{ marginBottom: '3px' }}>Correct Answer (Optional)</label>
-                          <input
-                            type="text"
-                            placeholder="Leave blank for non-graded"
-                            value={newQuestion.correctAnswer}
-                            onChange={(e) => setNewQuestion({ ...newQuestion, correctAnswer: e.target.value })}
-                            style={{ width: '100%' }}
-                          />
-                        </div>
-                        <div className="form-group" style={{ minWidth: '80px', margin: 0 }}>
-                          <label style={{ marginBottom: '3px' }}>Points</label>
-                          <input
-                            type="number"
-                            min="1"
-                            value={newQuestion.pointsValue}
-                            onChange={(e) => setNewQuestion({ ...newQuestion, pointsValue: parseInt(e.target.value) || 1 })}
-                            style={{ width: '100%' }}
-                          />
-                        </div>
-                      </div>
-                      <small style={{ display: 'block', fontSize: '10px', color: 'var(--dtm-muted)' }}>
-                        For MULTIPLE CHOICE: choice letter or text.
-                      </small>
+                      {formData.target !== 'STUDENT' && (
+                        <>
+                          <div style={{ display: 'flex', gap: '8px', alignItems: 'flex-start', marginBottom: '4px' }}>
+                            <div className="form-group" style={{ flex: 1, margin: 0 }}>
+                              <label style={{ marginBottom: '3px' }}>Correct Answer (Optional)</label>
+                              <input
+                                type="text"
+                                placeholder="Leave blank for non-graded"
+                                value={newQuestion.correctAnswer}
+                                onChange={(e) => setNewQuestion({ ...newQuestion, correctAnswer: e.target.value })}
+                                style={{ width: '100%' }}
+                              />
+                            </div>
+                            <div className="form-group" style={{ minWidth: '80px', margin: 0 }}>
+                              <label style={{ marginBottom: '3px' }}>Points</label>
+                              <input
+                                type="number"
+                                min="1"
+                                value={newQuestion.pointsValue}
+                                onChange={(e) => setNewQuestion({ ...newQuestion, pointsValue: parseInt(e.target.value) || 1 })}
+                                style={{ width: '100%' }}
+                              />
+                            </div>
+                          </div>
+                          <small style={{ display: 'block', fontSize: '10px', color: 'var(--dtm-muted)' }}>
+                            For MULTIPLE CHOICE: choice letter or text.
+                          </small>
+                        </>
+                      )}
                     </div>
                   </div>
                 )}

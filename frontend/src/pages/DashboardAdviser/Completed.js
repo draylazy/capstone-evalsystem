@@ -1,6 +1,8 @@
 import React, { useEffect, useState } from "react";
 import AdviserSidebar from "../../components/Sidebar/AdviserSidebar";
 import { adviserAPI } from "../../services/api";
+import { usePagination } from "../../hooks/usePagination";
+import Pagination from "../../components/Pagination/Pagination";
 import "./Adviser.css";
 
 const Completed = () => {
@@ -29,6 +31,9 @@ const Completed = () => {
 
     loadCompleted();
   }, []);
+
+  const { currentPage: curPageTeam, totalPages: totPageTeam, paginatedData: pagTeam, goToPage: goPageTeam } = usePagination(completed, 10);
+  const { currentPage: curPageStud, totalPages: totPageStud, paginatedData: pagStud, goToPage: goPageStud } = usePagination(completedStudents, 10);
 
   return (
     <div className="adviser-container">
@@ -95,6 +100,7 @@ const Completed = () => {
             ) : completed.length === 0 ? (
               <p style={{ color: "var(--dtm-muted)" }}>No completed team evaluations.</p>
             ) : (
+              <>
               <table className="class-table">
                 <thead>
                   <tr>
@@ -107,9 +113,9 @@ const Completed = () => {
                   </tr>
                 </thead>
                 <tbody>
-                  {completed.map((e, index) => (
+                  {pagTeam.map((e, index) => (
                     <tr key={e.id}>
-                      <td>{index + 1}</td>
+                      <td>{(curPageTeam - 1) * 10 + index + 1}</td>
                       <td><strong>{e.teamName || e.team?.name || `Team #${e.teamId || "N/A"}`}</strong></td>
                       <td>{e.className || "N/A"}</td>
                       <td>{e.questionnaire?.title || "N/A"}</td>
@@ -125,6 +131,8 @@ const Completed = () => {
                   ))}
                 </tbody>
               </table>
+              <Pagination currentPage={curPageTeam} totalPages={totPageTeam} onPageChange={goPageTeam} />
+              </>
             )}
           </div>
         )}
@@ -142,6 +150,7 @@ const Completed = () => {
             ) : completedStudents.length === 0 ? (
               <p style={{ color: "var(--dtm-muted)" }}>No completed individual student evaluations.</p>
             ) : (
+              <>
               <table className="class-table">
                 <thead>
                   <tr>
@@ -155,9 +164,9 @@ const Completed = () => {
                   </tr>
                 </thead>
                 <tbody>
-                  {completedStudents.map((e, index) => (
+                  {pagStud.map((e, index) => (
                     <tr key={e.id}>
-                      <td>{index + 1}</td>
+                      <td>{(curPageStud - 1) * 10 + index + 1}</td>
                       <td>{e.studentNumber || "N/A"}</td>
                       <td>
                         <strong>{e.evaluateeFirstName} {e.evaluateeLastName}</strong>
@@ -176,6 +185,8 @@ const Completed = () => {
                   ))}
                 </tbody>
               </table>
+              <Pagination currentPage={curPageStud} totalPages={totPageStud} onPageChange={goPageStud} />
+              </>
             )}
           </div>
         )}

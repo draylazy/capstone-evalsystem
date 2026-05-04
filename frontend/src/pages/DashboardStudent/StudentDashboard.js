@@ -2,6 +2,8 @@ import React, { useEffect, useMemo, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import StudentSidebar from "../../components/Sidebar/StudentSidebar";
 import { useToast } from "../../contexts/ToastContext";
+import { usePagination } from "../../hooks/usePagination";
+import Pagination from "../../components/Pagination/Pagination";
 import "../DashboardTeacher/Teacher.css";
 import "./StudentResponsive.css";
 
@@ -96,6 +98,8 @@ const StudentDashboard = () => {
     });
   }, [questionnaires, statusFilter, searchTerm]);
 
+  const { currentPage, totalPages, paginatedData, goToPage } = usePagination(filteredQuestionnaires, 10);
+
   const studentName = [currentUser?.firstName, currentUser?.lastName].filter(Boolean).join(" ") || "Student";
 
   return (
@@ -174,7 +178,7 @@ const StudentDashboard = () => {
                 </tr>
               </thead>
               <tbody>
-                {filteredQuestionnaires.map((q, idx) => {
+                {paginatedData.map((q, idx) => {
                   const isMissed = Boolean(q.isMissed);
                   const completed = q.peerTasks?.filter(t => t.status === 'SUBMITTED').length || 0;
                   const total = q.peerTasks?.length || 0;
@@ -184,7 +188,7 @@ const StudentDashboard = () => {
 
                   return (
                     <tr key={q.id}>
-                      <td data-label="#">{idx + 1}</td>
+                      <td data-label="#">{(currentPage - 1) * 10 + idx + 1}</td>
                       <td data-label="Title"><strong>{q.title}</strong></td>
                       <td data-label="Description">{q.description || "No description"}</td>
                       <td data-label="Status">
@@ -233,6 +237,7 @@ const StudentDashboard = () => {
                 })}
               </tbody>
               </table>
+              <Pagination currentPage={currentPage} totalPages={totalPages} onPageChange={goToPage} />
             </div>
           )}
         </div>

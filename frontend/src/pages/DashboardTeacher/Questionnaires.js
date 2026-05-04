@@ -5,6 +5,8 @@ import { questionnaireAPI, classAPI } from "../../services/api";
 import { useToast } from "../../contexts/ToastContext";
 import ConfirmModal from "../../components/ConfirmModal/ConfirmModal";
 import QuestionnaireDetailModal from "./QuestionnaireDetailModal";
+import { usePagination } from "../../hooks/usePagination";
+import Pagination from "../../components/Pagination/Pagination";
 import "./Teacher.css";
 
 const API_BASE_URL = (process.env.REACT_APP_API_BASE_URL || 'http://localhost:8080/api').replace(/\/api\/?$/, '');
@@ -40,6 +42,8 @@ const Questionnaires = () => {
   const [googleLinked, setGoogleLinked] = useState(false);
   const [showDetailsModal, setShowDetailsModal] = useState(false);
   const [selectedQuestionnaireId, setSelectedQuestionnaireId] = useState(null);
+
+  const { currentPage, totalPages, paginatedData, goToPage } = usePagination(questionnaires, 10);
 
   useEffect(() => {
     fetchQuestionnaires();
@@ -228,6 +232,7 @@ const Questionnaires = () => {
           ) : questionnaires.length === 0 ? (
             <p>No questionnaires created yet. Click "Create New Questionnaire" to get started.</p>
           ) : (
+            <>
             <table className="class-table">
               <thead>
                 <tr>
@@ -240,7 +245,7 @@ const Questionnaires = () => {
                 </tr>
               </thead>
               <tbody>
-                {questionnaires.map((q) => (
+                {paginatedData.map((q) => (
                   <tr key={q.id}>
                     <td>{q.title}</td>
                     <td>
@@ -297,6 +302,8 @@ const Questionnaires = () => {
                 ))}
               </tbody>
             </table>
+            <Pagination currentPage={currentPage} totalPages={totalPages} onPageChange={goToPage} />
+            </>
           )}
         </div>
 

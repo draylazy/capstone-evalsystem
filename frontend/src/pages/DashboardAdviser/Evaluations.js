@@ -2,6 +2,8 @@ import React, { useEffect, useMemo, useState } from "react";
 import { useParams, useNavigate } from "react-router-dom";
 import AdviserSidebar from "../../components/Sidebar/AdviserSidebar";
 import { adviserAPI, questionnaireAPI, teamAPI } from "../../services/api";
+import { usePagination } from "../../hooks/usePagination";
+import Pagination from "../../components/Pagination/Pagination";
 import "./Adviser.css";
 
 const Evaluations = () => {
@@ -117,6 +119,8 @@ const Evaluations = () => {
       });
   }, [questionnaires, searchTerm, statusFilter, statusByQuestionnaire]);
 
+  const { currentPage, totalPages, paginatedData, goToPage } = usePagination(filteredQuestionnaires, 10);
+
   const formatDeadline = (dateTimeString) => {
     if (!dateTimeString) return "No deadline";
     return new Date(dateTimeString).toLocaleString([], {
@@ -191,6 +195,7 @@ const Evaluations = () => {
           ) : filteredQuestionnaires.length === 0 ? (
             <p>No questionnaires assigned to this team.</p>
           ) : (
+            <>
             <table className="class-table">
               <thead>
                 <tr>
@@ -205,7 +210,7 @@ const Evaluations = () => {
                 </tr>
               </thead>
               <tbody>
-                {filteredQuestionnaires.map((q, index) => {
+                {paginatedData.map((q, index) => {
                   const status = resolveQueueStatus(q);
                   const statusRow = statusByQuestionnaire[q.id];
                   const progress = statusRow?.progressPercent ?? 0;
@@ -215,7 +220,7 @@ const Evaluations = () => {
 
                   return (
                   <tr key={q.id}>
-                    <td>{index + 1}</td>
+                    <td>{(currentPage - 1) * 10 + index + 1}</td>
                     <td><strong>{q.title}</strong></td>
                     <td>{q.description || "No description"}</td>
                     <td>
@@ -270,6 +275,8 @@ const Evaluations = () => {
                 );})}
               </tbody>
             </table>
+            <Pagination currentPage={currentPage} totalPages={totalPages} onPageChange={goToPage} />
+            </>
           )}
         </div>
       </div>

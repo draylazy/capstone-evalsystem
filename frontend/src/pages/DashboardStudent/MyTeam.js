@@ -1,6 +1,8 @@
 import React, { useEffect, useState } from "react";
 import StudentSidebar from "../../components/Sidebar/StudentSidebar";
 import { useToast } from "../../contexts/ToastContext";
+import { usePagination } from "../../hooks/usePagination";
+import Pagination from "../../components/Pagination/Pagination";
 import "../DashboardTeacher/Teacher.css";
 import "./StudentResponsive.css";
 
@@ -10,6 +12,9 @@ const MyTeam = () => {
     const [team, setTeam] = useState(null);
     const [loading, setLoading] = useState(true);
     const toast = useToast();
+
+    const members = team?.members || [];
+    const { currentPage, totalPages, paginatedData, goToPage } = usePagination(members, 10);
 
     useEffect(() => {
         const fetchTeam = async () => {
@@ -88,7 +93,7 @@ const MyTeam = () => {
                                 </tr>
                             </thead>
                             <tbody>
-                                {team.members?.map((member) => (
+                                {paginatedData.map((member) => (
                                     <tr key={member.id} style={member.isMe ? { background: 'rgba(242, 201, 76, 0.05)' } : {}}>
                                         <td data-label="Name">
                                             <div style={{ display: 'flex', alignItems: 'center', gap: '10px', justifyContent: 'center' }}>
@@ -103,6 +108,7 @@ const MyTeam = () => {
                                 ))}
                                 </tbody>
                             </table>
+                            <Pagination currentPage={currentPage} totalPages={totalPages} onPageChange={goToPage} />
                         </div>
                     </div>
                 )}
