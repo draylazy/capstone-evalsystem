@@ -4,6 +4,8 @@ import { userManagementAPI } from '../../services/api';
 import { useToast } from '../../contexts/ToastContext';
 import TeacherSidebar from '../../components/Sidebar/TeacherSidebar';
 import SummaryCard from '../../components/Cards/SummaryCard';
+import { usePagination } from '../../hooks/usePagination';
+import Pagination from '../../components/Pagination/Pagination';
 import './Teacher.css';
 
 function UserManagement() {
@@ -163,6 +165,8 @@ function UserManagement() {
     ? users
     : users.filter(u => u.role === filterRole);
 
+  const { currentPage, totalPages, paginatedData, goToPage } = usePagination(filtered, 10);
+
   const counts = {
     total: users.length,
     teacher: users.filter(u => u.role === 'TEACHER').length,
@@ -233,6 +237,7 @@ function UserManagement() {
               <p>No users found. Upload student or adviser sheets to get started.</p>
             </div>
           ) : (
+            <>
             <table className="class-table">
               <thead>
                 <tr>
@@ -244,9 +249,9 @@ function UserManagement() {
                 </tr>
               </thead>
               <tbody>
-                {filtered.map((u, idx) => (
+                {paginatedData.map((u, idx) => (
                   <tr key={u.id}>
-                    <td>{idx + 1}</td>
+                    <td>{(currentPage - 1) * 10 + idx + 1}</td>
                     <td>{u.firstName && u.lastName ? `${u.firstName} ${u.lastName}` : '—'}</td>
                     <td style={{ fontFamily: 'monospace', fontSize: '13px' }}>{u.email}</td>
                     <td>
@@ -276,6 +281,12 @@ function UserManagement() {
                 ))}
               </tbody>
             </table>
+            <Pagination 
+              currentPage={currentPage} 
+              totalPages={totalPages} 
+              onPageChange={goToPage} 
+            />
+          </>
           )}
         </div>
       </div>

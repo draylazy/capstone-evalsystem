@@ -2,6 +2,8 @@ import React, { useEffect, useState, useMemo } from "react";
 import { useParams, useNavigate } from "react-router-dom";
 import AdviserSidebar from "../../components/Sidebar/AdviserSidebar";
 import { adviserAPI, questionnaireAPI, teamAPI } from "../../services/api";
+import { usePagination } from "../../hooks/usePagination";
+import Pagination from "../../components/Pagination/Pagination";
 import "./Adviser.css";
 
 const AdviserStudentEvaluations = () => {
@@ -51,6 +53,8 @@ const AdviserStudentEvaluations = () => {
       s.studentNumber?.toLowerCase().includes(term)
     );
   }, [students, searchTerm]);
+
+  const { currentPage, totalPages, paginatedData, goToPage } = usePagination(filteredStudents, 10);
 
   return (
     <div className="adviser-container">
@@ -140,6 +144,7 @@ const AdviserStudentEvaluations = () => {
               {searchTerm ? "No students match your search." : "No students in this team."}
             </p>
           ) : (
+            <>
             <table className="class-table">
               <thead>
                 <tr>
@@ -150,9 +155,9 @@ const AdviserStudentEvaluations = () => {
                 </tr>
               </thead>
               <tbody>
-                {filteredStudents.map((student, index) => (
+                {paginatedData.map((student, index) => (
                   <tr key={student.studentId}>
-                    <td>{index + 1}</td>
+                    <td>{(currentPage - 1) * 10 + index + 1}</td>
                     <td>{student.studentNumber}</td>
                     <td>
                       <strong>{student.firstName} {student.lastName}</strong>
@@ -181,6 +186,8 @@ const AdviserStudentEvaluations = () => {
                 ))}
               </tbody>
             </table>
+            <Pagination currentPage={currentPage} totalPages={totalPages} onPageChange={goToPage} />
+            </>
           )}
 
           <div style={{ marginTop: "20px" }}>

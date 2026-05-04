@@ -35,7 +35,13 @@ import java.util.ArrayList;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.Map;
 import java.util.Optional;
+import java.util.concurrent.CompletableFuture;
+
+import org.springframework.transaction.support.TransactionSynchronization;
+import org.springframework.transaction.support.TransactionSynchronizationManager;
+import org.springframework.transaction.support.TransactionTemplate;
 
 @Service
 public class UserManagementService {
@@ -72,6 +78,10 @@ public class UserManagementService {
     @Autowired
     private GoogleSheetsService googleSheetsService;
 
+    @Autowired
+    private TransactionTemplate transactionTemplate;
+
+    @org.springframework.context.annotation.Lazy
     @Autowired
     private StudentEvaluationService studentEvaluationService;
 
@@ -186,6 +196,24 @@ public class UserManagementService {
             rows.add(row);
         }
 
+        rows.sort((r1, r2) -> {
+            String team1 = r1.getOrDefault("TEAMCODE", "");
+            String team2 = r2.getOrDefault("TEAMCODE", "");
+            int teamCompare = team1.compareToIgnoreCase(team2);
+            if (teamCompare != 0) return teamCompare;
+            
+            String mem1 = r1.getOrDefault("MEMBER#", "");
+            String mem2 = r2.getOrDefault("MEMBER#", "");
+            if (!mem1.isEmpty() && !mem2.isEmpty()) {
+                try {
+                    return Integer.compare(Integer.parseInt(mem1), Integer.parseInt(mem2));
+                } catch (NumberFormatException e) {
+                    return mem1.compareToIgnoreCase(mem2);
+                }
+            }
+            return mem1.compareToIgnoreCase(mem2);
+        });
+
         return rows;
     }
 
@@ -243,12 +271,39 @@ public class UserManagementService {
                                 String.format("%.2f", qSummary.getOverallAverage()));
                     }
                 }
+                
+                List<Questionnaire> questionnaires = studentEvaluationService.getAssignedQuestionnaires(student.getId());
+                for (Questionnaire q : questionnaires) {
+                    String ownScore = studentEvaluationService.getStudentOwnScoreSummary(student.getId(), q.getId());
+                    if (!ownScore.equals("Not Started")) {
+                        row.put(q.getTitle() + " (Score)", ownScore);
+                    }
+                }
             } catch (Exception e) {
                 logger.warn("Could not generate student report summary for export: " + e.getMessage());
             }
 
             rows.add(row);
         }
+
+        rows.sort((r1, r2) -> {
+            String team1 = r1.getOrDefault("TEAMCODE", "");
+            String team2 = r2.getOrDefault("TEAMCODE", "");
+            int teamCompare = team1.compareToIgnoreCase(team2);
+            if (teamCompare != 0) return teamCompare;
+            
+            String mem1 = r1.getOrDefault("MEMBER#", "");
+            String mem2 = r2.getOrDefault("MEMBER#", "");
+            if (!mem1.isEmpty() && !mem2.isEmpty()) {
+                try {
+                    return Integer.compare(Integer.parseInt(mem1), Integer.parseInt(mem2));
+                } catch (NumberFormatException e) {
+                    return mem1.compareToIgnoreCase(mem2);
+                }
+            }
+            return mem1.compareToIgnoreCase(mem2);
+        });
+
         return rows;
     }
 
@@ -362,47 +417,72 @@ public class UserManagementService {
         return user.orElse(null);
     }
 
-    public void syncStudentDataToGoogleSheets(String teacherEmail) {
-        try {
-            User teacher = findByEmail(teacherEmail);
-            if (teacher == null || !teacher.getRole().equals(User.UserRole.TEACHER)) {
-                logger.warn("Teacher not found or invalid role: {}", teacherEmail);
-                return;
-            }
-            if (teacher.getGoogleSheetsUrl() == null || teacher.getGoogleSheetsUrl().isEmpty()) {
-                logger.info("Google Sheets URL not configured for teacher: {}", teacherEmail);
-                return;
-            }
-            if (!teacher.getIsGoogleLinked()) {
-                logger.warn("Google account not linked for teacher: {}", teacherEmail);
-                return;
-            }
+    public void asyncSyncAllDataToGoogleSheets(String teacherEmail) {
+        if (teacherEmail == null || teacherEmail.isEmpty()) return;
 
-            List<Map<String, String>> exportRows = getStudentExportRows();
-            if (exportRows.isEmpty()) {
-                logger.info("No student data to sync for teacher: {}", teacherEmail);
-                return;
-            }
+        Runnable syncTask = () -> {
+            CompletableFuture.runAsync(() -> {
+                transactionTemplate.execute(status -> {
+                    try {
+                        User teacher = findByEmail(teacherEmail);
+                        if (teacher == null || !teacher.getRole().equals(User.UserRole.TEACHER)) return null;
+                        if (teacher.getGoogleSheetsUrl() == null || teacher.getGoogleSheetsUrl().isEmpty()) return null;
+                        if (!teacher.getIsGoogleLinked()) return null;
 
-            List<String> headers = new ArrayList<>();
-            if (!exportRows.isEmpty()) {
-                headers.addAll(exportRows.get(0).keySet());
-            }
+                        // Sync Adviser Evaluation Data
+                        List<Map<String, String>> adviserRows = getExportRows("STUDENT");
+                        if (!adviserRows.isEmpty()) {
+                            List<String> headers = new ArrayList<>(adviserRows.get(0).keySet());
+                            List<List<String>> rows = new ArrayList<>();
+                            for (Map<String, String> row : adviserRows) {
+                                List<String> rowData = new ArrayList<>();
+                                for (String header : headers) {
+                                    rowData.add(row.getOrDefault(header, ""));
+                                }
+                                rows.add(rowData);
+                            }
+                            googleSheetsService.writeDataToSheet(teacher, headers, rows, "Adviser Evaluation Data");
+                        }
 
-            List<List<String>> rows = new ArrayList<>();
-            for (Map<String, String> row : exportRows) {
-                List<String> rowData = new ArrayList<>();
-                for (String header : headers) {
-                    rowData.add(row.getOrDefault(header, ""));
+                        // Sync Student Reports
+                        List<Map<String, String>> reportRows = getStudentReportsExportRows();
+                        if (!reportRows.isEmpty()) {
+                            List<String> reportHeaders = new ArrayList<>();
+                            for (Map<String, String> row : reportRows) {
+                                for (String key : row.keySet()) {
+                                    if (!reportHeaders.contains(key)) {
+                                        reportHeaders.add(key);
+                                    }
+                                }
+                            }
+                            List<List<String>> reportData = new ArrayList<>();
+                            for (Map<String, String> row : reportRows) {
+                                List<String> rowData = new ArrayList<>();
+                                for (String header : reportHeaders) {
+                                    rowData.add(row.getOrDefault(header, ""));
+                                }
+                                reportData.add(rowData);
+                            }
+                            googleSheetsService.writeDataToSheet(teacher, reportHeaders, reportData, "Student Reports");
+                        }
+
+                    } catch (Exception e) {
+                        logger.error("Error in asyncSyncAllDataToGoogleSheets for teacher: {}", teacherEmail, e);
+                    }
+                    return null;
+                });
+            });
+        };
+
+        if (TransactionSynchronizationManager.isSynchronizationActive()) {
+            TransactionSynchronizationManager.registerSynchronization(new TransactionSynchronization() {
+                @Override
+                public void afterCommit() {
+                    syncTask.run();
                 }
-                rows.add(rowData);
-            }
-
-            googleSheetsService.writeDataToSheet(teacher, headers, rows, "Students Questionnaire");
-            logger.info("Successfully synced student data to Google Sheets for teacher: {}", teacherEmail);
-
-        } catch (Exception e) {
-            logger.error("Error syncing student data to Google Sheets for teacher: {}", teacherEmail, e);
+            });
+        } else {
+            syncTask.run();
         }
     }
 
@@ -716,10 +796,6 @@ public class UserManagementService {
                 errors.add("Row " + (i + 2) + ": Error processing student: " + e.getMessage());
                 skipped++;
             }
-        }
-
-        if ((added > 0 || updated > 0) && teacherEmail != null && !teacherEmail.isEmpty()) {
-            syncStudentDataToGoogleSheets(teacherEmail);
         }
 
         return new UploadResult(added, updated, skipped, errors);

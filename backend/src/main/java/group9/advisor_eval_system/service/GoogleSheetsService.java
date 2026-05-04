@@ -61,6 +61,14 @@ public class GoogleSheetsService {
             String sheetId = extractSheetIdFromUrl(teacher.getGoogleSheetsUrl());
             ensureSheetExists(accessToken, sheetId, sheetName);
 
+            // Clear the sheet before writing new data to ensure it's an exact update
+            String clearUrl = String.format("%s/%s/values/'%s':clear", SHEETS_API_URL, sheetId, sheetName);
+            try {
+                callSheetsApi(accessToken, clearUrl, HttpMethod.POST, "{}");
+            } catch (Exception e) {
+                log.warn("Failed to clear sheet '{}' before updating: {}", sheetName, e.getMessage());
+            }
+
             // Prepare data with headers
             List<List<Object>> data = new ArrayList<>();
             data.add(new ArrayList<>(headers));

@@ -26,6 +26,10 @@ public class EvaluationService {
     private final StudentEvaluationRepository studentEvaluationRepository;
     private final StudentEvaluationScoreRepository studentEvaluationScoreRepository;
 
+    @org.springframework.context.annotation.Lazy
+    @org.springframework.beans.factory.annotation.Autowired
+    private UserManagementService userManagementService;
+
     // ─────────────────────────────────────────────────────────────
     // Existing team-level evaluation methods (unchanged)
     // ─────────────────────────────────────────────────────────────
@@ -157,6 +161,13 @@ public class EvaluationService {
             questionnaire.setLockedAt(LocalDateTime.now());
             questionnaireRepository.save(questionnaire);
             log.info("Auto-locked questionnaire {} on first evaluation submission", questionnaire.getId());
+        }
+
+        if (evaluation.getTeam() != null && evaluation.getTeam().getSchoolClass() != null 
+            && evaluation.getTeam().getSchoolClass().getTeacher() != null) {
+            userManagementService.asyncSyncAllDataToGoogleSheets(
+                evaluation.getTeam().getSchoolClass().getTeacher().getEmail()
+            );
         }
 
         return submitted;
@@ -373,7 +384,16 @@ public class EvaluationService {
 
         evaluation.setStatus(StudentEvaluation.EvaluationStatus.SUBMITTED);
         evaluation.setSubmittedAt(LocalDateTime.now());
+        StudentEvaluation submitted = studentEvaluationRepository.save(evaluation);
         log.info("Submitted adviser-student evaluation {}", evaluationId);
-        return studentEvaluationRepository.save(evaluation);
+
+        if (evaluation.getTeam() != null && evaluation.getTeam().getSchoolClass() != null 
+            && evaluation.getTeam().getSchoolClass().getTeacher() != null) {
+            userManagementService.asyncSyncAllDataToGoogleSheets(
+                evaluation.getTeam().getSchoolClass().getTeacher().getEmail()
+            );
+        }
+
+        return submitted;
     }
 }

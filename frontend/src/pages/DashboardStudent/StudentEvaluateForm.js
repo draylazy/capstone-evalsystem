@@ -234,11 +234,18 @@ const StudentEvaluateForm = () => {
           <div className="eval-right-pane">
             <div style={{ maxWidth: '800px', margin: '0 auto' }}>
               {currentPage.items.map((item) => {
-                const min = item.minScore ?? 1;
-                const max = item.maxScore ?? 5;
-                const range = Array.from({ length: Math.abs(max - min) + 1 }, (_, i) => {
-                  return max > min ? max - i : min - i;
-                });
+                const isRating = item.questionType === "RATING";
+                const customRatingRange = [10, 9.9, 9.8, 9.7, 9.6, 9.5, 9.4, 9.3, 9.2, 9.1, 9, 8, 7, 6, 5, 4, 3, 2, 1];
+                let finalRange = [];
+                if (isRating) {
+                  finalRange = customRatingRange;
+                } else {
+                  const min = item.minScore ?? 1;
+                  const max = item.maxScore ?? 5;
+                  finalRange = Array.from({ length: Math.abs(max - min) + 1 }, (_, i) => {
+                    return max > min ? max - i : min - i;
+                  });
+                }
 
                 return (
                   <div key={item.id} style={{ marginBottom: '40px', padding: '24px', background: 'rgba(255,255,255,0.02)', borderRadius: '12px', border: '1px solid rgba(255,255,255,0.05)' }}>
@@ -290,25 +297,34 @@ const StudentEvaluateForm = () => {
                               </div>
                             ) : (
                               <div style={{ display: 'flex', alignItems: 'center', gap: '16px', flexWrap: 'wrap' }}>
-                                {range.map((num) => {
+                                {finalRange.map((num) => {
                                   const isSelected = String(answers[member.evaluationId]?.[item.id]) === String(num);
+                                  
+                                  const isChosenByOther = isRating && members.some(otherMem => 
+                                    otherMem.evaluationId !== member.evaluationId && 
+                                    String(answers[otherMem.evaluationId]?.[item.id]) === String(num)
+                                  );
+                                  
+                                  const isDisabled = isSubmitted || isChosenByOther;
+
                                   return (
                                     <label key={num} style={{ 
                                       display: 'flex', 
                                       alignItems: 'center',
                                       gap: '8px', 
-                                      cursor: isSubmitted ? 'default' : 'pointer',
+                                      cursor: isDisabled ? 'not-allowed' : 'pointer',
                                       background: isSelected ? 'rgba(242, 201, 76, 0.1)' : 'transparent',
                                       padding: '6px 12px',
                                       borderRadius: '20px',
                                       border: `1px solid ${isSelected ? 'var(--dtm-gold)' : 'transparent'}`,
-                                      transition: 'all 0.2s ease'
+                                      transition: 'all 0.2s ease',
+                                      opacity: isDisabled && !isSelected ? 0.3 : 1
                                     }}>
                                       <div style={{
                                         width: '18px',
                                         height: '18px',
                                         borderRadius: '50%',
-                                        border: `2px solid ${isSelected ? 'var(--dtm-gold)' : 'rgba(255,255,255,0.3)'}`,
+                                        border: `2px solid ${isSelected ? 'var(--dtm-gold)' : (isDisabled && !isSelected ? 'rgba(255,255,255,0.1)' : 'rgba(255,255,255,0.3)')}`,
                                         display: 'flex',
                                         alignItems: 'center',
                                         justifyContent: 'center',
@@ -319,8 +335,12 @@ const StudentEvaluateForm = () => {
                                           name={`member-${member.id}-item-${item.id}`} 
                                           value={num}
                                           checked={isSelected}
-                                          onChange={() => handleScoreChange(member.evaluationId, item.id, num)}
-                                          disabled={isSubmitted}
+                                          onChange={() => {
+                                            if (!isDisabled) {
+                                              handleScoreChange(member.evaluationId, item.id, num);
+                                            }
+                                          }}
+                                          disabled={isDisabled}
                                           style={{ opacity: 0, position: 'absolute', inset: 0, cursor: 'inherit', margin: 0, width: '100%', height: '100%' }}
                                         />
                                         {isSelected && <div style={{ width: '8px', height: '8px', borderRadius: '50%', background: 'var(--dtm-gold)' }} />}

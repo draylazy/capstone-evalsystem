@@ -36,6 +36,10 @@ public class QuestionnaireService {
     private final EvaluationScoreRepository evaluationScoreRepository;
     private final StudentEvaluationScoreRepository studentEvaluationScoreRepository;
 
+    @org.springframework.context.annotation.Lazy
+    @org.springframework.beans.factory.annotation.Autowired
+    private UserManagementService userManagementService;
+
     /**
      * Create a new questionnaire with Google Form
      */
@@ -169,6 +173,8 @@ public class QuestionnaireService {
 
         // Persist Google question/item ids to local rows for future updates and tracing.
         syncGoogleQuestionMappings(savedQuestionnaire.getId(), teacherId);
+
+        userManagementService.asyncSyncAllDataToGoogleSheets(teacher.getEmail());
 
         return savedQuestionnaire;
     }
@@ -435,6 +441,8 @@ public class QuestionnaireService {
 
         log.info("Hard deleted questionnaire {} and disconnected {} evaluations, {} student evaluations, {} evaluation scores, and {} student evaluation scores",
                 questionnaireId, evaluations.size(), studentEvaluations.size(), evaluationScores.size(), studentEvaluationScores.size());
+
+        userManagementService.asyncSyncAllDataToGoogleSheets(questionnaire.getCreatedByTeacher().getEmail());
     }
 
     /**
@@ -587,6 +595,8 @@ public class QuestionnaireService {
         }
 
         log.info("Updated questionnaire {}", questionnaireId);
+
+        userManagementService.asyncSyncAllDataToGoogleSheets(questionnaire.getCreatedByTeacher().getEmail());
 
         return saved;
     }
