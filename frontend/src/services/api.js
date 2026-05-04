@@ -966,6 +966,44 @@ export const userManagementAPI = {
   },
 };
 
+export const performanceAPI = {
+  getTeams: async () => {
+    const response = await fetch(`${API_BASE_URL}/teacher/performance/teams`, {
+      method: 'GET',
+      headers: getHeaders(),
+    });
+    if (!response.ok) await throwApiError(response, 'Failed to fetch performance teams');
+    return await response.json();
+  },
+
+  getTeamStudents: async (teamId) => {
+    const response = await fetch(`${API_BASE_URL}/teacher/performance/teams/${teamId}/students`, {
+      method: 'GET',
+      headers: getHeaders(),
+    });
+    if (!response.ok) await throwApiError(response, 'Failed to fetch team students');
+    return await response.json();
+  },
+
+  getIndividualPerformance: async (studentId) => {
+    const response = await fetch(`${API_BASE_URL}/teacher/performance/students/${studentId}/individual`, {
+      method: 'GET',
+      headers: getHeaders(),
+    });
+    if (!response.ok) await throwApiError(response, 'Failed to fetch individual performance');
+    return await response.json();
+  },
+
+  getPeerPerformance: async (studentId) => {
+    const response = await fetch(`${API_BASE_URL}/teacher/performance/students/${studentId}/peer`, {
+      method: 'GET',
+      headers: getHeaders(),
+    });
+    if (!response.ok) await throwApiError(response, 'Failed to fetch peer performance');
+    return await response.json();
+  },
+};
+
 export default {
   authAPI,
   userAPI,
@@ -977,5 +1015,6 @@ export default {
   studentAPI,
   adviserAPI,
   teacherReportAPI,
-  userManagementAPI
+  userManagementAPI,
+  performanceAPI
 };
