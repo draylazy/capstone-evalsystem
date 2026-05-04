@@ -12,47 +12,63 @@ import java.util.Optional;
 @Repository
 public interface StudentEvaluationRepository extends JpaRepository<StudentEvaluation, Long> {
 
-    // --- Existing peer-to-peer queries ---
+        // --- Existing peer-to-peer queries ---
 
-    Optional<StudentEvaluation> findByStudentIdAndQuestionnaireIdAndEvaluateeId(
-            Long studentId, Long questionnaireId, Long evaluateeId);
+        Optional<StudentEvaluation> findByStudentIdAndQuestionnaireIdAndEvaluateeId(
+                        Long studentId, Long questionnaireId, Long evaluateeId);
 
-    Optional<StudentEvaluation> findByStudentIdAndQuestionnaireIdAndEvaluateeIsNull(
-            Long studentId, Long questionnaireId);
+        Optional<StudentEvaluation> findByStudentIdAndQuestionnaireIdAndEvaluateeIsNull(
+                        Long studentId, Long questionnaireId);
 
-    @Query("SELECT e FROM StudentEvaluation e LEFT JOIN FETCH e.scores WHERE e.student.id = :studentId")
-    List<StudentEvaluation> findByStudentIdWithScores(@Param("studentId") Long studentId);
+        @Query("SELECT e FROM StudentEvaluation e LEFT JOIN FETCH e.scores WHERE e.student.id = :studentId")
+        List<StudentEvaluation> findByStudentIdWithScores(@Param("studentId") Long studentId);
 
-    List<StudentEvaluation> findByQuestionnaireId(Long questionnaireId);
+        List<StudentEvaluation> findByQuestionnaireId(Long questionnaireId);
 
-    List<StudentEvaluation> findByQuestionnaireIdAndEvaluateeId(Long questionnaireId, Long evaluateeId);
+        List<StudentEvaluation> findByQuestionnaireIdAndEvaluateeId(Long questionnaireId, Long evaluateeId);
 
-    List<StudentEvaluation> findByEvaluateeIdAndStatus(Long evaluateeId, StudentEvaluation.EvaluationStatus status);
+        List<StudentEvaluation> findByEvaluateeIdAndStatus(Long evaluateeId, StudentEvaluation.EvaluationStatus status);
 
-    @Query("""
-            SELECT DISTINCT e FROM StudentEvaluation e
-            LEFT JOIN FETCH e.scores s
-            LEFT JOIN FETCH s.questionnaireItem qi
-            LEFT JOIN FETCH e.questionnaire q
-            LEFT JOIN FETCH q.items qi2
-            LEFT JOIN FETCH q.sections qs
-            LEFT JOIN FETCH qs.items qsi
-            LEFT JOIN FETCH e.student st
-            LEFT JOIN FETCH st.teamStudents ts
-            LEFT JOIN FETCH ts.team t
-            LEFT JOIN FETCH e.evaluatee ev
-            WHERE e.id = :id
-            """)
-    Optional<StudentEvaluation> findByIdWithDetails(@Param("id") Long id);
+        @Query("""
+                        SELECT DISTINCT e FROM StudentEvaluation e
+                        LEFT JOIN FETCH e.scores s
+                        LEFT JOIN FETCH s.questionnaireItem
+                        LEFT JOIN FETCH e.questionnaire q
+                        LEFT JOIN FETCH q.items
+                        LEFT JOIN FETCH q.sections qs
+                        LEFT JOIN FETCH qs.items
+                        LEFT JOIN FETCH e.student
+                        LEFT JOIN FETCH e.evaluatee
+                        WHERE e.evaluatee.id = :evaluateeId AND e.status = :status
+                        """)
+        List<StudentEvaluation> findByEvaluateeIdAndStatusWithDetails(
+                        @Param("evaluateeId") Long evaluateeId,
+                        @Param("status") StudentEvaluation.EvaluationStatus status);
 
-    // --- New adviser-student eval queries ---
+        @Query("""
+                        SELECT DISTINCT e FROM StudentEvaluation e
+                        LEFT JOIN FETCH e.scores s
+                        LEFT JOIN FETCH s.questionnaireItem qi
+                        LEFT JOIN FETCH e.questionnaire q
+                        LEFT JOIN FETCH q.items qi2
+                        LEFT JOIN FETCH q.sections qs
+                        LEFT JOIN FETCH qs.items qsi
+                        LEFT JOIN FETCH e.student st
+                        LEFT JOIN FETCH st.teamStudents ts
+                        LEFT JOIN FETCH ts.team t
+                        LEFT JOIN FETCH e.evaluatee ev
+                        WHERE e.id = :id
+                        """)
+        Optional<StudentEvaluation> findByIdWithDetails(@Param("id") Long id);
 
-    Optional<StudentEvaluation> findByAdviserIdAndEvaluateeIdAndQuestionnaireIdAndTeamId(
-            Long adviserId, Long evaluateeId, Long questionnaireId, Long teamId);
+        // --- New adviser-student eval queries ---
 
-    List<StudentEvaluation> findByAdviserIdAndTeamId(Long adviserId, Long teamId);
+        Optional<StudentEvaluation> findByAdviserIdAndEvaluateeIdAndQuestionnaireIdAndTeamId(
+                        Long adviserId, Long evaluateeId, Long questionnaireId, Long teamId);
 
-    List<StudentEvaluation> findByAdviserIdAndEvaluateeId(Long adviserId, Long evaluateeId);
+        List<StudentEvaluation> findByAdviserIdAndTeamId(Long adviserId, Long teamId);
 
-    List<StudentEvaluation> findByAdviserIdAndStatus(Long adviserId, StudentEvaluation.EvaluationStatus status);
+        List<StudentEvaluation> findByAdviserIdAndEvaluateeId(Long adviserId, Long evaluateeId);
+
+        List<StudentEvaluation> findByAdviserIdAndStatus(Long adviserId, StudentEvaluation.EvaluationStatus status);
 }

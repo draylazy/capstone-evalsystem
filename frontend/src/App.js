@@ -9,6 +9,8 @@ import Teacher from './pages/DashboardTeacher/Teacher';
 import Questionnaires from './pages/DashboardTeacher/Questionnaires';
 import CreateQuestionnaire from './pages/DashboardTeacher/CreateQuestionnaire';
 import Reports from './pages/DashboardTeacher/Reports';
+import Performance from './pages/DashboardTeacher/Performance';
+import StudentPerformance from './pages/DashboardTeacher/StudentPerformance';
 import EvaluationDetail from './pages/DashboardTeacher/EvaluationDetail';
 import StudentEvaluationDetail from './pages/DashboardTeacher/StudentEvaluationDetail';
 import Students from './pages/DashboardTeacher/Students';
@@ -76,6 +78,17 @@ function App() {
         <Route path="/teacher/reports/student-evaluation/:evaluationId" element={
           <ProtectedRoute allowedRoles={['TEACHER']}>
             <StudentEvaluationDetail />
+          </ProtectedRoute>
+        } />
+
+        <Route path="/teacher/performance" element={
+          <ProtectedRoute allowedRoles={['TEACHER']}>
+            <Performance />
+          </ProtectedRoute>
+        } />
+        <Route path="/teacher/performance/student/:studentId" element={
+          <ProtectedRoute allowedRoles={['TEACHER']}>
+            <StudentPerformance />
           </ProtectedRoute>
         } />
 
