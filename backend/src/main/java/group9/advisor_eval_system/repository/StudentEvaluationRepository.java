@@ -71,4 +71,50 @@ public interface StudentEvaluationRepository extends JpaRepository<StudentEvalua
         List<StudentEvaluation> findByAdviserIdAndEvaluateeId(Long adviserId, Long evaluateeId);
 
         List<StudentEvaluation> findByAdviserIdAndStatus(Long adviserId, StudentEvaluation.EvaluationStatus status);
+
+        // ─── Performance page queries ──────────────────────────────────────────────
+
+        // Returns [teamId, count] for SUBMITTED adviser-student evals in teacher's classes
+        @Query("SELECT se.team.id, COUNT(se) FROM StudentEvaluation se " +
+                        "JOIN se.team t JOIN t.schoolClass sc " +
+                        "WHERE sc.teacher.id = :teacherId AND se.adviser IS NOT NULL " +
+                        "AND se.status = 'SUBMITTED' GROUP BY se.team.id")
+        List<Object[]> countAdviserStudentEvalsByTeamForTeacher(@Param("teacherId") Long teacherId);
+
+        // Returns [teamId, count] for SUBMITTED peer evals in teacher's classes (via evaluatee's team)
+        @Query("SELECT ts.team.id, COUNT(se) FROM StudentEvaluation se " +
+                        "JOIN se.evaluatee ev JOIN ev.teamStudents ts " +
+                        "JOIN ts.team t JOIN t.schoolClass sc " +
+                        "WHERE sc.teacher.id = :teacherId AND se.student IS NOT NULL " +
+                        "AND se.student.id != se.evaluatee.id AND se.status = 'SUBMITTED' " +
+                        "GROUP BY ts.team.id")
+        List<Object[]> countPeerEvalsByTeamForTeacher(@Param("teacherId") Long teacherId);
+
+        // Count SUBMITTED adviser-student evals received by a specific evaluatee
+        @Query("SELECT COUNT(e) FROM StudentEvaluation e WHERE e.evaluatee.id = :evaluateeId " +
+                        "AND e.adviser IS NOT NULL AND e.status = 'SUBMITTED'")
+        long countAdviserStudentEvalsByEvaluateeId(@Param("evaluateeId") Long evaluateeId);
+
+        // Count SUBMITTED peer evals received by a specific evaluatee (excluding self-evals)
+        @Query("SELECT COUNT(e) FROM StudentEvaluation e WHERE e.evaluatee.id = :evaluateeId " +
+                        "AND e.student IS NOT NULL AND e.student.id != e.evaluatee.id AND e.status = 'SUBMITTED'")
+        long countPeerEvalsByEvaluateeId(@Param("evaluateeId") Long evaluateeId);
+
+        // Full details for SUBMITTED adviser-student evals for a specific evaluatee
+        @Query("""
+                        SELECT DISTINCT e FROM StudentEvaluation e
+                        LEFT JOIN FETCH e.scores s
+                        LEFT JOIN FETCH s.questionnaireItem
+                        LEFT JOIN FETCH e.questionnaire q
+                        LEFT JOIN FETCH q.items
+                        LEFT JOIN FETCH q.sections qs
+                        LEFT JOIN FETCH qs.items
+                        LEFT JOIN FETCH e.adviser
+                        LEFT JOIN FETCH e.evaluatee
+                        LEFT JOIN FETCH e.team
+                        WHERE e.evaluatee.id = :evaluateeId
+                        AND e.adviser IS NOT NULL
+                        AND e.status = 'SUBMITTED'
+                        """)
+        List<StudentEvaluation> findAdviserStudentByEvaluateeWithDetails(@Param("evaluateeId") Long evaluateeId);
 }
