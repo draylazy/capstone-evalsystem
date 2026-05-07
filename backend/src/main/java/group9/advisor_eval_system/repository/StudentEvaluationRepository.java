@@ -111,6 +111,7 @@ public interface StudentEvaluationRepository extends JpaRepository<StudentEvalua
                         LEFT JOIN FETCH qs.items
                         LEFT JOIN FETCH e.adviser
                         LEFT JOIN FETCH e.evaluatee
+                        LEFT JOIN FETCH e.student
                         LEFT JOIN FETCH e.team
                         WHERE e.evaluatee.id = :evaluateeId
                         AND e.adviser IS NOT NULL

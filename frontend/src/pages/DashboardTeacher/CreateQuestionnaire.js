@@ -35,6 +35,7 @@ const CreateQuestionnaire = () => {
         sectionTitle: "Section 1",
         sectionDescription: "",
         orderIndex: 0,
+        evaluateIndividuals: false,
         items: []
       }
     ],
@@ -44,6 +45,7 @@ const CreateQuestionnaire = () => {
   const [newSection, setNewSection] = useState({
     sectionTitle: "",
     sectionDescription: "",
+    evaluateIndividuals: false,
     items: []
   });
 
@@ -229,6 +231,7 @@ const CreateQuestionnaire = () => {
           sectionTitle: `Section ${newSectionNumber}`,
           sectionDescription: "",
           orderIndex: formData.sections.length,
+          evaluateIndividuals: false,
           items: []
         }
       ]
@@ -302,6 +305,29 @@ const CreateQuestionnaire = () => {
                       style={{ padding: '8px 10px', fontSize: '11px', width: '100%', boxSizing: 'border-box' }}
                     />
                   </div>
+
+                  <div className="form-group" style={{ marginBottom: '8px' }}>
+                    <label style={{ fontSize: '11px', fontWeight: '600', color: 'var(--dtm-gold)', margin: 0, display: 'flex', alignItems: 'center', gap: '8px' }}>
+                      <input
+                        type="checkbox"
+                        checked={formData.sections[activeSectionIndex].evaluateIndividuals || false}
+                        onChange={(e) => {
+                          const updatedSections = [...formData.sections];
+                          updatedSections[activeSectionIndex].evaluateIndividuals = e.target.checked;
+                          setFormData({ ...formData, sections: updatedSections });
+                          // If enabling individual eval and current question type is not compatible, reset to RATING
+                          if (e.target.checked && !['RATING', 'TEXT'].includes(newQuestion.questionType)) {
+                            setNewQuestion({ ...newQuestion, questionType: 'RATING', maxScore: 10 });
+                          }
+                        }}
+                        style={{ width: '14px', height: '14px', cursor: 'pointer' }}
+                      />
+                      Evaluate Individual Students
+                    </label>
+                    <small style={{ display: 'block', color: 'var(--dtm-muted)', fontSize: '9px', marginTop: '4px', marginLeft: '22px' }}>
+                      When enabled, advisers will answer these questions for each student individually instead of for the team as a whole. Questions follow the peer-to-peer format (Rating and Text only).
+                    </small>
+                  </div>
                 </div>
 
                 <div style={{
@@ -324,7 +350,13 @@ const CreateQuestionnaire = () => {
                         key={idx}
                         type="button"
                         className={`section-tab ${activeSectionIndex === idx ? 'active' : ''}`}
-                        onClick={() => setActiveSectionIndex(idx)}
+                        onClick={() => {
+                          setActiveSectionIndex(idx);
+                          // If switching to a section with individual eval and current question type is not compatible, reset to RATING
+                          if (section.evaluateIndividuals && !['RATING', 'TEXT'].includes(newQuestion.questionType)) {
+                            setNewQuestion({ ...newQuestion, questionType: 'RATING', maxScore: 10 });
+                          }
+                        }}
                       >
                         {section.sectionTitle}
                       </button>
@@ -412,9 +444,8 @@ const CreateQuestionnaire = () => {
                     }}
                     style={{ fontSize: '11px' }}
                   >
-                    <option value="ADVISER">Adviser (Team)</option>
-                    <option value="ADVISER_STUDENT">Adviser (Individual Student)</option>
-                    <option value="STUDENT">Student (Peer-to-Peer)</option>
+                    <option value="ADVISER">Team</option>
+                    <option value="STUDENT">Peer-to-Peer</option>
                   </select>
                 </div>
                 <button
@@ -475,15 +506,16 @@ const CreateQuestionnaire = () => {
                               value={newQuestion.questionType}
                               onChange={(e) => {
                                 const qType = e.target.value;
+                                const isIndividualSection = formData.sections[activeSectionIndex]?.evaluateIndividuals;
                                 setNewQuestion({ 
                                   ...newQuestion, 
                                   questionType: qType,
-                                  maxScore: qType === 'RATING' && formData.target === 'STUDENT' ? 10 : newQuestion.maxScore
+                                  maxScore: (qType === 'RATING' && (formData.target === 'STUDENT' || isIndividualSection)) ? 10 : newQuestion.maxScore
                                 });
                               }}
                               style={{ fontSize: '11px', minWidth: '140px' }}
                             >
-                              {formData.target === 'STUDENT' ? (
+                              {formData.target === 'STUDENT' || formData.sections[activeSectionIndex]?.evaluateIndividuals ? (
                                 <>
                                   <option value="RATING">Rating</option>
                                   <option value="TEXT">Text Response</option>

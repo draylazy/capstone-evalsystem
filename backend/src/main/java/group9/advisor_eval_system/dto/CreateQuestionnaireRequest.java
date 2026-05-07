@@ -87,6 +87,8 @@ public class CreateQuestionnaireRequest {
 
         private Integer orderIndex;
 
+        private Boolean evaluateIndividuals; // New: indicates this section is for individual student evaluation
+
         @NotBlank(message = "At least one question is required in a section")
         private List<QuestionnaireItemDto> items;
     }

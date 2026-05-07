@@ -808,6 +808,17 @@ export const adviserAPI = {
     if (!response.ok) await throwApiError(response, 'Failed to fetch completed student evaluations');
     return await response.json();
   },
+
+  // Save mixed team/individual evaluation from team questionnaire
+  saveMixedEvaluation: async (payload) => {
+    const response = await fetch(`${API_BASE_URL}/adviser/evaluation/save-mixed/${payload.evaluationId}`, {
+      method: 'POST',
+      headers: getHeaders(),
+      body: JSON.stringify(payload),
+    });
+    if (!response.ok) await throwApiError(response, 'Failed to save mixed evaluation');
+    return await response.json();
+  },
 };
 
 // Teacher Report API
