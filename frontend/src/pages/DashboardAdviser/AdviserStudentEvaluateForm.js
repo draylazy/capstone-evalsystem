@@ -2,6 +2,8 @@ import React, { useEffect, useState, useMemo } from "react";
 import { useParams, useNavigate } from "react-router-dom";
 import AdviserSidebar from "../../components/Sidebar/AdviserSidebar";
 import { adviserAPI } from "../../services/api";
+import { useToast } from "../../contexts/ToastContext";
+import ConfirmModal from "../../components/ConfirmModal/ConfirmModal";
 import "../DashboardTeacher/Teacher.css";
 import "./Adviser.css";
 
@@ -16,6 +18,9 @@ const AdviserStudentEvaluateForm = () => {
   const [saving, setSaving] = useState(false);
   const [submitting, setSubmitting] = useState(false);
   const [currentQuestionIndex, setCurrentQuestionIndex] = useState(0);
+  const [confirmSubmit, setConfirmSubmit] = useState(false);
+
+  const toast = useToast();
 
   const goBack = () => navigate(`/adviser/student-evaluations/${teamId}`);
 
@@ -93,22 +98,20 @@ const AdviserStudentEvaluateForm = () => {
         evaluationId: evaluation.id,
         answers,
       });
-      alert("Draft saved successfully!");
+      toast.success("Draft saved successfully!");
     } catch (e) {
-      alert("Error saving: " + e.message);
+      toast.error("Error saving: " + e.message);
     } finally {
       setSaving(false);
     }
   };
 
-  const handleSubmit = async () => {
-    if (
-      !window.confirm(
-        "Are you sure you want to submit this evaluation? You cannot edit it after submission."
-      )
-    )
-      return;
+  const handleSubmit = () => {
+    setConfirmSubmit(true);
+  };
 
+  const doSubmit = async () => {
+    setConfirmSubmit(false);
     setSubmitting(true);
     try {
       await adviserAPI.saveStudentEvaluation({
@@ -118,7 +121,7 @@ const AdviserStudentEvaluateForm = () => {
       await adviserAPI.submitStudentEvaluation(evaluation.id);
       navigate(`/adviser/student-evaluations/${teamId}`);
     } catch (e) {
-      alert("Error submitting: " + e.message);
+      toast.error("Error submitting: " + e.message);
       setSubmitting(false);
     }
   };
@@ -500,6 +503,15 @@ const AdviserStudentEvaluateForm = () => {
           </div>
         </div>
       </div>
+      <ConfirmModal
+        isOpen={confirmSubmit}
+        title="Submit Evaluation"
+        message="Are you sure you want to submit this evaluation? You cannot edit it after submission."
+        confirmText="Submit"
+        cancelText="Cancel"
+        onConfirm={doSubmit}
+        onCancel={() => setConfirmSubmit(false)}
+      />
     </div>
   );
 };

@@ -113,18 +113,36 @@ public class AdviserEvaluationController {
 
             List<Map<String, Object>> statuses = evaluations.stream().map(evaluation -> {
                 int totalQuestions = 0;
-                if (evaluation.getQuestionnaire() != null && evaluation.getQuestionnaire().getItems() != null) {
-                    totalQuestions = new HashSet<>(evaluation.getQuestionnaire().getItems()).size();
+                if (evaluation.getQuestionnaire() != null) {
+                    // Count top-level items
+                    int topLevel = evaluation.getQuestionnaire().getItems() != null
+                            ? new HashSet<>(evaluation.getQuestionnaire().getItems()).size() : 0;
+                    // Count items nested inside sections
+                    int sectionLevel = 0;
+                    if (evaluation.getQuestionnaire().getSections() != null) {
+                        for (var section : evaluation.getQuestionnaire().getSections()) {
+                            if (section.getItems() != null) {
+                                sectionLevel += section.getItems().size();
+                            }
+                        }
+                    }
+                    totalQuestions = topLevel + sectionLevel;
                 }
 
-                int answeredCount = evaluation.getScores() != null ? evaluation.getScores().size() : 0;
-                int progressPercent = totalQuestions > 0
-                        ? (int) Math.round((answeredCount * 100.0) / totalQuestions)
-                        : 0;
+                boolean isCompleted = evaluation.getStatus() == Evaluation.EvaluationStatus.SUBMITTED
+                        || evaluation.getStatus() == Evaluation.EvaluationStatus.REVIEWED;
+
+                int answeredCount = isCompleted
+                        ? totalQuestions
+                        : (evaluation.getScores() != null ? evaluation.getScores().size() : 0);
+                int progressPercent = isCompleted
+                        ? 100
+                        : (totalQuestions > 0
+                                ? (int) Math.round((answeredCount * 100.0) / totalQuestions)
+                                : 0);
 
                 String queueStatus;
-                if (evaluation.getStatus() == Evaluation.EvaluationStatus.SUBMITTED ||
-                        evaluation.getStatus() == Evaluation.EvaluationStatus.REVIEWED) {
+                if (isCompleted) {
                     queueStatus = "SUBMITTED";
                 } else if (evaluation.getQuestionnaire() != null
                         && !Boolean.TRUE.equals(evaluation.getQuestionnaire().getIsActive())) {
@@ -214,6 +232,30 @@ public class AdviserEvaluationController {
             response.setScores(
                     new ArrayList<>(scores).stream().map(EvaluationScoreDto::fromEntity).collect(Collectors.toList()));
 
+            // Populate team with students for mixed questionnaires
+            if (evaluation.getTeam() != null) {
+                EvaluationResponse.TeamInfo teamInfo = new EvaluationResponse.TeamInfo();
+                teamInfo.setId(evaluation.getTeam().getId());
+                teamInfo.setName(evaluation.getTeam().getName());
+                
+                if (evaluation.getTeam().getTeamStudents() != null && !evaluation.getTeam().getTeamStudents().isEmpty()) {
+                    teamInfo.setTeamStudents(
+                        evaluation.getTeam().getTeamStudents().stream()
+                            .filter(ts -> ts != null && ts.getStudent() != null)
+                            .map(ts -> new EvaluationResponse.TeamStudentInfo(
+                                ts.getStudent().getId(),
+                                ts.getStudent().getFirstName(),
+                                ts.getStudent().getLastName(),
+                                ts.getStudent().getStudentId()
+                            ))
+                            .collect(Collectors.toList())
+                    );
+                } else {
+                    teamInfo.setTeamStudents(new ArrayList<>());
+                }
+                response.setTeam(teamInfo);
+            }
+
             return ResponseEntity.ok(response);
         } catch (Exception e) {
             log.error("Error getting evaluation: {}", e.getMessage(), e);
@@ -230,10 +272,25 @@ public class AdviserEvaluationController {
         Long evaluationId = Long.valueOf(payload.get("evaluationId").toString());
         String generalComments = (String) payload.get("generalComments");
 
-        Map<String, Object> answersRaw = (Map<String, Object>) payload.get("answers");
+        Object answersObj = payload.get("answers");
+        if (answersObj == null) {
+            throw new RuntimeException("No answers provided in request");
+        }
+        if (!(answersObj instanceof Map)) {
+            throw new RuntimeException("Answers must be a JSON object, got: " + answersObj.getClass().getSimpleName());
+        }
+
+        @SuppressWarnings("unchecked")
+        Map<String, Object> answersRaw = (Map<String, Object>) answersObj;
         Map<Long, Object> answers = new HashMap<>();
         for (Map.Entry<String, Object> entry : answersRaw.entrySet()) {
-            answers.put(Long.valueOf(entry.getKey()), entry.getValue());
+            try {
+                Long itemId = Long.valueOf(entry.getKey());
+                answers.put(itemId, entry.getValue());
+            } catch (NumberFormatException e) {
+                log.error("Invalid item ID in answers: {}", entry.getKey(), e);
+                throw new RuntimeException("Invalid question ID: " + entry.getKey());
+            }
         }
 
         Evaluation evaluation = evaluationService.saveEvaluation(adviserId, evaluationId, answers, generalComments);
@@ -247,6 +304,145 @@ public class AdviserEvaluationController {
         Long adviserId = getAdviserId(request);
         Evaluation evaluation = evaluationService.submitEvaluation(adviserId, evaluationId);
         return EvaluationResponse.fromEntity(evaluation);
+    }
+
+    /**
+     * Save mixed team/individual evaluation from team questionnaire
+     * Detects section type and routes to appropriate save method
+     */
+    @PostMapping("/evaluation/save-mixed/{evaluationId}")
+    public ResponseEntity<?> saveMixedEvaluation(
+            @PathVariable Long evaluationId,
+            @RequestBody Map<String, Object> payload,
+            HttpServletRequest request) {
+        try {
+            Long adviserId = getAdviserId(request);
+            Long teamId = Long.valueOf(payload.get("teamId").toString());
+            Long questionnaireId = Long.valueOf(payload.get("questionnaireId").toString());
+            String generalComments = (String) payload.get("generalComments");
+            
+            // Get team info
+            Team team = teamService.getTeamById(teamId);
+            Questionnaire questionnaire = questionnaireRepository.findById(questionnaireId)
+                    .orElseThrow(() -> new RuntimeException("Questionnaire not found"));
+
+            // Parse section data: [ { sectionId, evaluateIndividuals, answers }, ... ]
+            @SuppressWarnings("unchecked")
+            List<Map<String, Object>> sectionDataList = (List<Map<String, Object>>) payload.get("sectionData");
+            
+            if (sectionDataList == null || sectionDataList.isEmpty()) {
+                return ResponseEntity.status(HttpStatus.BAD_REQUEST)
+                        .body(Map.of("error", "No section data provided"));
+            }
+
+            long teamSectionCount = 0;
+            long individualSectionCount = 0;
+            long teamStudentCount = team.getTeamStudents().size();
+
+            for (Map<String, Object> sectionData : sectionDataList) {
+                Boolean evaluateIndividuals = (Boolean) sectionData.getOrDefault("evaluateIndividuals", false);
+                
+                @SuppressWarnings("unchecked")
+                Map<String, Object> answersRaw = (Map<String, Object>) sectionData.get("answers");
+                Map<Long, Object> answers = new HashMap<>();
+                
+                if (answersRaw != null) {
+                    for (Map.Entry<String, Object> entry : answersRaw.entrySet()) {
+                        try {
+                            Long itemId = Long.valueOf(entry.getKey());
+                            Object value = entry.getValue();
+                            
+                            // Validate answer values - should not be Map objects for flat evaluations
+                            if (value instanceof Map && !evaluateIndividuals) {
+                                log.warn("Skipping nested Map value for item {} in team-level evaluation. " +
+                                        "Value: {}. This may indicate payload structure mismatch.", 
+                                        itemId, value);
+                                continue;
+                            }
+                            
+                            answers.put(itemId, value);
+                        } catch (NumberFormatException e) {
+                            log.error("Invalid item ID in answers: {}", entry.getKey(), e);
+                        }
+                    }
+                }
+
+                if (!evaluateIndividuals) {
+                    // TEAM-LEVEL: Save to Evaluation table (once per team)
+                    evaluationService.saveEvaluation(adviserId, evaluationId, answers, generalComments);
+                    teamSectionCount++;
+                    log.info("Saved team-level answers for evaluation {} section with {} answers", evaluationId, answers.size());
+                } else {
+                    // INDIVIDUAL: Create StudentEvaluation for each student
+                    // Convert studentIds from JSON (which are Integers) to Longs
+                    @SuppressWarnings("unchecked")
+                    List<Object> studentIdsRaw = (List<Object>) sectionData.getOrDefault("studentIds", 
+                        team.getTeamStudents().stream()
+                            .map(ts -> ts.getStudent().getId())
+                            .collect(Collectors.toList()));
+                    
+                    List<Long> studentIds = new ArrayList<>();
+                    for (Object id : studentIdsRaw) {
+                        if (id instanceof Number) {
+                            studentIds.add(((Number) id).longValue());
+                        }
+                    }
+
+                    for (Long studentId : studentIds) {
+                        StudentEvaluation eval = evaluationService
+                                .getOrCreateAdviserStudentEvaluation(adviserId, teamId, studentId, questionnaireId);
+                        
+                        // Extract answers for this specific student from the section data
+                        @SuppressWarnings("unchecked")
+                        Map<String, Object> studentAnswersRaw = (Map<String, Object>) sectionData.get("studentAnswers");
+                        Map<Long, Object> studentAnswers = new HashMap<>();
+                        
+                        if (studentAnswersRaw != null) {
+                            @SuppressWarnings("unchecked")
+                            Map<String, Object> perStudentAnswers = (Map<String, Object>) studentAnswersRaw.get(studentId.toString());
+                            if (perStudentAnswers != null) {
+                                for (Map.Entry<String, Object> entry : perStudentAnswers.entrySet()) {
+                                    studentAnswers.put(Long.valueOf(entry.getKey()), entry.getValue());
+                                }
+                            }
+                        }
+                        
+                        evaluationService.saveAdviserStudentEvaluation(adviserId, eval.getId(), studentAnswers);
+                    }
+                    individualSectionCount++;
+                    log.info("Saved individual answers for evaluation {} section for {} students", 
+                            evaluationId, studentIds.size());
+                }
+            }
+
+            // If this is a submit request, mark the team-level evaluation as SUBMITTED
+            Boolean isSubmit = Boolean.TRUE.equals(payload.get("submit"));
+            if (isSubmit) {
+                evaluationService.submitEvaluation(adviserId, evaluationId);
+                // Also submit all adviser-student evals created for this questionnaire/team
+                List<StudentEvaluation> adviserStudentEvals =
+                        studentEvaluationRepository.findByAdviserIdAndTeamId(adviserId, teamId);
+                for (StudentEvaluation studentEval : adviserStudentEvals) {
+                    if (studentEval.getQuestionnaire() != null
+                            && studentEval.getQuestionnaire().getId().equals(questionnaireId)
+                            && studentEval.getStatus() == StudentEvaluation.EvaluationStatus.IN_PROGRESS) {
+                        evaluationService.submitAdviserStudentEvaluation(adviserId, studentEval.getId());
+                    }
+                }
+                log.info("Submitted mixed evaluation {} and associated student evals", evaluationId);
+            }
+
+            return ResponseEntity.ok(Map.of(
+                    "success", true,
+                    "evaluationId", evaluationId,
+                    "teamSectionsSaved", teamSectionCount,
+                    "individualSectionsSaved", individualSectionCount,
+                    "studentEvaluationsCount", teamStudentCount * individualSectionCount));
+        } catch (Exception e) {
+            log.error("Error saving mixed evaluation: {}", e.getMessage(), e);
+            return ResponseEntity.status(HttpStatus.BAD_REQUEST)
+                    .body(Map.of("error", getErrorMessage(e)));
+        }
     }
 
     @GetMapping("/evaluations/completed")
@@ -352,10 +548,26 @@ public class AdviserEvaluationController {
             Long adviserId = getAdviserId(request);
             Long evaluationId = Long.valueOf(payload.get("evaluationId").toString());
 
-            Map<String, Object> answersRaw = (Map<String, Object>) payload.get("answers");
+            Object answersObj = payload.get("answers");
+            if (answersObj == null) {
+                throw new RuntimeException("No answers provided in request");
+            }
+            
+            if (!(answersObj instanceof Map)) {
+                throw new RuntimeException("Answers must be a JSON object, got: " + answersObj.getClass().getSimpleName());
+            }
+            
+            @SuppressWarnings("unchecked")
+            Map<String, Object> answersRaw = (Map<String, Object>) answersObj;
             Map<Long, Object> answers = new HashMap<>();
             for (Map.Entry<String, Object> entry : answersRaw.entrySet()) {
-                answers.put(Long.valueOf(entry.getKey()), entry.getValue());
+                try {
+                    Long itemId = Long.valueOf(entry.getKey());
+                    answers.put(itemId, entry.getValue());
+                } catch (NumberFormatException e) {
+                    log.error("Invalid item ID in answers: {}", entry.getKey(), e);
+                    throw new RuntimeException("Invalid question ID: " + entry.getKey());
+                }
             }
 
             StudentEvaluation saved = evaluationService
