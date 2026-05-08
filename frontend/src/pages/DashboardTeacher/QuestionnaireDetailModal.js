@@ -368,120 +368,51 @@ const QuestionnaireDetailModal = ({ isOpen, onClose, questionnaireId, onUpdate }
                           </div>
 
                           {/* Questions List */}
-                          <div style={{ borderTop: '1px solid rgba(255, 255, 255, 0.1)', paddingTop: '8px', flex: 1, display: 'flex', flexDirection: 'column' }}>
+                          <div style={{ borderTop: '1px solid rgba(255, 255, 255, 0.1)', paddingTop: '8px' }}>
                             <h4 style={{ margin: '0 0 8px 0', fontSize: '12px', fontWeight: '600', color: 'var(--dtm-gold)' }}>
                               Questions in this page
                             </h4>
 
-                            <div style={{ display: 'flex', flexDirection: 'column', gap: '10px', maxHeight: '400px', overflowY: 'auto', paddingRight: '5px' }}>
-                              {formData.sections[activeSectionIndex].items?.map((q, qIdx) => (
-                                <div key={qIdx} style={{
-                                  background: 'rgba(255, 255, 255, 0.04)',
-                                  borderLeft: '3px solid var(--dtm-gold)',
-                                  borderRadius: '4px',
-                                  padding: '12px',
-                                  display: 'flex',
-                                  flexDirection: 'column',
-                                  gap: '8px'
-                                }}>
-                                  <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                                    <span style={{ fontSize: '11px', fontWeight: '600', color: 'var(--dtm-gold)' }}>Q{qIdx + 1}</span>
+                            {formData.sections[activeSectionIndex].items && formData.sections[activeSectionIndex].items.length > 0 ? (
+                              <div style={{ display: 'flex', flexDirection: 'column', gap: '8px', maxHeight: '400px', overflowY: 'auto' }}>
+                                {formData.sections[activeSectionIndex].items.map((q, qIdx) => (
+                                  <div key={qIdx} style={{
+                                    background: 'rgba(255, 255, 255, 0.04)',
+                                    borderLeft: '3px solid var(--dtm-gold)',
+                                    borderRadius: '4px',
+                                    padding: '8px',
+                                    display: 'flex',
+                                    justifyContent: 'space-between',
+                                    alignItems: 'flex-start',
+                                    gap: '8px'
+                                  }}>
+                                    <div style={{ flex: 1, minWidth: 0 }}>
+                                      <p style={{ margin: '0 0 4px 0', fontSize: '11px', fontWeight: '500', color: 'var(--dtm-text)', wordBreak: 'break-word' }}>
+                                        Q{qIdx + 1}: {q.questionText}
+                                      </p>
+                                      <small style={{ color: 'var(--dtm-muted)', fontSize: '10px' }}>
+                                        {q.questionType}
+                                        {(q.questionType === 'NUMERIC_SCALE' || q.questionType === 'RATING') && ` (${q.minScore}-${q.maxScore})`}
+                                        {q.required === false ? ' • Optional' : ' • Required'}
+                                      </small>
+                                    </div>
                                     <button
                                       type="button"
                                       className="btn btn-sm btn-danger"
                                       onClick={() => handleRemoveQuestion(qIdx)}
-                                      style={{ padding: '4px 8px', fontSize: '10px' }}
+                                      style={{ padding: '4px 8px', fontSize: '10px', flexShrink: 0 }}
                                       title="Delete question"
                                     >
                                       ×
                                     </button>
                                   </div>
-                                  
-                                  <input
-                                    type="text"
-                                    value={q.questionText}
-                                    onChange={(e) => {
-                                      const updatedSections = [...formData.sections];
-                                      updatedSections[activeSectionIndex].items[qIdx].questionText = e.target.value;
-                                      setFormData({ ...formData, sections: updatedSections });
-                                    }}
-                                    placeholder="Question text"
-                                    style={{ fontSize: '12px', padding: '6px' }}
-                                  />
-                                  
-                                  <div style={{ display: 'flex', gap: '10px', flexWrap: 'wrap', alignItems: 'center' }}>
-                                      <select
-                                        value={q.questionType}
-                                        onChange={(e) => {
-                                          const updatedSections = [...formData.sections];
-                                          updatedSections[activeSectionIndex].items[qIdx].questionType = e.target.value;
-                                          setFormData({ ...formData, sections: updatedSections });
-                                        }}
-                                        style={{ fontSize: '11px', minWidth: '130px', padding: '6px' }}
-                                      >
-                                        {formData.target === 'STUDENT' ? (
-                                          <>
-                                            <option value="RATING">Rating</option>
-                                            <option value="TEXT">Text Response</option>
-                                          </>
-                                        ) : (
-                                          <>
-                                            <option value="NUMERIC_SCALE">Numeric Scale</option>
-                                            <option value="RATING">Rating</option>
-                                            <option value="TEXT">Text Response</option>
-                                            <option value="MULTIPLE_CHOICE">Multiple Choice</option>
-                                          </>
-                                        )}
-                                      </select>
-                                    
-                                    {(q.questionType === 'NUMERIC_SCALE' || q.questionType === 'RATING') && (
-                                      <div style={{ display: 'flex', gap: '6px', alignItems: 'center', background: 'rgba(0,0,0,0.2)', padding: '4px 8px', borderRadius: '4px' }}>
-                                        <span style={{ fontSize: '11px', color: 'var(--dtm-muted)' }}>Range:</span>
-                                        <input 
-                                          type="number" 
-                                          value={q.minScore} 
-                                          onChange={(e) => {
-                                            const updatedSections = [...formData.sections];
-                                            updatedSections[activeSectionIndex].items[qIdx].minScore = parseInt(e.target.value);
-                                            setFormData({ ...formData, sections: updatedSections });
-                                          }}
-                                          style={{ width: '45px', fontSize: '11px', padding: '4px', textAlign: 'center' }}
-                                        />
-                                        <span style={{ fontSize: '11px', color: 'var(--dtm-muted)' }}>to</span>
-                                        <input 
-                                          type="number" 
-                                          value={q.maxScore} 
-                                          onChange={(e) => {
-                                            const updatedSections = [...formData.sections];
-                                            updatedSections[activeSectionIndex].items[qIdx].maxScore = parseInt(e.target.value);
-                                            setFormData({ ...formData, sections: updatedSections });
-                                          }}
-                                          style={{ width: '45px', fontSize: '11px', padding: '4px', textAlign: 'center' }}
-                                        />
-                                      </div>
-                                    )}
-
-                                    <select
-                                      value={q.required === false ? 'OPTIONAL' : 'REQUIRED'}
-                                      onChange={(e) => {
-                                        const updatedSections = [...formData.sections];
-                                        updatedSections[activeSectionIndex].items[qIdx].required = e.target.value === 'REQUIRED';
-                                        setFormData({ ...formData, sections: updatedSections });
-                                      }}
-                                      style={{ fontSize: '11px', minWidth: '105px', padding: '6px' }}
-                                    >
-                                      <option value="REQUIRED">Required</option>
-                                      <option value="OPTIONAL">Optional</option>
-                                    </select>
-                                  </div>
-                                </div>
-                              ))}
-                              {(!formData.sections[activeSectionIndex].items || formData.sections[activeSectionIndex].items.length === 0) && (
-                                <p style={{ fontSize: '10px', color: 'var(--dtm-muted)', marginBottom: 0, fontStyle: 'italic' }}>
-                                  No questions yet. Add one on the right →
-                                </p>
-                              )}
-                            </div>
+                                ))}
+                              </div>
+                            ) : (
+                              <p style={{ fontSize: '10px', color: 'var(--dtm-muted)', marginBottom: 0, fontStyle: 'italic' }}>
+                                No questions yet. Add one on the right →
+                              </p>
+                            )}
                           </div>
                         </>
                       )}
@@ -497,11 +428,11 @@ const QuestionnaireDetailModal = ({ isOpen, onClose, questionnaireId, onUpdate }
                             value={formData.title}
                             onChange={(e) => setFormData({ ...formData, title: e.target.value })}
                             required
-                            placeholder="Questionnaire Title"
+                            placeholder="e.g., Team Performance Evaluation"
                             style={{ fontSize: '11px' }}
                           />
                         </div>
-                        <div className="form-group" style={{ width: '120px' }}>
+                        <div className="form-group" style={{ minWidth: '200px' }}>
                           <label>Questionnaire For</label>
                           <select
                             value={formData.target}
@@ -514,38 +445,43 @@ const QuestionnaireDetailModal = ({ isOpen, onClose, questionnaireId, onUpdate }
                             }}
                             style={{ fontSize: '11px' }}
                           >
-                            <option value="ADVISER">Adviser</option>
-                            <option value="STUDENT">Student</option>
+                            <option value="ADVISER">Adviser (Team)</option>
+                            <option value="ADVISER_STUDENT">Adviser (Individual Student)</option>
+                            <option value="STUDENT">Student (Peer-to-Peer)</option>
                           </select>
                         </div>
                       </div>
 
-                      <div className="form-group" style={{ marginBottom: '10px' }}>
+                      <div className="form-group" style={{ marginBottom: '4px', marginTop: '-6px' }}>
                         <label>Description</label>
                         <textarea
                           value={formData.description}
                           onChange={(e) => setFormData({ ...formData, description: e.target.value })}
                           rows="2"
-                          placeholder="Description"
+                          placeholder="What is this questionnaire about?"
                           style={{ fontSize: '11px' }}
                         />
                       </div>
 
-                      <div className="form-group" style={{ marginBottom: '15px' }}>
+                      <div className="form-group" style={{ marginBottom: '8px' }}>
                         <label>Deadline (Optional)</label>
                         <input
                           type="datetime-local"
                           value={formData.deadlineAt}
+                          min={new Date(Date.now() + 60000).toISOString().slice(0, 16)}
                           onChange={(e) => setFormData({ ...formData, deadlineAt: e.target.value })}
                           style={{ fontSize: '11px' }}
                         />
+                        <small style={{ color: 'var(--dtm-muted)', fontSize: '10px' }}>
+                          Leave blank for no deadline. When reached, this questionnaire closes automatically.
+                        </small>
                       </div>
 
                       <div style={{ marginBottom: '8px', marginTop: '4px' }}>
                         <h3 style={{ margin: '0 0 8px 0', fontSize: '12px', fontWeight: '600', color: 'var(--dtm-gold)' }}>Add Question</h3>
                         
                         <div className="add-question-box">
-                          <div className="form-group" style={{ marginBottom: '10px' }}>
+                          <div className="form-group">
                             <label>Question Text *</label>
                             <div style={{ display: 'flex', gap: '8px', alignItems: 'center', justifyContent: 'space-between' }}>
                               <div style={{ display: 'flex', gap: '8px', alignItems: 'center', flex: 1 }}>
@@ -554,7 +490,7 @@ const QuestionnaireDetailModal = ({ isOpen, onClose, questionnaireId, onUpdate }
                                   value={newQuestion.questionText}
                                   onChange={(e) => setNewQuestion({ ...newQuestion, questionText: e.target.value })}
                                   placeholder="Ask your question..."
-                                  style={{ fontSize: '11px', flex: '1 1 auto', minWidth: '150px' }}
+                                  style={{ fontSize: '11px', flex: 1 }}
                                 />
                                 <select
                                   value={newQuestion.questionType}
@@ -566,7 +502,7 @@ const QuestionnaireDetailModal = ({ isOpen, onClose, questionnaireId, onUpdate }
                                       maxScore: qType === 'RATING' && formData.target === 'STUDENT' ? 10 : newQuestion.maxScore
                                     });
                                   }}
-                                  style={{ fontSize: '11px', width: '130px', flexShrink: 0 }}
+                                  style={{ fontSize: '11px', minWidth: '140px' }}
                                 >
                                   {formData.target === 'STUDENT' ? (
                                     <>
@@ -590,8 +526,8 @@ const QuestionnaireDetailModal = ({ isOpen, onClose, questionnaireId, onUpdate }
                                   onClick={handleAddQuestion}
                                   className="add-question-btn"
                                   style={{
-                                    width: '32px',
-                                    height: '32px',
+                                    width: '36px',
+                                    height: '36px',
                                     borderRadius: '50%',
                                     background: 'linear-gradient(135deg, rgba(138, 21, 31, 0.9), rgba(138, 21, 31, 0.6))',
                                     border: '1px solid rgba(242, 201, 76, 0.4)',
@@ -604,7 +540,8 @@ const QuestionnaireDetailModal = ({ isOpen, onClose, questionnaireId, onUpdate }
                                     justifyContent: 'center',
                                     lineHeight: '0',
                                     padding: '0',
-                                    flexShrink: 0
+                                    flexShrink: 0,
+                                    position: 'relative'
                                   }}
                                   title="Add Question"
                                 >
@@ -614,10 +551,10 @@ const QuestionnaireDetailModal = ({ isOpen, onClose, questionnaireId, onUpdate }
                                   type="button"
                                   onClick={handleAddSection}
                                   className="add-page-icon-btn"
-                                  style={{ flexShrink: 0, display: 'flex', alignItems: 'center', justifyContent: 'center', lineHeight: '0', padding: '0', width: '32px', height: '32px' }}
+                                  style={{ flexShrink: 0, display: 'flex', alignItems: 'center', justifyContent: 'center', lineHeight: '0', padding: '0' }}
                                   title="Add Section"
                                 >
-                                  <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                                  <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
                                     <rect x="3" y="2" width="16" height="8" rx="1"></rect>
                                     <rect x="3" y="14" width="16" height="8" rx="1"></rect>
                                   </svg>

@@ -399,7 +399,7 @@ const CreateQuestionnaire = () => {
                   />
                 </div>
 
-                <div className="form-group" style={{ width: '120px' }}>
+                <div className="form-group" style={{ minWidth: '200px' }}>
                   <label>Questionnaire For</label>
                   <select
                     value={formData.target}
