@@ -2,7 +2,7 @@ import React from 'react';
 import ReactDOM from 'react-dom';
 import './ConfirmModal.css';
 
-const ConfirmModal = ({ isOpen, title, message, onConfirm, onCancel, confirmText = 'Confirm', cancelText = 'Cancel', isDanger = false }) => {
+const ConfirmModal = ({ isOpen, title, message, onConfirm, onCancel, confirmText = 'Confirm', cancelText = 'Cancel', isDanger = false, showCancel = true }) => {
   if (!isOpen) return null;
 
   return ReactDOM.createPortal(
@@ -17,12 +17,14 @@ const ConfirmModal = ({ isOpen, title, message, onConfirm, onCancel, confirmText
           >
             {confirmText}
           </button>
-          <button 
-            className="confirm-modal-btn confirm-modal-btn-secondary"
-            onClick={onCancel}
-          >
-            {cancelText}
-          </button>
+          {showCancel && (
+            <button 
+              className="confirm-modal-btn confirm-modal-btn-secondary"
+              onClick={onCancel}
+            >
+              {cancelText}
+            </button>
+          )}
         </div>
       </div>
     </div>,

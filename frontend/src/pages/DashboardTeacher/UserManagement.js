@@ -39,17 +39,6 @@ function UserManagement() {
     }
   };
 
-  const handleDelete = async (id, email) => {
-    if (!window.confirm(`Remove ${email} from the system?`)) return;
-    try {
-      await userManagementAPI.deleteUser(id);
-      toast.success(`${email} removed`);
-      fetchUsers();
-    } catch (err) {
-      toast.error('Failed to remove: ' + err.message);
-    }
-  };
-
   const handleImport = async (e) => {
     e.preventDefault();
     if (!uploadFile) { setUploadError('Please select a file'); return; }
@@ -245,7 +234,6 @@ function UserManagement() {
                   <th>Name</th>
                   <th>Email</th>
                   <th>Role</th>
-                  <th>Actions</th>
                 </tr>
               </thead>
               <tbody>
@@ -265,17 +253,6 @@ function UserManagement() {
                       }}>
                         {u.role}
                       </span>
-                    </td>
-                    <td>
-                      {u.email !== 'authortet@gmail.com' && (
-                        <button
-                          className="btn-secondary"
-                          style={{ padding: '5px 12px', fontSize: '12px', color: '#dc3545', borderColor: '#dc3545' }}
-                          onClick={() => handleDelete(u.id, u.email)}
-                        >
-                          Remove
-                        </button>
-                      )}
                     </td>
                   </tr>
                 ))}
