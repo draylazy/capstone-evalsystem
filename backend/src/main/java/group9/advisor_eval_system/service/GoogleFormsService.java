@@ -345,9 +345,10 @@ public class GoogleFormsService {
                         
                         for (QuestionnaireItem item : sortedItems) {
                             if (isIndividualSection) {
-                                // For individual evaluations, create grid question via direct HTTP call
+                                // For individual evaluations, create grid question request (added to batch)
                                 final int NUM_INDIVIDUAL_SLOTS = 10;
-                                createGridQuestionViaHttp(formId, item, itemIndex++, NUM_INDIVIDUAL_SLOTS, accessToken);
+                                Request gridRequest = createGridQuestionRequest(item, itemIndex++, NUM_INDIVIDUAL_SLOTS);
+                                requests.add(gridRequest);
                             } else {
                                 // For non-individual sections, add question normally (once)
                                 Request request = createQuestionRequest(item, itemIndex++);
@@ -393,15 +394,15 @@ public class GoogleFormsService {
     }
 
     /**
-     * Create a grid question via direct HTTP call to Google Forms API
-     * Uses questionGroupItem with rowQuestion objects and shared grid columns
+     * Create a grid question request for batch API (hybrid questionnaires)
+     * Grid has rows for each team member (1-10) and columns based on question type
+     * Uses raw JSON construction since Google Forms API v1 has limited grid support
      */
-    private void createGridQuestionViaHttp(String formId, QuestionnaireItem item, int index, 
-                                          int numRows, String accessToken) {
+    private Request createGridQuestionRequest(QuestionnaireItem item, int index, int numRows) {
         try {
             com.fasterxml.jackson.databind.ObjectMapper mapper = new com.fasterxml.jackson.databind.ObjectMapper();
             
-            // Build rows (one rowQuestion for each team member 1-10)
+            // Build rows (one for each team member 1-10)
             java.util.List<java.util.Map<String, Object>> questions = new ArrayList<>();
             for (int i = 1; i <= numRows; i++) {
                 java.util.Map<String, Object> rowQuestion = new java.util.HashMap<>();
@@ -418,7 +419,7 @@ public class GoogleFormsService {
             if (item.getQuestionType() == QuestionnaireItem.QuestionType.NUMERIC_SCALE ||
                     item.getQuestionType() == QuestionnaireItem.QuestionType.RATING) {
                 // Create numeric scale columns with decimals between highest and 2nd highest
-                // e.g., 10 9.9 9.8 9.7 9.6 9.5 9.4 9.3 9.2 9.1 9 8 7 6 5 4 3 2 1
+                // e.g., 10, 9.9, 9.8, ..., 9.1, 9, 8, 7, ..., 1
                 int low = item.getMinScore() != null ? item.getMinScore() : 1;
                 int high = item.getMaxScore() != null ? item.getMaxScore() : 5;
                 
@@ -495,44 +496,18 @@ public class GoogleFormsService {
             java.util.Map<String, Object> request = new java.util.HashMap<>();
             request.put("createItem", createItemRequest);
 
-            // Build batch update request
-            java.util.List<java.util.Map<String, Object>> requests = new ArrayList<>();
-            requests.add(request);
+            // Convert raw JSON to Request object
+            String requestJson = mapper.writeValueAsString(request);
+            com.google.api.client.json.JsonParser parser = JSON_FACTORY.createJsonParser(requestJson);
+            Request formRequest = parser.parse(Request.class);
 
-            java.util.Map<String, Object> batchRequest = new java.util.HashMap<>();
-            batchRequest.put("requests", requests);
-
-            // Make HTTP request
-            String url = "https://forms.googleapis.com/v1/forms/" + formId + ":batchUpdate";
-            String jsonBody = mapper.writeValueAsString(batchRequest);
-            
-            log.info("Creating grid question with JSON: {}", jsonBody);
-
-            com.google.api.client.http.HttpTransport httpTransport = GoogleNetHttpTransport.newTrustedTransport();
-            com.google.api.client.http.HttpRequestFactory requestFactory = httpTransport.createRequestFactory(
-                    request_inner -> request_inner.setHeaders(
-                            new com.google.api.client.http.HttpHeaders().setAuthorization("Bearer " + accessToken)
-                    )
-            );
-
-            com.google.api.client.http.HttpRequest httpRequest = requestFactory.buildPostRequest(
-                    new com.google.api.client.http.GenericUrl(url),
-                    com.google.api.client.http.ByteArrayContent.fromString("application/json", jsonBody)
-            );
-
-            com.google.api.client.http.HttpResponse response = httpRequest.execute();
-            
-            if (response.getStatusCode() >= 400) {
-                String errorBody = response.parseAsString();
-                log.error("Failed to create grid question: HTTP {}: {}", response.getStatusCode(), errorBody);
-                throw new RuntimeException("Failed to create grid question: HTTP " + response.getStatusCode() + ": " + errorBody);
-            } else {
-                log.info("Successfully created grid question for form {}", formId);
-            }
+            log.info("Created grid question request at index {} for: {}", index, item.getQuestionText());
+            return formRequest;
 
         } catch (Exception e) {
-            log.error("Error creating grid question via HTTP", e);
-            throw new RuntimeException("Failed to create grid question: " + e.getMessage(), e);
+            log.error("Error creating grid question request, falling back to individual questions", e);
+            // Fallback: create as individual non-grid questions
+            return createQuestionRequest(item, index);
         }
     }
 
