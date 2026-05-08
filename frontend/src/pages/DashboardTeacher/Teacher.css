@@ -4436,6 +4436,28 @@
 .perf-level-text.perf-level--mid  { color: var(--dtm-gold); }
 .perf-level-text.perf-level--low  { color: #f87171; }
 
+.perf-eval-summary-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  padding: 14px 16px;
+  border-radius: 12px;
+  background: rgba(255, 255, 255, 0.04);
+  border: 1px solid rgba(255, 255, 255, 0.09);
+  margin-bottom: 16px;
+}
+
+.perf-eval-count-chip {
+  font-size: 13px;
+  color: rgba(255, 255, 255, 0.6);
+}
+
+.perf-view-all-btn {
+  white-space: nowrap;
+  flex-shrink: 0;
+}
+
 .perf-eval-list { display: flex; flex-direction: column; gap: 10px; margin-bottom: 20px; }
 
 .perf-eval-row {
@@ -4551,7 +4573,7 @@
   border: 1px solid rgba(147,197,253,0.22);
 }
 
-/* -- EvalPerformanceDetail — clickable eval rows ----------------- */
+/* -- EvalPerformanceDetail ï¿½ clickable eval rows ----------------- */
 .perf-eval-row--clickable {
   display: flex;
   align-items: center;
