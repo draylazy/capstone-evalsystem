@@ -544,68 +544,117 @@ const EvaluationDetail = () => {
 
   const aiFeedbackSections = parseAiFeedbackSections(aiFeedback);
 
-  const renderQuestionAnswerList = () => (
-    <>
-      <div className="evaluation-modal-summary-row">
-        <span className="evaluation-modal-count">Showing {filteredQuestionAnswerRows.length} of {questionAnswerRows.length} questions</span>
-      </div>
+  const renderQuestionAnswerList = () => {
+    // Group filteredQuestionAnswerRows by sectionTitle (null → "General Questions")
+    const groups = [];
+    const groupMap = new Map();
 
-      <div className="evaluation-modal-filter-row">
-        {QA_FILTER_OPTIONS.map((filterKey) => {
-          const label = filterKey === "all"
-            ? "All"
-            : filterKey === "withScores"
-              ? "With Scores"
-              : filterKey === "textAnswers"
-                ? "Text Answers"
-                : "Unanswered";
+    filteredQuestionAnswerRows.forEach((row) => {
+      const key = row.sectionTitle ?? "__general__";
+      if (!groupMap.has(key)) {
+        const group = {
+          sectionTitle: row.sectionTitle,
+          isIndividual: !!row.isIndividual,
+          rows: [],
+        };
+        groupMap.set(key, group);
+        groups.push(group);
+      }
+      const group = groupMap.get(key);
+      // Keep isIndividual true if any row in group is individual
+      if (row.isIndividual) group.isIndividual = true;
+      group.rows.push(row);
+    });
 
-          return (
-            <button
-              key={filterKey}
-              type="button"
-              className={`evaluation-filter-chip ${qaFilter === filterKey ? "is-active" : ""}`}
-              onClick={() => setQaFilter(filterKey)}
-            >
-              {label}
-            </button>
-          );
-        })}
-      </div>
+    // Running Q index across all groups for consistent numbering
+    let globalQIndex = 0;
 
-      {filteredQuestionAnswerRows.length > 0 ? (
-        filteredQuestionAnswerRows.map((row, index) => (
-          <div key={row.key} className="evaluation-response-item">
-            {row.sectionTitle && (
-              <div className="evaluation-response-section">Section: {row.sectionTitle}</div>
-            )}
-            <div className="evaluation-response-question">
-              <strong>Q{index + 1}:</strong> {row.questionText}
+    return (
+      <>
+        <div className="evaluation-modal-summary-row">
+          <span className="evaluation-modal-count">
+            Showing {filteredQuestionAnswerRows.length} of {questionAnswerRows.length} questions
+          </span>
+        </div>
+
+        <div className="evaluation-modal-filter-row">
+          {QA_FILTER_OPTIONS.map((filterKey) => {
+            const label = filterKey === "all"
+              ? "All"
+              : filterKey === "withScores"
+                ? "With Scores"
+                : filterKey === "textAnswers"
+                  ? "Text Answers"
+                  : "Unanswered";
+            return (
+              <button
+                key={filterKey}
+                type="button"
+                className={`evaluation-filter-chip ${qaFilter === filterKey ? "is-active" : ""}`}
+                onClick={() => setQaFilter(filterKey)}
+              >
+                {label}
+              </button>
+            );
+          })}
+        </div>
+
+        {groups.length > 0 ? (
+          groups.map((group, gIdx) => (
+            <div key={group.sectionTitle ?? `group-${gIdx}`} className="qa-section-group">
+              <div className="qa-section-header">
+                <div className="qa-section-header-left">
+                  <span className="qa-section-icon">{group.isIndividual ? "👤" : "👥"}</span>
+                  <span className="qa-section-title">
+                    {group.sectionTitle ?? "General Questions"}
+                  </span>
+                  <span className={`qa-section-type-badge ${group.isIndividual ? "is-individual" : "is-team"}`}>
+                    {group.isIndividual ? "Individual" : "Team"}
+                  </span>
+                </div>
+                <span className="qa-section-q-count">{group.rows.length} Q</span>
+              </div>
+
+              <div className="qa-question-list">
+                {group.rows.map((row) => {
+                  globalQIndex += 1;
+                  const qNum = globalQIndex;
+                  return (
+                    <div key={row.key} className={`qa-question-row ${!row.isAnswered ? "is-unanswered" : ""}`}>
+                      <div className="qa-question-top">
+                        <span className="qa-question-num">Q{qNum}</span>
+                        <span className="qa-question-text">{row.questionText}</span>
+                      </div>
+                      {row.isIndividual && row.studentEntries?.length > 0 ? (
+                        <div className="qa-student-answers">
+                          {row.studentEntries.map(({ studentName, score }, idx) => (
+                            <div key={idx} className="qa-student-answer-row">
+                              <span className="qa-student-name">{studentName}</span>
+                              <span className="qa-student-value">{formatAnswerValue(score, null)}</span>
+                            </div>
+                          ))}
+                        </div>
+                      ) : (
+                        <div className={`qa-answer-block ${!row.isAnswered ? "is-empty" : ""}`}>
+                          {row.answerText}
+                        </div>
+                      )}
+                    </div>
+                  );
+                })}
+              </div>
             </div>
-            {row.isIndividual && row.studentEntries?.length > 0 ? (
-              <div className="evaluation-response-answer">
-                {row.studentEntries.map(({ studentName, score }, idx) => (
-                  <div key={idx}>
-                    <strong>{studentName}:</strong> {formatAnswerValue(score, null)}
-                  </div>
-                ))}
-              </div>
-            ) : (
-              <div className="evaluation-response-answer">
-                <strong>Answer:</strong> {row.answerText}
-              </div>
-            )}
-          </div>
-        ))
-      ) : (
-        <p className="pending">No questionnaire responses for this filter.</p>
-      )}
+          ))
+        ) : (
+          <p className="pending">No questionnaire responses for this filter.</p>
+        )}
 
-      <div className="evaluation-general-comment-box">
-        <strong>General Comments:</strong> {evaluation.generalComments?.trim() || "None"}
-      </div>
-    </>
-  );
+        <div className="evaluation-general-comment-box">
+          <strong>General Comments:</strong> {evaluation.generalComments?.trim() || "None"}
+        </div>
+      </>
+    );
+  };
 
   return (
     <div className="teacher-container">
