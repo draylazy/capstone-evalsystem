@@ -2,6 +2,7 @@ import React, { useEffect, useState, useMemo } from "react";
 import { useParams, useNavigate } from "react-router-dom";
 import StudentSidebar from "../../components/Sidebar/StudentSidebar";
 import { useToast } from "../../contexts/ToastContext";
+import { generateDecimalRatingRange, generateNumericRange } from "../../utils/ratingUtils";
 import "../DashboardTeacher/Teacher.css";
 import "./StudentResponsive.css";
 import ConfirmModal from "../../components/ConfirmModal/ConfirmModal";
@@ -240,16 +241,11 @@ const StudentEvaluateForm = () => {
             <div style={{ maxWidth: '800px', margin: '0 auto' }}>
               {currentPage.items.map((item) => {
                 const isRating = item.questionType === "RATING";
-                const customRatingRange = [10, 9.9, 9.8, 9.7, 9.6, 9.5, 9.4, 9.3, 9.2, 9.1, 9, 8, 7, 6, 5, 4, 3, 2, 1];
                 let finalRange = [];
                 if (isRating) {
-                  finalRange = customRatingRange;
+                  finalRange = generateDecimalRatingRange(item.minScore, item.maxScore);
                 } else {
-                  const min = item.minScore ?? 1;
-                  const max = item.maxScore ?? 5;
-                  finalRange = Array.from({ length: Math.abs(max - min) + 1 }, (_, i) => {
-                    return max > min ? max - i : min - i;
-                  });
+                  finalRange = generateNumericRange(item.minScore, item.maxScore);
                 }
 
                 return (

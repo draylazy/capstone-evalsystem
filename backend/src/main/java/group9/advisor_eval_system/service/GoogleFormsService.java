@@ -417,13 +417,28 @@ public class GoogleFormsService {
 
             if (item.getQuestionType() == QuestionnaireItem.QuestionType.NUMERIC_SCALE ||
                     item.getQuestionType() == QuestionnaireItem.QuestionType.RATING) {
-                // Create numeric scale columns (e.g., 10-1 in reverse order)
+                // Create numeric scale columns with decimals between highest and 2nd highest
+                // e.g., 10 9.9 9.8 9.7 9.6 9.5 9.4 9.3 9.2 9.1 9 8 7 6 5 4 3 2 1
                 int low = item.getMinScore() != null ? item.getMinScore() : 1;
                 int high = item.getMaxScore() != null ? item.getMaxScore() : 5;
-                for (int i = high; i >= low; i--) {
-                    java.util.Map<String, String> option = new java.util.HashMap<>();
-                    option.put("value", String.valueOf(i));
-                    options.add(option);
+                
+                // Add the highest value
+                java.util.Map<String, String> option = new java.util.HashMap<>();
+                option.put("value", String.valueOf(high));
+                options.add(option);
+                
+                // Add decimal values from high-0.1 to high-0.9
+                for (int i = 9; i >= 1; i--) {
+                    java.util.Map<String, String> decimalOption = new java.util.HashMap<>();
+                    decimalOption.put("value", String.format("%.1f", high - (i / 10.0)));
+                    options.add(decimalOption);
+                }
+                
+                // Add remaining integer values
+                for (int i = high - 1; i >= low; i--) {
+                    java.util.Map<String, String> intOption = new java.util.HashMap<>();
+                    intOption.put("value", String.valueOf(i));
+                    options.add(intOption);
                 }
                 gridColumns.put("type", "RADIO");
             } else if (item.getQuestionType() == QuestionnaireItem.QuestionType.MULTIPLE_CHOICE) {
