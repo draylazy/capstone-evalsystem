@@ -49,6 +49,7 @@ const QuestionnaireDetailModal = ({ isOpen, onClose, questionnaireId, onUpdate }
           sectionTitle: "General",
           sectionDescription: "",
           orderIndex: 0,
+          evaluateIndividuals: false,
           items: data.items || []
         }];
       }
@@ -142,6 +143,7 @@ const QuestionnaireDetailModal = ({ isOpen, onClose, questionnaireId, onUpdate }
           sectionTitle: `Section ${newSectionNumber}`,
           sectionDescription: "",
           orderIndex: formData.sections.length,
+          evaluateIndividuals: false,
           items: []
         }
       ]
@@ -324,6 +326,25 @@ const QuestionnaireDetailModal = ({ isOpen, onClose, questionnaireId, onUpdate }
                                 placeholder="Describe this section (optional)"
                                 style={{ padding: '8px 10px', fontSize: '11px', width: '100%', boxSizing: 'border-box' }}
                               />
+                            </div>
+
+                            <div className="form-group" style={{ marginBottom: '8px' }}>
+                              <label style={{ fontSize: '11px', fontWeight: '600', color: 'var(--dtm-gold)', margin: 0, display: 'flex', alignItems: 'center', gap: '8px' }}>
+                                <input
+                                  type="checkbox"
+                                  checked={formData.sections[activeSectionIndex].evaluateIndividuals || false}
+                                  onChange={(e) => {
+                                    const updatedSections = [...formData.sections];
+                                    updatedSections[activeSectionIndex].evaluateIndividuals = e.target.checked;
+                                    setFormData({ ...formData, sections: updatedSections });
+                                  }}
+                                  style={{ width: '14px', height: '14px', cursor: 'pointer' }}
+                                />
+                                Evaluate Individual Students
+                              </label>
+                              <small style={{ display: 'block', color: 'var(--dtm-muted)', fontSize: '9px', marginTop: '4px', marginLeft: '22px' }}>
+                                When enabled, advisers will answer these questions for each student individually instead of for the team as a whole.
+                              </small>
                             </div>
                           </div>
 

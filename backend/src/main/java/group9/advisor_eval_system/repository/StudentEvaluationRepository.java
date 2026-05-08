@@ -68,6 +68,20 @@ public interface StudentEvaluationRepository extends JpaRepository<StudentEvalua
 
         List<StudentEvaluation> findByAdviserIdAndTeamId(Long adviserId, Long teamId);
 
+        @Query("""
+                        SELECT DISTINCT se FROM StudentEvaluation se
+                        LEFT JOIN FETCH se.scores s
+                        LEFT JOIN FETCH s.questionnaireItem
+                        LEFT JOIN FETCH se.evaluatee
+                        WHERE se.adviser.id = :adviserId
+                        AND se.team.id = :teamId
+                        AND se.questionnaire.id = :questionnaireId
+                        """)
+        List<StudentEvaluation> findByAdviserIdAndTeamIdAndQuestionnaireIdWithScores(
+                        @Param("adviserId") Long adviserId,
+                        @Param("teamId") Long teamId,
+                        @Param("questionnaireId") Long questionnaireId);
+
         List<StudentEvaluation> findByAdviserIdAndEvaluateeId(Long adviserId, Long evaluateeId);
 
         List<StudentEvaluation> findByAdviserIdAndStatus(Long adviserId, StudentEvaluation.EvaluationStatus status);
@@ -111,6 +125,7 @@ public interface StudentEvaluationRepository extends JpaRepository<StudentEvalua
                         LEFT JOIN FETCH qs.items
                         LEFT JOIN FETCH e.adviser
                         LEFT JOIN FETCH e.evaluatee
+                        LEFT JOIN FETCH e.student
                         LEFT JOIN FETCH e.team
                         WHERE e.evaluatee.id = :evaluateeId
                         AND e.adviser IS NOT NULL

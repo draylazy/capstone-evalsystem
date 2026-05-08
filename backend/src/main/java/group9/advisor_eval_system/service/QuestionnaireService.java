@@ -72,6 +72,7 @@ public class QuestionnaireService {
                 section.setSectionTitle(sectionDto.getSectionTitle());
                 section.setSectionDescription(sectionDto.getSectionDescription());
                 section.setOrderIndex(sectionDto.getOrderIndex() != null ? sectionDto.getOrderIndex() : 0);
+                section.setEvaluateIndividuals(sectionDto.getEvaluateIndividuals() != null ? sectionDto.getEvaluateIndividuals() : false);
 
                 // Convert items to entities
                 List<QuestionnaireItem> sectionItems = new ArrayList<>();
@@ -139,20 +140,25 @@ public class QuestionnaireService {
                 section.setSectionTitle(sectionDto.getSectionTitle());
                 section.setSectionDescription(sectionDto.getSectionDescription());
                 section.setOrderIndex(sectionDto.getOrderIndex() != null ? sectionDto.getOrderIndex() : 0);
+                section.setEvaluateIndividuals(sectionDto.getEvaluateIndividuals() != null ? sectionDto.getEvaluateIndividuals() : false);
                 section.setQuestionnaire(savedQuestionnaire);
 
-                QuestionnaireSection savedSection = questionnaireSectionRepository.save(section);
-
-                // Save questions in this section
+                // Collect all items BEFORE saving section
+                Set<QuestionnaireItem> itemsForSection = new HashSet<>();
                 if (sectionDto.getItems() != null && !sectionDto.getItems().isEmpty()) {
                     for (int i = 0; i < sectionDto.getItems().size(); i++) {
                         QuestionnaireItem item = sectionDto.getItems().get(i).toEntity();
                         item.setQuestionnaire(savedQuestionnaire);
-                        item.setSection(savedSection);
+                        item.setSection(section);
                         item.setOrderIndex(i);
-                        questionnaireItemRepository.save(item);
+                        QuestionnaireItem savedItem = questionnaireItemRepository.save(item);
+                        itemsForSection.add(savedItem);
                     }
                 }
+                
+                // Set items collection BEFORE saving section
+                section.setItems(itemsForSection);
+                questionnaireSectionRepository.save(section);
             }
         }
 
@@ -520,22 +526,28 @@ public class QuestionnaireService {
                 section.setSectionTitle(sectionDto.getSectionTitle());
                 section.setSectionDescription(sectionDto.getSectionDescription());
                 section.setOrderIndex(sectionDto.getOrderIndex() != null ? sectionDto.getOrderIndex() : 0);
+                section.setEvaluateIndividuals(sectionDto.getEvaluateIndividuals() != null ? sectionDto.getEvaluateIndividuals() : false);
                 section.setQuestionnaire(questionnaire);
 
-                QuestionnaireSection savedSection = questionnaireSectionRepository.save(section);
-
+                // Collect all items BEFORE saving section
+                Set<QuestionnaireItem> itemsForSection = new HashSet<>();
                 if (sectionDto.getItems() != null && !sectionDto.getItems().isEmpty()) {
                     for (int i = 0; i < sectionDto.getItems().size(); i++) {
                         CreateQuestionnaireRequest.QuestionnaireItemDto itemDto = sectionDto.getItems().get(i);
                         QuestionnaireItem item = findOrCreateQuestionnaireItem(itemDto.getId(), existingItemsById);
-                        copyItemFields(itemDto, item, i, questionnaire, savedSection);
+                        copyItemFields(itemDto, item, i, questionnaire, section);
                         QuestionnaireItem savedItem = questionnaireItemRepository.save(item);
                         allSavedItems.add(savedItem);
+                        itemsForSection.add(savedItem);
                         if (savedItem.getId() != null) {
                             retainedItemIds.add(savedItem.getId());
                         }
                     }
                 }
+                
+                // Set items collection BEFORE saving section
+                section.setItems(itemsForSection);
+                QuestionnaireSection savedSection = questionnaireSectionRepository.save(section);
                 questionnaire.getSections().add(savedSection);
             }
         } else if (request.getQuestions() != null && !request.getQuestions().isEmpty()) {
