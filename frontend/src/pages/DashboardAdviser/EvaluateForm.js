@@ -4,6 +4,7 @@ import AdviserSidebar from "../../components/Sidebar/AdviserSidebar";
 import { adviserAPI } from "../../services/api";
 import IndividualEvaluationGrid from "./IndividualEvaluationGrid";
 import { useToast } from "../../contexts/ToastContext";
+import { generateDecimalRatingRange, generateNumericRange } from "../../utils/ratingUtils";
 import ConfirmModal from "../../components/ConfirmModal/ConfirmModal";
 import "../DashboardTeacher/Teacher.css";
 import "./Adviser.css";
@@ -304,11 +305,10 @@ const EvaluateForm = () => {
                     <div style={{ display: 'flex', flexDirection: 'column', gap: '24px' }}>
                       {currentSection.items.map((item) => {
                         const currentValue = answers[item.id];
-                        const min = item.minScore ?? 1;
-                        const max = item.maxScore ?? 5;
-                        const range = Array.from({ length: Math.abs(max - min) + 1 }, (_, i) => {
-                          return max > min ? max - i : min - i;
-                        });
+                        const isRating = item.questionType === "RATING";
+                        const range = isRating 
+                          ? generateDecimalRatingRange(item.minScore, item.maxScore)
+                          : generateNumericRange(item.minScore, item.maxScore);
 
                         return (
                           <div key={item.id} style={{
@@ -508,11 +508,10 @@ const EvaluateForm = () => {
     </div>
   );
 
-  const min = currentItem.minScore ?? 1;
-  const max = currentItem.maxScore ?? 5;
-  const range = Array.from({ length: Math.abs(max - min) + 1 }, (_, i) => {
-    return max > min ? max - i : min - i;
-  });
+  const isRating = currentItem.questionType === "RATING";
+  const range = isRating 
+    ? generateDecimalRatingRange(currentItem.minScore, currentItem.maxScore)
+    : generateNumericRange(currentItem.minScore, currentItem.maxScore);
 
   return (
     <div className="teacher-container">

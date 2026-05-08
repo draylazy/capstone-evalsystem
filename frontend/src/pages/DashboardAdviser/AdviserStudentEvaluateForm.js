@@ -3,6 +3,7 @@ import { useParams, useNavigate } from "react-router-dom";
 import AdviserSidebar from "../../components/Sidebar/AdviserSidebar";
 import { adviserAPI } from "../../services/api";
 import { useToast } from "../../contexts/ToastContext";
+import { generateDecimalRatingRange, generateNumericRange } from "../../utils/ratingUtils";
 import ConfirmModal from "../../components/ConfirmModal/ConfirmModal";
 import "../DashboardTeacher/Teacher.css";
 import "./Adviser.css";
@@ -155,12 +156,10 @@ const AdviserStudentEvaluateForm = () => {
       </div>
     );
 
-  const min = currentItem.minScore ?? 1;
-  const max = currentItem.maxScore ?? 5;
-  const range = Array.from(
-    { length: Math.abs(max - min) + 1 },
-    (_, i) => (max > min ? max - i : min - i)
-  );
+  const isRating = currentItem.questionType === "RATING";
+  const range = isRating
+    ? generateDecimalRatingRange(currentItem.minScore, currentItem.maxScore)
+    : generateNumericRange(currentItem.minScore, currentItem.maxScore);
 
   return (
     <div className="teacher-container">
