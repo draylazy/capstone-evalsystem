@@ -291,8 +291,7 @@ const Questionnaires = () => {
                         <button
                           className="btn btn-sm btn-danger"
                           onClick={() => handleDeleteQuestionnaire(q.id)}
-                          disabled={q.isLocked}
-                          title={q.isLocked ? "Cannot delete - questionnaire is locked" : "Delete"}
+                          title="Delete"
                         >
                           Delete
                         </button>
