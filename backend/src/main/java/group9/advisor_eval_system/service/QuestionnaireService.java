@@ -90,12 +90,14 @@ public class QuestionnaireService {
 
             // Create Google Form with sections and page breaks
             googleForm = googleFormsService.createGoogleFormWithSections(
-                    teacherId, title, description, questions != null ? questions : List.of(), sectionEntities);
+                    teacherId, title, description, questions != null ? questions : List.of(), sectionEntities,
+                    "STUDENT".equalsIgnoreCase(targetRole));
         } else {
             // Create Google Form without sections (legacy)
             List<QuestionnaireItem> allQuestions = new ArrayList<>(questions != null ? questions : List.of());
             totalQuestionCount = allQuestions.size();
-            googleForm = googleFormsService.createGoogleForm(teacherId, title, description, allQuestions);
+            googleForm = googleFormsService.createGoogleForm(teacherId, title, description, allQuestions,
+                    "STUDENT".equalsIgnoreCase(targetRole));
         }
 
         // Also count loose questions if they exist
@@ -624,7 +626,8 @@ public class QuestionnaireService {
                     questionnaire.getTitle(),
                     questionnaire.getDescription(),
                     looseQuestions,
-                    allSections
+                    allSections,
+                    questionnaire.getTarget() == Questionnaire.QuestionnaireTarget.STUDENT
             );
             syncGoogleQuestionMappings(questionnaire.getId(), teacherId);
             return;
@@ -641,14 +644,16 @@ public class QuestionnaireService {
                         questionnaire.getTitle(),
                         questionnaire.getDescription(),
                         looseQuestions != null ? looseQuestions : List.of(),
-                        allSections
+                        allSections,
+                        questionnaire.getTarget() == Questionnaire.QuestionnaireTarget.STUDENT
                 );
             } else {
                 replacementForm = googleFormsService.createGoogleForm(
                         teacherId,
                         questionnaire.getTitle(),
                         questionnaire.getDescription(),
-                        looseQuestions != null ? looseQuestions : List.of()
+                        looseQuestions != null ? looseQuestions : List.of(),
+                        questionnaire.getTarget() == Questionnaire.QuestionnaireTarget.STUDENT
                 );
             }
 
@@ -726,6 +731,7 @@ public class QuestionnaireService {
                                 Questionnaire questionnaire,
                                 QuestionnaireSection section) {
         target.setQuestionText(source.getQuestionText());
+        target.setQuestionDescription(source.getQuestionDescription());
         target.setQuestionType(QuestionnaireItem.QuestionType.valueOf(source.getQuestionType()));
         target.setMaxScore(source.getMaxScore());
         target.setMinScore(source.getMinScore());
@@ -769,6 +775,7 @@ public class QuestionnaireService {
                             .map(item -> {
                                 CreateQuestionnaireRequest.QuestionnaireItemDto dto = new CreateQuestionnaireRequest.QuestionnaireItemDto();
                                 dto.setQuestionText(item.getQuestionText());
+                                dto.setQuestionDescription(item.getQuestionDescription());
                                 dto.setOrderIndex(item.getOrderIndex());
                                 dto.setQuestionType(item.getQuestionType().name());
                                 dto.setMaxScore(item.getMaxScore());

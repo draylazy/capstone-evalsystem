@@ -40,7 +40,8 @@ public class GoogleFormsService {
     /**
      * Create a Google Form using the teacher's OAuth token
      */
-    public Form createGoogleForm(Long teacherId, String title, String description, List<QuestionnaireItem> questions) {
+    public Form createGoogleForm(Long teacherId, String title, String description, 
+                                 List<QuestionnaireItem> questions, boolean isStudentEvaluation) {
         try {
             String accessToken = googleAuthService.getValidAccessToken(teacherId);
             Forms formsService = getFormsService(accessToken);
@@ -61,7 +62,7 @@ public class GoogleFormsService {
             // Add questions to the form
             log.info("Received {} questions to add to form", questions != null ? questions.size() : 0);
             if (questions != null && !questions.isEmpty()) {
-                addQuestionsToForm(formsService, createdForm.getFormId(), questions);
+                addQuestionsToForm(formsService, createdForm.getFormId(), questions, isStudentEvaluation, accessToken);
             } else {
                 log.warn("No questions provided to add to Google Form");
             }
@@ -130,7 +131,8 @@ public class GoogleFormsService {
      */
     public Form createGoogleFormWithSections(Long teacherId, String title, String description, 
                                              List<QuestionnaireItem> questions, 
-                                             List<QuestionnaireSection> sections) {
+                                             List<QuestionnaireSection> sections,
+                                             boolean isStudentEvaluation) {
         try {
             String accessToken = googleAuthService.getValidAccessToken(teacherId);
             Forms formsService = getFormsService(accessToken);
@@ -150,7 +152,7 @@ public class GoogleFormsService {
 
             // Add questions and sections with page breaks
             if ((sections != null && !sections.isEmpty()) || (questions != null && !questions.isEmpty())) {
-                addQuestionsAndSectionsToForm(formsService, createdForm.getFormId(), questions, sections, accessToken);
+                addQuestionsAndSectionsToForm(formsService, createdForm.getFormId(), questions, sections, isStudentEvaluation, accessToken);
             } else {
                 log.warn("No questions or sections provided to add to Google Form");
             }
@@ -215,7 +217,8 @@ public class GoogleFormsService {
      */
     public void overwriteGoogleForm(Long teacherId, String formId, String title, String description,
                                     List<QuestionnaireItem> questions,
-                                    List<QuestionnaireSection> sections) {
+                                    List<QuestionnaireSection> sections,
+                                    boolean isStudentEvaluation) {
         try {
             String accessToken = googleAuthService.getValidAccessToken(teacherId);
             Forms formsService = getFormsService(accessToken);
@@ -255,7 +258,7 @@ public class GoogleFormsService {
 
             // 4. Add the new items using our existing logic
             if ((sections != null && !sections.isEmpty()) || (questions != null && !questions.isEmpty())) {
-                addQuestionsAndSectionsToForm(formsService, formId, questions, sections, accessToken);
+                addQuestionsAndSectionsToForm(formsService, formId, questions, sections, isStudentEvaluation, accessToken);
             }
 
             log.info("Successfully overwritten Google Form {}", formId);
@@ -283,21 +286,30 @@ public class GoogleFormsService {
     /**
      * Add questions to an existing Google Form
      */
-    private void addQuestionsToForm(Forms formsService, String formId, List<QuestionnaireItem> questions) {
+    private void addQuestionsToForm(Forms formsService, String formId, List<QuestionnaireItem> questions, 
+                                    boolean isStudentEvaluation, String accessToken) {
         try {
             List<Request> requests = new ArrayList<>();
+            int itemIndex = 0;
 
             for (int i = 0; i < questions.size(); i++) {
                 QuestionnaireItem item = questions.get(i);
-                Request request = createQuestionRequest(item, i);
-                requests.add(request);
+                if (isStudentEvaluation && item.getQuestionType() != QuestionnaireItem.QuestionType.TEXT) {
+                    // For student evaluations, use grid for non-text questions
+                    final int NUM_INDIVIDUAL_SLOTS = 10;
+                    createGridQuestionViaHttp(formId, item, itemIndex++, NUM_INDIVIDUAL_SLOTS, accessToken);
+                } else {
+                    Request request = createQuestionRequest(item, itemIndex++);
+                    requests.add(request);
+                }
             }
 
-            BatchUpdateFormRequest batchUpdateRequest = new BatchUpdateFormRequest()
-                    .setRequests(requests);
-
-            formsService.forms().batchUpdate(formId, batchUpdateRequest).execute();
-            log.info("Added {} questions to form {}", questions.size(), formId);
+            if (!requests.isEmpty()) {
+                BatchUpdateFormRequest batchUpdateRequest = new BatchUpdateFormRequest()
+                        .setRequests(requests);
+                formsService.forms().batchUpdate(formId, batchUpdateRequest).execute();
+            }
+            log.info("Added {} items to form {}", questions.size(), formId);
 
         } catch (Exception e) {
             log.error("Error adding questions to form", e);
@@ -311,6 +323,7 @@ public class GoogleFormsService {
     private void addQuestionsAndSectionsToForm(Forms formsService, String formId, 
                                                 List<QuestionnaireItem> looseQuestions, 
                                                 List<QuestionnaireSection> sections,
+                                                boolean isStudentEvaluation,
                                                 String accessToken) {
         try {
             List<Request> requests = new ArrayList<>();
@@ -319,8 +332,13 @@ public class GoogleFormsService {
             // Add loose questions first (if any)
             if (looseQuestions != null && !looseQuestions.isEmpty()) {
                 for (QuestionnaireItem item : looseQuestions) {
-                    Request request = createQuestionRequest(item, itemIndex++);
-                    requests.add(request);
+                    if (isStudentEvaluation && item.getQuestionType() != QuestionnaireItem.QuestionType.TEXT) {
+                        final int NUM_INDIVIDUAL_SLOTS = 10;
+                        createGridQuestionViaHttp(formId, item, itemIndex++, NUM_INDIVIDUAL_SLOTS, accessToken);
+                    } else {
+                        Request request = createQuestionRequest(item, itemIndex++);
+                        requests.add(request);
+                    }
                 }
             }
 
@@ -344,12 +362,12 @@ public class GoogleFormsService {
                         boolean isIndividualSection = section.getEvaluateIndividuals() != null && section.getEvaluateIndividuals();
                         
                         for (QuestionnaireItem item : sortedItems) {
-                            if (isIndividualSection) {
-                                // For individual evaluations, create grid question via direct HTTP call
+                            if (isIndividualSection || (isStudentEvaluation && item.getQuestionType() != QuestionnaireItem.QuestionType.TEXT)) {
+                                // For individual evaluations or student-targeted non-text questions, create grid
                                 final int NUM_INDIVIDUAL_SLOTS = 10;
                                 createGridQuestionViaHttp(formId, item, itemIndex++, NUM_INDIVIDUAL_SLOTS, accessToken);
                             } else {
-                                // For non-individual sections, add question normally (once)
+                                // For others, add question normally
                                 Request request = createQuestionRequest(item, itemIndex++);
                                 requests.add(request);
                             }
@@ -480,6 +498,9 @@ public class GoogleFormsService {
             // Build the item
             java.util.Map<String, Object> item_map = new java.util.HashMap<>();
             item_map.put("title", item.getQuestionText());
+            if (item.getQuestionDescription() != null && !item.getQuestionDescription().isBlank()) {
+                item_map.put("description", item.getQuestionDescription());
+            }
             item_map.put("questionGroupItem", questionGroupItem);
 
             // Build the location
@@ -749,6 +770,9 @@ public class GoogleFormsService {
         // Create the item
         Item formItem = new Item();
         formItem.setTitle(item.getQuestionText());
+        if (item.getQuestionDescription() != null && !item.getQuestionDescription().isBlank()) {
+            formItem.setDescription(item.getQuestionDescription());
+        }
         formItem.setQuestionItem(new QuestionItem().setQuestion(question));
 
         // Create the request

@@ -549,14 +549,14 @@
 
 .questionnaire-preview-panel::-webkit-scrollbar-thumb,
 .questionnaire-creation-panel::-webkit-scrollbar-thumb {
-  background: rgba(138, 21, 31, 0.5);
+  background: #f2c94c;
   border-radius: 10px;
   border: 2px solid rgba(255, 255, 255, 0.05);
 }
 
 .questionnaire-preview-panel::-webkit-scrollbar-thumb:hover,
 .questionnaire-creation-panel::-webkit-scrollbar-thumb:hover {
-  background: rgba(138, 21, 31, 0.8);
+  background: #ffdb70;
 }
 
 /* RESPONSIVE DESIGN */

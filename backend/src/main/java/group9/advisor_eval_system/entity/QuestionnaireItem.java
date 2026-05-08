@@ -21,6 +21,9 @@ public class QuestionnaireItem {
     @NotBlank
     @Column(nullable = false, length = 1000)
     private String questionText;
+
+    @Column(nullable = true, length = 1000)
+    private String questionDescription;
     
     @Column(nullable = false)
     private Integer orderIndex; // For sorting questions

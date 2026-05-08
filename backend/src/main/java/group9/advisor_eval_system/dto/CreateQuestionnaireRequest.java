@@ -37,6 +37,8 @@ public class CreateQuestionnaireRequest {
         @NotBlank(message = "Question text is required")
         private String questionText;
 
+        private String questionDescription;
+
         private Integer orderIndex;
 
         @NotBlank(message = "Question type is required")
@@ -54,6 +56,7 @@ public class CreateQuestionnaireRequest {
             QuestionnaireItem item = new QuestionnaireItem();
             item.setId(this.id);
             item.setQuestionText(this.questionText);
+            item.setQuestionDescription(this.questionDescription);
             item.setOrderIndex(this.orderIndex != null ? this.orderIndex : 0);
             item.setQuestionType(QuestionnaireItem.QuestionType.valueOf(this.questionType));
             item.setMaxScore(this.maxScore);

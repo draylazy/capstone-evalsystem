@@ -11,6 +11,14 @@
   justify-content: center;
   z-index: 10000;
   animation: fadeIn 0.2s ease-out;
+  padding-left: 260px; /* Shift past the sidebar */
+  box-sizing: border-box;
+}
+
+@media (max-width: 1024px) {
+  .confirm-modal-overlay {
+    padding-left: 0;
+  }
 }
 
 @keyframes fadeIn {
