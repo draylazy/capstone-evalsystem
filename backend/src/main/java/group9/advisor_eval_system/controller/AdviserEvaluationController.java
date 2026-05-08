@@ -254,10 +254,25 @@ public class AdviserEvaluationController {
         Long evaluationId = Long.valueOf(payload.get("evaluationId").toString());
         String generalComments = (String) payload.get("generalComments");
 
-        Map<String, Object> answersRaw = (Map<String, Object>) payload.get("answers");
+        Object answersObj = payload.get("answers");
+        if (answersObj == null) {
+            throw new RuntimeException("No answers provided in request");
+        }
+        if (!(answersObj instanceof Map)) {
+            throw new RuntimeException("Answers must be a JSON object, got: " + answersObj.getClass().getSimpleName());
+        }
+
+        @SuppressWarnings("unchecked")
+        Map<String, Object> answersRaw = (Map<String, Object>) answersObj;
         Map<Long, Object> answers = new HashMap<>();
         for (Map.Entry<String, Object> entry : answersRaw.entrySet()) {
-            answers.put(Long.valueOf(entry.getKey()), entry.getValue());
+            try {
+                Long itemId = Long.valueOf(entry.getKey());
+                answers.put(itemId, entry.getValue());
+            } catch (NumberFormatException e) {
+                log.error("Invalid item ID in answers: {}", entry.getKey(), e);
+                throw new RuntimeException("Invalid question ID: " + entry.getKey());
+            }
         }
 
         Evaluation evaluation = evaluationService.saveEvaluation(adviserId, evaluationId, answers, generalComments);
@@ -315,7 +330,22 @@ public class AdviserEvaluationController {
                 
                 if (answersRaw != null) {
                     for (Map.Entry<String, Object> entry : answersRaw.entrySet()) {
-                        answers.put(Long.valueOf(entry.getKey()), entry.getValue());
+                        try {
+                            Long itemId = Long.valueOf(entry.getKey());
+                            Object value = entry.getValue();
+                            
+                            // Validate answer values - should not be Map objects for flat evaluations
+                            if (value instanceof Map && !evaluateIndividuals) {
+                                log.warn("Skipping nested Map value for item {} in team-level evaluation. " +
+                                        "Value: {}. This may indicate payload structure mismatch.", 
+                                        itemId, value);
+                                continue;
+                            }
+                            
+                            answers.put(itemId, value);
+                        } catch (NumberFormatException e) {
+                            log.error("Invalid item ID in answers: {}", entry.getKey(), e);
+                        }
                     }
                 }
 
@@ -323,7 +353,7 @@ public class AdviserEvaluationController {
                     // TEAM-LEVEL: Save to Evaluation table (once per team)
                     evaluationService.saveEvaluation(adviserId, evaluationId, answers, generalComments);
                     teamSectionCount++;
-                    log.info("Saved team-level answers for evaluation {} section", evaluationId);
+                    log.info("Saved team-level answers for evaluation {} section with {} answers", evaluationId, answers.size());
                 } else {
                     // INDIVIDUAL: Create StudentEvaluation for each student
                     // Convert studentIds from JSON (which are Integers) to Longs
@@ -483,10 +513,26 @@ public class AdviserEvaluationController {
             Long adviserId = getAdviserId(request);
             Long evaluationId = Long.valueOf(payload.get("evaluationId").toString());
 
-            Map<String, Object> answersRaw = (Map<String, Object>) payload.get("answers");
+            Object answersObj = payload.get("answers");
+            if (answersObj == null) {
+                throw new RuntimeException("No answers provided in request");
+            }
+            
+            if (!(answersObj instanceof Map)) {
+                throw new RuntimeException("Answers must be a JSON object, got: " + answersObj.getClass().getSimpleName());
+            }
+            
+            @SuppressWarnings("unchecked")
+            Map<String, Object> answersRaw = (Map<String, Object>) answersObj;
             Map<Long, Object> answers = new HashMap<>();
             for (Map.Entry<String, Object> entry : answersRaw.entrySet()) {
-                answers.put(Long.valueOf(entry.getKey()), entry.getValue());
+                try {
+                    Long itemId = Long.valueOf(entry.getKey());
+                    answers.put(itemId, entry.getValue());
+                } catch (NumberFormatException e) {
+                    log.error("Invalid item ID in answers: {}", entry.getKey(), e);
+                    throw new RuntimeException("Invalid question ID: " + entry.getKey());
+                }
             }
 
             StudentEvaluation saved = evaluationService

@@ -116,11 +116,40 @@ public class EvaluationService {
             score.setEvaluation(evaluation);
             score.setQuestionnaireItem(item);
 
+            Object value = entry.getValue();
+            if (value == null) {
+                log.warn("Null value for question item {}", itemId);
+                continue;
+            }
+
+            // Skip if value is a Map (likely nested/student answers, not for team-level evaluation)
+            if (value instanceof Map) {
+                log.warn("Skipping Map value for question item {} - likely nested answers structure", itemId);
+                continue;
+            }
+
             if (item.getQuestionType() == QuestionnaireItem.QuestionType.TEXT
                     || item.getQuestionType() == QuestionnaireItem.QuestionType.MULTIPLE_CHOICE) {
-                score.setTextResponse(String.valueOf(entry.getValue()));
+                score.setTextResponse(String.valueOf(value));
             } else {
-                score.setNumericScore(Double.valueOf(entry.getValue().toString()));
+                // Numeric type
+                try {
+                    double numValue;
+                    if (value instanceof Number) {
+                        numValue = ((Number) value).doubleValue();
+                    } else {
+                        String strValue = String.valueOf(value).trim();
+                        if (strValue.isEmpty()) {
+                            log.warn("Empty string value for numeric question item {}", itemId);
+                            continue;
+                        }
+                        numValue = Double.parseDouble(strValue);
+                    }
+                    score.setNumericScore(numValue);
+                } catch (NumberFormatException e) {
+                    log.error("Cannot parse numeric value '{}' for question item {}: {}", value, itemId, e.getMessage(), e);
+                    throw new RuntimeException("Invalid numeric value for question " + itemId + ": " + value);
+                }
             }
 
             evaluationScoreRepository.save(score);
@@ -334,7 +363,7 @@ public class EvaluationService {
     public StudentEvaluation saveAdviserStudentEvaluation(
             Long adviserId, Long evaluationId, Map<Long, Object> answers) {
 
-        StudentEvaluation evaluation = studentEvaluationRepository.findById(evaluationId)
+        StudentEvaluation evaluation = studentEvaluationRepository.findByIdWithDetails(evaluationId)
                 .orElseThrow(() -> new RuntimeException("Student evaluation not found"));
 
         if (evaluation.getAdviser() == null || !evaluation.getAdviser().getId().equals(adviserId)) {
@@ -355,11 +384,40 @@ public class EvaluationService {
             score.setStudentEvaluation(evaluation);
             score.setQuestionnaireItem(item);
 
+            Object value = entry.getValue();
+            if (value == null) {
+                log.warn("Null value for question item {}", entry.getKey());
+                continue;
+            }
+
+            // Skip if value is a Map (likely nested/student answers, not for individual evaluation)
+            if (value instanceof Map) {
+                log.warn("Skipping Map value for question item {} - likely nested answers structure", entry.getKey());
+                continue;
+            }
+
             if (item.getQuestionType() == QuestionnaireItem.QuestionType.TEXT
                     || item.getQuestionType() == QuestionnaireItem.QuestionType.MULTIPLE_CHOICE) {
-                score.setTextResponse(String.valueOf(entry.getValue()));
+                score.setTextResponse(String.valueOf(value));
             } else {
-                score.setNumericScore(Double.valueOf(entry.getValue().toString()));
+                // Numeric type
+                try {
+                    double numValue;
+                    if (value instanceof Number) {
+                        numValue = ((Number) value).doubleValue();
+                    } else {
+                        String strValue = String.valueOf(value).trim();
+                        if (strValue.isEmpty()) {
+                            log.warn("Empty string value for numeric question item {}", entry.getKey());
+                            continue;
+                        }
+                        numValue = Double.parseDouble(strValue);
+                    }
+                    score.setNumericScore(numValue);
+                } catch (NumberFormatException e) {
+                    log.error("Cannot parse numeric value '{}' for question item {}: {}", value, entry.getKey(), e.getMessage(), e);
+                    throw new RuntimeException("Invalid numeric value for question " + entry.getKey() + ": " + value);
+                }
             }
             studentEvaluationScoreRepository.save(score);
         }
@@ -371,7 +429,7 @@ public class EvaluationService {
     @Transactional
     public StudentEvaluation submitAdviserStudentEvaluation(Long adviserId, Long evaluationId) {
 
-        StudentEvaluation evaluation = studentEvaluationRepository.findById(evaluationId)
+        StudentEvaluation evaluation = studentEvaluationRepository.findByIdWithDetails(evaluationId)
                 .orElseThrow(() -> new RuntimeException("Student evaluation not found"));
 
         if (evaluation.getAdviser() == null || !evaluation.getAdviser().getId().equals(adviserId)) {
