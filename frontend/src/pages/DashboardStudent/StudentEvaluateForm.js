@@ -4,6 +4,7 @@ import StudentSidebar from "../../components/Sidebar/StudentSidebar";
 import { useToast } from "../../contexts/ToastContext";
 import "../DashboardTeacher/Teacher.css";
 import "./StudentResponsive.css";
+import ConfirmModal from "../../components/ConfirmModal/ConfirmModal";
 
 const API_BASE_URL = "http://localhost:8080";
 
@@ -22,6 +23,7 @@ const StudentEvaluateForm = () => {
   const [status, setStatus] = useState("IN_PROGRESS");
   
   const [currentPageIndex, setCurrentPageIndex] = useState(0);
+  const [showConfirmModal, setShowConfirmModal] = useState(false);
 
   const currentUser = useMemo(() => {
     const raw = localStorage.getItem("user");
@@ -153,8 +155,11 @@ const StudentEvaluateForm = () => {
       return;
     }
 
-    if (!window.confirm("Are you sure you want to submit all evaluations? You cannot edit them after submission.")) return;
-    
+    setShowConfirmModal(true);
+  };
+
+  const handleConfirmSubmit = async () => {
+    setShowConfirmModal(false);
     setSubmitting(true);
     try {
       const token = currentUser?.token;
@@ -408,6 +413,16 @@ const StudentEvaluateForm = () => {
           </div>
         </div>
       </div>
+
+      <ConfirmModal
+        isOpen={showConfirmModal}
+        title="Confirm Submission"
+        message="Are you sure you want to submit all evaluations? You cannot edit them after submission."
+        confirmText="Submit Evaluations"
+        cancelText="Cancel"
+        onConfirm={handleConfirmSubmit}
+        onCancel={() => setShowConfirmModal(false)}
+      />
     </div>
   );
 };

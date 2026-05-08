@@ -18,6 +18,7 @@ const QuestionnaireDetailModal = ({ isOpen, onClose, questionnaireId, onUpdate }
   });
 
   const [activeSectionIndex, setActiveSectionIndex] = useState(0);
+  const [editingQuestionIndex, setEditingQuestionIndex] = useState(null);
   const [newQuestion, setNewQuestion] = useState({
     questionText: "",
     questionType: "NUMERIC_SCALE",
@@ -111,7 +112,16 @@ const QuestionnaireDetailModal = ({ isOpen, onClose, questionnaireId, onUpdate }
     if (!updatedSections[activeSectionIndex].items) {
       updatedSections[activeSectionIndex].items = [];
     }
-    updatedSections[activeSectionIndex].items.push({ ...newQuestion });
+    
+    if (editingQuestionIndex !== null) {
+      updatedSections[activeSectionIndex].items[editingQuestionIndex] = { ...newQuestion };
+      toast.success("Question updated!");
+      setEditingQuestionIndex(null);
+    } else {
+      updatedSections[activeSectionIndex].items.push({ ...newQuestion });
+      toast.success("Question added!");
+    }
+    
     setFormData({ ...formData, sections: updatedSections });
 
     setNewQuestion({
@@ -124,7 +134,12 @@ const QuestionnaireDetailModal = ({ isOpen, onClose, questionnaireId, onUpdate }
       pointsValue: 1,
       required: true,
     });
-    toast.success("Question added!");
+  };
+
+  const handleEditQuestion = (index) => {
+    const q = formData.sections[activeSectionIndex].items[index];
+    setNewQuestion({ ...q });
+    setEditingQuestionIndex(index);
   };
 
   const handleRemoveQuestion = (index) => {
@@ -328,24 +343,26 @@ const QuestionnaireDetailModal = ({ isOpen, onClose, questionnaireId, onUpdate }
                               />
                             </div>
 
-                            <div className="form-group" style={{ marginBottom: '8px' }}>
-                              <label style={{ fontSize: '11px', fontWeight: '600', color: 'var(--dtm-gold)', margin: 0, display: 'flex', alignItems: 'center', gap: '8px' }}>
-                                <input
-                                  type="checkbox"
-                                  checked={formData.sections[activeSectionIndex].evaluateIndividuals || false}
-                                  onChange={(e) => {
-                                    const updatedSections = [...formData.sections];
-                                    updatedSections[activeSectionIndex].evaluateIndividuals = e.target.checked;
-                                    setFormData({ ...formData, sections: updatedSections });
-                                  }}
-                                  style={{ width: '14px', height: '14px', cursor: 'pointer' }}
-                                />
-                                Evaluate Individual Students
-                              </label>
-                              <small style={{ display: 'block', color: 'var(--dtm-muted)', fontSize: '9px', marginTop: '4px', marginLeft: '22px' }}>
-                                When enabled, advisers will answer these questions for each student individually instead of for the team as a whole.
-                              </small>
-                            </div>
+                            {formData.target !== 'STUDENT' && (
+                              <div className="form-group" style={{ marginBottom: '8px' }}>
+                                <label style={{ fontSize: '11px', fontWeight: '600', color: 'var(--dtm-gold)', margin: 0, display: 'flex', alignItems: 'center', gap: '8px' }}>
+                                  <input
+                                    type="checkbox"
+                                    checked={formData.sections[activeSectionIndex].evaluateIndividuals || false}
+                                    onChange={(e) => {
+                                      const updatedSections = [...formData.sections];
+                                      updatedSections[activeSectionIndex].evaluateIndividuals = e.target.checked;
+                                      setFormData({ ...formData, sections: updatedSections });
+                                    }}
+                                    style={{ width: '14px', height: '14px', cursor: 'pointer' }}
+                                  />
+                                  Evaluate Individual Students
+                                </label>
+                                <small style={{ display: 'block', color: 'var(--dtm-muted)', fontSize: '9px', marginTop: '4px', marginLeft: '22px' }}>
+                                  When enabled, advisers will answer these questions for each student individually instead of for the team as a whole.
+                                </small>
+                              </div>
+                            )}
                           </div>
 
                           <div style={{
@@ -368,7 +385,20 @@ const QuestionnaireDetailModal = ({ isOpen, onClose, questionnaireId, onUpdate }
                                   <button
                                     type="button"
                                     className={`section-tab ${activeSectionIndex === idx ? 'active' : ''}`}
-                                    onClick={() => setActiveSectionIndex(idx)}
+                                    onClick={() => {
+                                      setActiveSectionIndex(idx);
+                                      setEditingQuestionIndex(null);
+                                      setNewQuestion({
+                                        questionText: "",
+                                        questionType: formData.target === 'STUDENT' ? "RATING" : "NUMERIC_SCALE",
+                                        minScore: 1,
+                                        maxScore: formData.target === 'STUDENT' ? 10 : 5,
+                                        choices: [],
+                                        correctAnswer: "",
+                                        pointsValue: 1,
+                                        required: true,
+                                      });
+                                    }}
                                   >
                                     {section.sectionTitle || `Section ${idx + 1}`}
                                   </button>
@@ -417,15 +447,26 @@ const QuestionnaireDetailModal = ({ isOpen, onClose, questionnaireId, onUpdate }
                                         {q.required === false ? ' • Optional' : ' • Required'}
                                       </small>
                                     </div>
-                                    <button
-                                      type="button"
-                                      className="btn btn-sm btn-danger"
-                                      onClick={() => handleRemoveQuestion(qIdx)}
-                                      style={{ padding: '4px 8px', fontSize: '10px', flexShrink: 0 }}
-                                      title="Delete question"
-                                    >
-                                      ×
-                                    </button>
+                                    <div style={{ display: 'flex', gap: '4px', flexShrink: 0 }}>
+                                      <button
+                                        type="button"
+                                        className="btn btn-sm btn-secondary"
+                                        onClick={() => handleEditQuestion(qIdx)}
+                                        style={{ padding: '4px 8px', fontSize: '10px' }}
+                                        title="Edit question"
+                                      >
+                                        ✎
+                                      </button>
+                                      <button
+                                        type="button"
+                                        className="btn btn-sm btn-danger"
+                                        onClick={() => handleRemoveQuestion(qIdx)}
+                                        style={{ padding: '4px 8px', fontSize: '10px' }}
+                                        title="Delete question"
+                                      >
+                                        ×
+                                      </button>
+                                    </div>
                                   </div>
                                 ))}
                               </div>
@@ -466,9 +507,8 @@ const QuestionnaireDetailModal = ({ isOpen, onClose, questionnaireId, onUpdate }
                             }}
                             style={{ fontSize: '11px' }}
                           >
-                            <option value="ADVISER">Adviser (Team)</option>
-                            <option value="ADVISER_STUDENT">Adviser (Individual Student)</option>
-                            <option value="STUDENT">Student (Peer-to-Peer)</option>
+                            <option value="ADVISER">Team</option>
+                            <option value="STUDENT">Peer-to-Peer</option>
                           </select>
                         </div>
                       </div>
@@ -499,7 +539,9 @@ const QuestionnaireDetailModal = ({ isOpen, onClose, questionnaireId, onUpdate }
                       </div>
 
                       <div style={{ marginBottom: '8px', marginTop: '4px' }}>
-                        <h3 style={{ margin: '0 0 8px 0', fontSize: '12px', fontWeight: '600', color: 'var(--dtm-gold)' }}>Add Question</h3>
+                        <h3 style={{ margin: '0 0 8px 0', fontSize: '12px', fontWeight: '600', color: 'var(--dtm-gold)' }}>
+                          {editingQuestionIndex !== null ? 'Edit Question' : 'Add Question'}
+                        </h3>
                         
                         <div className="add-question-box">
                           <div className="form-group">
@@ -511,7 +553,7 @@ const QuestionnaireDetailModal = ({ isOpen, onClose, questionnaireId, onUpdate }
                                   value={newQuestion.questionText}
                                   onChange={(e) => setNewQuestion({ ...newQuestion, questionText: e.target.value })}
                                   placeholder="Ask your question..."
-                                  style={{ fontSize: '11px', flex: 1 }}
+                                  style={{ fontSize: '11px', flex: 1, minWidth: '200px' }}
                                 />
                                 <select
                                   value={newQuestion.questionType}
@@ -523,7 +565,7 @@ const QuestionnaireDetailModal = ({ isOpen, onClose, questionnaireId, onUpdate }
                                       maxScore: qType === 'RATING' && formData.target === 'STUDENT' ? 10 : newQuestion.maxScore
                                     });
                                   }}
-                                  style={{ fontSize: '11px', minWidth: '140px' }}
+                                  style={{ fontSize: '11px', width: '115px', flexShrink: 0 }}
                                 >
                                   {formData.target === 'STUDENT' ? (
                                     <>
@@ -564,10 +606,33 @@ const QuestionnaireDetailModal = ({ isOpen, onClose, questionnaireId, onUpdate }
                                     flexShrink: 0,
                                     position: 'relative'
                                   }}
-                                  title="Add Question"
+                                  title={editingQuestionIndex !== null ? "Update Question" : "Add Question"}
                                 >
-                                  +
+                                  {editingQuestionIndex !== null ? '✓' : '+'}
                                 </button>
+                                {editingQuestionIndex !== null && (
+                                  <button
+                                    type="button"
+                                    onClick={() => {
+                                      setEditingQuestionIndex(null);
+                                      setNewQuestion({
+                                        questionText: "",
+                                        questionType: formData.target === 'STUDENT' ? "RATING" : "NUMERIC_SCALE",
+                                        minScore: 1,
+                                        maxScore: formData.target === 'STUDENT' ? 10 : 5,
+                                        choices: [],
+                                        correctAnswer: "",
+                                        pointsValue: 1,
+                                        required: true,
+                                      });
+                                    }}
+                                    className="btn btn-sm btn-secondary"
+                                    style={{ flexShrink: 0, padding: '0 8px', height: '36px', fontSize: '11px', borderRadius: '4px' }}
+                                    title="Cancel Edit"
+                                  >
+                                    Cancel
+                                  </button>
+                                )}
                                 <button
                                   type="button"
                                   onClick={handleAddSection}
