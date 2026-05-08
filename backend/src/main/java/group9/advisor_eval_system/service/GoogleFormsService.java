@@ -417,10 +417,10 @@ public class GoogleFormsService {
 
             if (item.getQuestionType() == QuestionnaireItem.QuestionType.NUMERIC_SCALE ||
                     item.getQuestionType() == QuestionnaireItem.QuestionType.RATING) {
-                // Create numeric scale columns (e.g., 1-5)
+                // Create numeric scale columns (e.g., 10-1 in reverse order)
                 int low = item.getMinScore() != null ? item.getMinScore() : 1;
                 int high = item.getMaxScore() != null ? item.getMaxScore() : 5;
-                for (int i = low; i <= high; i++) {
+                for (int i = high; i >= low; i--) {
                     java.util.Map<String, String> option = new java.util.HashMap<>();
                     option.put("value", String.valueOf(i));
                     options.add(option);
