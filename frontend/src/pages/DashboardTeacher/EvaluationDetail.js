@@ -171,6 +171,7 @@ const EvaluationDetail = () => {
   const buildQuestionAnswerRows = (evalData) => {
     const questionnaire = evalData?.questionnaire || {};
     const scores = Array.isArray(evalData?.scores) ? evalData.scores : [];
+    const individualStudentScores = Array.isArray(evalData?.individualStudentScores) ? evalData.individualStudentScores : [];
     const sections = Array.isArray(questionnaire?.sections) ? questionnaire.sections : [];
     const standaloneItems = Array.isArray(questionnaire?.items) ? questionnaire.items : [];
 
@@ -180,6 +181,19 @@ const EvaluationDetail = () => {
         .map((score) => [score.questionnaireItemId, score])
     );
 
+    // Build per-student score map for individual sections: itemId -> [{studentName, score}]
+    const indScoresByItemId = new Map();
+    individualStudentScores.forEach(({ studentName, scores: studentScores }) => {
+      if (!Array.isArray(studentScores)) return;
+      studentScores.forEach((score) => {
+        if (score?.questionnaireItemId == null) return;
+        if (!indScoresByItemId.has(score.questionnaireItemId)) {
+          indScoresByItemId.set(score.questionnaireItemId, []);
+        }
+        indScoresByItemId.get(score.questionnaireItemId).push({ studentName, score });
+      });
+    });
+
     const rows = [];
     const renderedScoreIds = new Set();
 
@@ -187,26 +201,53 @@ const EvaluationDetail = () => {
       .slice()
       .sort((a, b) => toSortedNumber(a?.orderIndex) - toSortedNumber(b?.orderIndex))
       .forEach((section) => {
+        const isIndividual = section?.evaluateIndividuals === true;
         const sectionItems = Array.isArray(section?.items) ? section.items : [];
         sectionItems
           .slice()
           .sort((a, b) => toSortedNumber(a?.orderIndex) - toSortedNumber(b?.orderIndex))
           .forEach((item) => {
-            const score = scoreByItemId.get(item?.id);
-            if (score?.id !== null && score?.id !== undefined) {
-              renderedScoreIds.add(score.id);
+            if (isIndividual) {
+              // Individual section: answers come from StudentEvaluation records per student
+              const studentEntries = indScoresByItemId.get(item?.id) || [];
+              const hasNumericAnswer = studentEntries.some(
+                ({ score }) => score?.numericScore !== null && score?.numericScore !== undefined
+              );
+              const hasTextAnswer = studentEntries.some(
+                ({ score }) => score?.textResponse && score.textResponse.trim()
+              );
+              const answerText = studentEntries.length > 0
+                ? studentEntries.map(({ studentName, score }) => `${studentName}: ${formatAnswerValue(score, item)}`).join(" | ")
+                : "Not answered";
+              rows.push({
+                key: item?.id ?? `section-${section?.id ?? "unknown"}-${rows.length}`,
+                sectionTitle: section?.sectionTitle || null,
+                questionText: item?.questionText || "Untitled question",
+                answerText,
+                hasNumericAnswer,
+                hasTextAnswer,
+                isAnswered: hasNumericAnswer || hasTextAnswer,
+                isIndividual: true,
+                studentEntries,
+              });
+            } else {
+              // Team-level section: answers from Evaluation.scores
+              const score = scoreByItemId.get(item?.id);
+              if (score?.id !== null && score?.id !== undefined) {
+                renderedScoreIds.add(score.id);
+              }
+              const hasNumericAnswer = score?.numericScore !== null && score?.numericScore !== undefined;
+              const hasTextAnswer = !!(score?.textResponse && score.textResponse.trim());
+              rows.push({
+                key: item?.id ?? `section-${section?.id ?? "unknown"}-${rows.length}`,
+                sectionTitle: section?.sectionTitle || null,
+                questionText: item?.questionText || score?.questionText || "Untitled question",
+                answerText: formatAnswerValue(score, item),
+                hasNumericAnswer,
+                hasTextAnswer,
+                isAnswered: hasNumericAnswer || hasTextAnswer,
+              });
             }
-            const hasNumericAnswer = score?.numericScore !== null && score?.numericScore !== undefined;
-            const hasTextAnswer = !!(score?.textResponse && score.textResponse.trim());
-            rows.push({
-              key: item?.id ?? `section-${section?.id ?? "unknown"}-${rows.length}`,
-              sectionTitle: section?.sectionTitle || null,
-              questionText: item?.questionText || score?.questionText || "Untitled question",
-              answerText: formatAnswerValue(score, item),
-              hasNumericAnswer,
-              hasTextAnswer,
-              isAnswered: hasNumericAnswer || hasTextAnswer,
-            });
           });
       });
 
@@ -541,8 +582,19 @@ const EvaluationDetail = () => {
             <div className="evaluation-response-question">
               <strong>Q{index + 1}:</strong> {row.questionText}
             </div>
-            <div className="evaluation-response-answer">
-              <strong>Answer:</strong> {row.answerText}</div>
+            {row.isIndividual && row.studentEntries?.length > 0 ? (
+              <div className="evaluation-response-answer">
+                {row.studentEntries.map(({ studentName, score }, idx) => (
+                  <div key={idx}>
+                    <strong>{studentName}:</strong> {formatAnswerValue(score, null)}
+                  </div>
+                ))}
+              </div>
+            ) : (
+              <div className="evaluation-response-answer">
+                <strong>Answer:</strong> {row.answerText}
+              </div>
+            )}
           </div>
         ))
       ) : (

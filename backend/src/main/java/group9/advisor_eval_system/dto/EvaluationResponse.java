@@ -31,6 +31,16 @@ public class EvaluationResponse {
     private LocalDateTime createdAt;
     private LocalDateTime updatedAt;
     private TeamInfo team; // Include full team with students for mixed questionnaires
+    private List<IndividualStudentScores> individualStudentScores; // Per-student scores for individual sections
+
+    @Data
+    @NoArgsConstructor
+    @AllArgsConstructor
+    public static class IndividualStudentScores {
+        private Long studentId;
+        private String studentName;
+        private List<EvaluationScoreDto> scores;
+    }
 
     @Data
     @NoArgsConstructor

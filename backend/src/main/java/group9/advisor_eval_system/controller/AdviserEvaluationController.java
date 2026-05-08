@@ -113,18 +113,36 @@ public class AdviserEvaluationController {
 
             List<Map<String, Object>> statuses = evaluations.stream().map(evaluation -> {
                 int totalQuestions = 0;
-                if (evaluation.getQuestionnaire() != null && evaluation.getQuestionnaire().getItems() != null) {
-                    totalQuestions = new HashSet<>(evaluation.getQuestionnaire().getItems()).size();
+                if (evaluation.getQuestionnaire() != null) {
+                    // Count top-level items
+                    int topLevel = evaluation.getQuestionnaire().getItems() != null
+                            ? new HashSet<>(evaluation.getQuestionnaire().getItems()).size() : 0;
+                    // Count items nested inside sections
+                    int sectionLevel = 0;
+                    if (evaluation.getQuestionnaire().getSections() != null) {
+                        for (var section : evaluation.getQuestionnaire().getSections()) {
+                            if (section.getItems() != null) {
+                                sectionLevel += section.getItems().size();
+                            }
+                        }
+                    }
+                    totalQuestions = topLevel + sectionLevel;
                 }
 
-                int answeredCount = evaluation.getScores() != null ? evaluation.getScores().size() : 0;
-                int progressPercent = totalQuestions > 0
-                        ? (int) Math.round((answeredCount * 100.0) / totalQuestions)
-                        : 0;
+                boolean isCompleted = evaluation.getStatus() == Evaluation.EvaluationStatus.SUBMITTED
+                        || evaluation.getStatus() == Evaluation.EvaluationStatus.REVIEWED;
+
+                int answeredCount = isCompleted
+                        ? totalQuestions
+                        : (evaluation.getScores() != null ? evaluation.getScores().size() : 0);
+                int progressPercent = isCompleted
+                        ? 100
+                        : (totalQuestions > 0
+                                ? (int) Math.round((answeredCount * 100.0) / totalQuestions)
+                                : 0);
 
                 String queueStatus;
-                if (evaluation.getStatus() == Evaluation.EvaluationStatus.SUBMITTED ||
-                        evaluation.getStatus() == Evaluation.EvaluationStatus.REVIEWED) {
+                if (isCompleted) {
                     queueStatus = "SUBMITTED";
                 } else if (evaluation.getQuestionnaire() != null
                         && !Boolean.TRUE.equals(evaluation.getQuestionnaire().getIsActive())) {
@@ -395,6 +413,23 @@ public class AdviserEvaluationController {
                     log.info("Saved individual answers for evaluation {} section for {} students", 
                             evaluationId, studentIds.size());
                 }
+            }
+
+            // If this is a submit request, mark the team-level evaluation as SUBMITTED
+            Boolean isSubmit = Boolean.TRUE.equals(payload.get("submit"));
+            if (isSubmit) {
+                evaluationService.submitEvaluation(adviserId, evaluationId);
+                // Also submit all adviser-student evals created for this questionnaire/team
+                List<StudentEvaluation> adviserStudentEvals =
+                        studentEvaluationRepository.findByAdviserIdAndTeamId(adviserId, teamId);
+                for (StudentEvaluation studentEval : adviserStudentEvals) {
+                    if (studentEval.getQuestionnaire() != null
+                            && studentEval.getQuestionnaire().getId().equals(questionnaireId)
+                            && studentEval.getStatus() == StudentEvaluation.EvaluationStatus.IN_PROGRESS) {
+                        evaluationService.submitAdviserStudentEvaluation(adviserId, studentEval.getId());
+                    }
+                }
+                log.info("Submitted mixed evaluation {} and associated student evals", evaluationId);
             }
 
             return ResponseEntity.ok(Map.of(

@@ -3,6 +3,8 @@ import { useParams, useNavigate } from "react-router-dom";
 import AdviserSidebar from "../../components/Sidebar/AdviserSidebar";
 import { adviserAPI } from "../../services/api";
 import IndividualEvaluationGrid from "./IndividualEvaluationGrid";
+import { useToast } from "../../contexts/ToastContext";
+import ConfirmModal from "../../components/ConfirmModal/ConfirmModal";
 import "../DashboardTeacher/Teacher.css";
 import "./Adviser.css";
 
@@ -28,6 +30,9 @@ const EvaluateForm = () => {
   const [submitting, setSubmitting] = useState(false);
   const [currentSectionIndex, setCurrentSectionIndex] = useState(0);
   const [currentQuestionIndex, setCurrentQuestionIndex] = useState(0);
+  const [confirmSubmit, setConfirmSubmit] = useState(false);
+
+  const toast = useToast();
 
   // Organize sections with proper structure
   const sections = useMemo(() => {
@@ -145,9 +150,9 @@ const EvaluateForm = () => {
           generalComments: comments,
         });
       }
-      alert("Draft saved successfully!");
+      toast.success("Draft saved successfully!");
     } catch (e) {
-      alert("Error saving evaluation: " + e.message);
+      toast.error("Error saving evaluation: " + e.message);
     } finally {
       setSaving(false);
     }
@@ -205,9 +210,12 @@ const EvaluateForm = () => {
     await adviserAPI.saveMixedEvaluation(payload);
   };
 
-  const handleSubmit = async () => {
-    if (!window.confirm("Are you sure you want to submit this evaluation? You cannot edit it after submission.")) return;
-    
+  const handleSubmit = () => {
+    setConfirmSubmit(true);
+  };
+
+  const doSubmit = async () => {
+    setConfirmSubmit(false);
     setSubmitting(true);
     try {
       if (isMixedQuestionnaire) {
@@ -222,7 +230,7 @@ const EvaluateForm = () => {
       }
       navigate("/adviser/completed");
     } catch (e) {
-      alert("Error submitting evaluation: " + e.message);
+      toast.error("Error submitting evaluation: " + e.message);
       setSubmitting(false);
     }
   };
@@ -479,6 +487,15 @@ const EvaluateForm = () => {
             </div>
           </div>
         </div>
+        <ConfirmModal
+          isOpen={confirmSubmit}
+          title="Submit Evaluation"
+          message="Are you sure you want to submit this evaluation? You cannot edit it after submission."
+          confirmText="Submit"
+          cancelText="Cancel"
+          onConfirm={doSubmit}
+          onCancel={() => setConfirmSubmit(false)}
+        />
       </div>
     );
   }
@@ -714,6 +731,15 @@ const EvaluateForm = () => {
           </div>
         </div>
       </div>
+      <ConfirmModal
+        isOpen={confirmSubmit}
+        title="Submit Evaluation"
+        message="Are you sure you want to submit this evaluation? You cannot edit it after submission."
+        confirmText="Submit"
+        cancelText="Cancel"
+        onConfirm={doSubmit}
+        onCancel={() => setConfirmSubmit(false)}
+      />
     </div>
   );
 };

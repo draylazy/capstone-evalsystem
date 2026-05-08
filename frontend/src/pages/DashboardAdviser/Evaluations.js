@@ -213,10 +213,14 @@ const Evaluations = () => {
                 {paginatedData.map((q, index) => {
                   const status = resolveQueueStatus(q);
                   const statusRow = statusByQuestionnaire[q.id];
-                  const progress = statusRow?.progressPercent ?? 0;
-                  const answered = statusRow?.answeredCount ?? 0;
-                  const totalQuestions = statusRow?.totalQuestions ?? 0;
+                  const rawTotalQuestions = statusRow?.totalQuestions ?? 0;
                   const lastUpdated = statusRow?.updatedAt;
+
+                  // If submitted, always show 100% regardless of score count in DB
+                  const isSubmitted = status === "SUBMITTED";
+                  const totalQuestions = rawTotalQuestions;
+                  const answered = isSubmitted ? rawTotalQuestions : (statusRow?.answeredCount ?? 0);
+                  const progress = isSubmitted ? 100 : (statusRow?.progressPercent ?? 0);
 
                   return (
                   <tr key={q.id}>
