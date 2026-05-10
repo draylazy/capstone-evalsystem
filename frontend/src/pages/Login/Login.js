@@ -6,6 +6,8 @@ import BlurText from '../../components/BlurText/BlurText';
 import '../../components/Aurora/Aurora.css';
 import './Login.css';
 
+import logo from '../../components/Logo/LOGO test.png';
+
 const API_BASE_URL = 'http://localhost:8080';
 
 function Login() {
@@ -131,7 +133,8 @@ function Login() {
       />
       <div className="login-container">
         <div className="login-box" ref={cardRef} onMouseMove={handleCardMouse}>
-          <h1>SAES</h1>
+          <img src={logo} alt="Logo" style={{ display: 'block', margin: '0 auto 15px auto', width: '100px', height: '100px', objectFit: 'contain' }} />
+          <h1 style={{ marginBottom: '10px' }}>Evaluation System</h1>
           <h3>
             <BlurText
               text="Student and Adviser Evaluation System"

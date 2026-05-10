@@ -41,12 +41,10 @@ const Reports = () => {
   }, []);
 
   const adviserEvalsForTeam = useMemo(() => evaluations.filter(e => e.teamName === selectedTeamName), [evaluations, selectedTeamName]);
-  const studentSelfEvalsForTeam = useMemo(() => studentEvaluations.filter(e => e.teamName === selectedTeamName && e.isSelf), [studentEvaluations, selectedTeamName]);
   const studentPeerEvalsForTeam = useMemo(() => studentEvaluations.filter(e => e.teamName === selectedTeamName && !e.isSelf), [studentEvaluations, selectedTeamName]);
 
   const { currentPage: curPageQuest, totalPages: totPageQuest, paginatedData: pagQuest, goToPage: goPageQuest } = usePagination(questionnaires, 10);
   const { currentPage: curPageAdv, totalPages: totPageAdv, paginatedData: pagAdv, goToPage: goPageAdv } = usePagination(adviserEvalsForTeam, 10);
-  const { currentPage: curPageSelf, totalPages: totPageSelf, paginatedData: pagSelf, goToPage: goPageSelf } = usePagination(studentSelfEvalsForTeam, 10);
   const { currentPage: curPagePeer, totalPages: totPagePeer, paginatedData: pagPeer, goToPage: goPagePeer } = usePagination(studentPeerEvalsForTeam, 10);
 
   useEffect(() => {
@@ -429,66 +427,10 @@ const Reports = () => {
                   </div>
                 ) : (
                   <>
-                    <div style={{ marginBottom: '40px' }}>
-                      <h3 style={{ borderBottom: '1px solid rgba(255,255,255,0.1)', paddingBottom: '10px' }}>Student Self-Evaluations</h3>
-                      {studentSelfEvalsForTeam.length === 0 ? (
-                        <p className="pending">No student self-evaluations for this team yet.</p>
-                      ) : (
-                        <>
-                        <table className="class-table">
-                          <thead>
-                            <tr>
-                              <th>Student Name</th>
-                              <th>Status</th>
-                              <th>Answers</th>
-                              <th>Avg Score</th>
-                              <th>Submitted Date</th>
-                              <th>Action</th>
-                            </tr>
-                          </thead>
-                          <tbody>
-                            {pagSelf.map((evaluation) => (
-                              <tr key={evaluation.id}>
-                                <td>{evaluation.evaluatorName}</td>
-                                <td>
-                                  <span className={evaluation.status === "SUBMITTED" ? "completed" : "pending"}>
-                                    {evaluation.status === "SUBMITTED" ? "Submitted" : "In Progress"}
-                                  </span>
-                                </td>
-                                <td>{evaluation.scoreCount}</td>
-                                <td>
-                                  {evaluation.averageScore !== null && evaluation.averageScore !== undefined
-                                    ? <strong style={{ color: 'var(--dtm-gold)' }}>{evaluation.averageScore}</strong>
-                                    : "N/A"}
-                                </td>
-                                <td>
-                                  {evaluation.submittedAt
-                                    ? new Date(evaluation.submittedAt).toLocaleDateString()
-                                    : "Not submitted"}
-                                </td>
-                                <td>
-                                  {evaluation.status === "SUBMITTED" && (
-                                    <button
-                                      className="btn"
-                                      onClick={() => viewStudentEvaluationDetails(evaluation.id)}
-                                    >
-                                      View Details
-                                    </button>
-                                  )}
-                                </td>
-                              </tr>
-                            ))}
-                          </tbody>
-                        </table>
-                        <Pagination currentPage={curPageSelf} totalPages={totPageSelf} onPageChange={goPageSelf} />
-                        </>
-                      )}
-                    </div>
-
                     <div>
-                      <h3 style={{ borderBottom: '1px solid rgba(255,255,255,0.1)', paddingBottom: '10px' }}>Student Peer Evaluations</h3>
+                      <h3 style={{ borderBottom: '1px solid rgba(255,255,255,0.1)', paddingBottom: '10px' }}>Student Evaluations</h3>
                       {studentPeerEvalsForTeam.length === 0 ? (
-                        <p className="pending">No peer-to-peer evaluations for this team yet.</p>
+                        <p className="pending">No student evaluations for this team yet.</p>
                       ) : (
                         <>
                         <table className="class-table">

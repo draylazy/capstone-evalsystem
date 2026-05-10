@@ -3,6 +3,7 @@ import { useLocation, useNavigate } from "react-router-dom";
 import { authAPI } from "../../services/api";
 import { LayoutDashboard, GraduationCap, UserCheck, ClipboardList, BarChart2, TrendingUp, Users } from "lucide-react";
 import "./Sidebar.css";
+import logo from '../Logo/LOGO test.png';
 
 const TeacherSidebar = () => {
   const navigate = useNavigate();
@@ -56,7 +57,10 @@ const TeacherSidebar = () => {
 
   return (
     <div className="sidebar sidebar--teacher">
-      <h2>Teacher Panel</h2>
+      <div className="sidebar-header" style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', padding: '20px 0', borderBottom: '1px solid rgba(255,255,255,0.08)' }}>
+        <img src={logo} alt="Logo" style={{ width: '50px', height: '50px', marginBottom: '8px', objectFit: 'contain' }} />
+        <h2 style={{ fontSize: '1.1rem', margin: 0, color: 'var(--dtm-gold)' }}>Teacher Panel</h2>
+      </div>
       <ul>
         {menuItems.map((item) => (
           <li

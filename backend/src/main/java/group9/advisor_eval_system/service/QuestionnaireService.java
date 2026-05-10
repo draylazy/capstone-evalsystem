@@ -471,6 +471,11 @@ public class QuestionnaireService {
             throw new RuntimeException("Cannot edit locked questionnaire. It has been answered by advisers.");
         }
 
+        // Check if active peer-to-peer questionnaire
+        if (questionnaire.getTarget() == Questionnaire.QuestionnaireTarget.STUDENT && Boolean.TRUE.equals(questionnaire.getIsActive())) {
+            throw new RuntimeException("Active peer-to-peer questionnaires cannot be edited. Please deactivate it first.");
+        }
+
         if (request.getTitle() != null && !request.getTitle().isEmpty()) {
             questionnaire.setTitle(request.getTitle());
         }
@@ -849,6 +854,11 @@ public class QuestionnaireService {
         // Check if questionnaire is locked
         if (questionnaire.getIsLocked() != null && questionnaire.getIsLocked()) {
             throw new RuntimeException("Cannot edit locked questionnaire. It has been answered by advisers.");
+        }
+
+        // Check if active peer-to-peer questionnaire
+        if (questionnaire.getTarget() == Questionnaire.QuestionnaireTarget.STUDENT && Boolean.TRUE.equals(questionnaire.getIsActive())) {
+            throw new RuntimeException("Active peer-to-peer questionnaires cannot be edited. Please deactivate it first.");
         }
 
         QuestionnaireItem item = questionnaireItemRepository.findById(itemId)
