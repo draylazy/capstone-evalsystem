@@ -416,39 +416,32 @@ public class QuestionnaireService {
             throw new RuntimeException("You can only delete your own questionnaires");
         }
 
-        // Disconnect all evaluation scores from questionnaire items
+        // Disconnect all evaluation scores from questionnaire items (keep evaluations for Reports)
         List<EvaluationScore> evaluationScores = evaluationScoreRepository.findByQuestionnaireId(questionnaireId);
         for (EvaluationScore score : evaluationScores) {
             score.setQuestionnaireItem(null);
         }
         evaluationScoreRepository.saveAll(evaluationScores);
 
-        // Disconnect all student evaluation scores from questionnaire items
-        List<StudentEvaluationScore> studentEvaluationScores = studentEvaluationScoreRepository.findByQuestionnaireId(questionnaireId);
-        for (StudentEvaluationScore score : studentEvaluationScores) {
-            score.setQuestionnaireItem(null);
-        }
-        studentEvaluationScoreRepository.saveAll(studentEvaluationScores);
-
-        // Disconnect all evaluations from this questionnaire
+        // Disconnect all evaluations from this questionnaire (preserve for Reports)
         List<Evaluation> evaluations = evaluationRepository.findByQuestionnaireId(questionnaireId);
         for (Evaluation evaluation : evaluations) {
             evaluation.setQuestionnaire(null);
         }
         evaluationRepository.saveAll(evaluations);
 
-        // Disconnect all student evaluations from this questionnaire
+        // Hard delete all student evaluations for this questionnaire.
+        // CascadeType.ALL on StudentEvaluation.scores will also delete their StudentEvaluationScore rows,
+        // so we do NOT need to disconnect scores separately — just delete the parent records.
         List<StudentEvaluation> studentEvaluations = studentEvaluationRepository.findByQuestionnaireId(questionnaireId);
-        for (StudentEvaluation studentEvaluation : studentEvaluations) {
-            studentEvaluation.setQuestionnaire(null);
-        }
-        studentEvaluationRepository.saveAll(studentEvaluations);
+        studentEvaluationRepository.deleteAll(studentEvaluations);
+        studentEvaluationRepository.flush();
 
         // Hard delete the questionnaire (cascades to items and sections)
         questionnaireRepository.deleteById(questionnaireId);
 
-        log.info("Hard deleted questionnaire {} and disconnected {} evaluations, {} student evaluations, {} evaluation scores, and {} student evaluation scores",
-                questionnaireId, evaluations.size(), studentEvaluations.size(), evaluationScores.size(), studentEvaluationScores.size());
+        log.info("Hard deleted questionnaire {} — disconnected {} evaluations/{} eval scores, hard-deleted {} student evaluations",
+                questionnaireId, evaluations.size(), evaluationScores.size(), studentEvaluations.size());
 
         userManagementService.asyncSyncAllDataToGoogleSheets(questionnaire.getCreatedByTeacher().getEmail());
     }
