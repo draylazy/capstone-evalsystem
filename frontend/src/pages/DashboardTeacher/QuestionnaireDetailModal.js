@@ -3,6 +3,7 @@ import { questionnaireAPI } from "../../services/api";
 import { useToast } from "../../contexts/ToastContext";
 import "./Teacher.css";
 import "./QuestionnaireTwoColumn.css";
+import CustomSelect from "../../components/CustomSelect/CustomSelect";
 
 const QuestionnaireDetailModal = ({ isOpen, onClose, questionnaireId, onUpdate }) => {
   const toast = useToast();
@@ -21,6 +22,7 @@ const QuestionnaireDetailModal = ({ isOpen, onClose, questionnaireId, onUpdate }
   const [editingQuestionIndex, setEditingQuestionIndex] = useState(null);
   const [newQuestion, setNewQuestion] = useState({
     questionText: "",
+    questionDescription: "",
     questionType: "NUMERIC_SCALE",
     minScore: 1,
     maxScore: 5,
@@ -126,6 +128,7 @@ const QuestionnaireDetailModal = ({ isOpen, onClose, questionnaireId, onUpdate }
 
     setNewQuestion({
       questionText: "",
+      questionDescription: "",
       questionType: formData.target === 'STUDENT' ? "RATING" : "NUMERIC_SCALE",
       minScore: 1,
       maxScore: formData.target === 'STUDENT' ? 10 : 5,
@@ -198,7 +201,7 @@ const QuestionnaireDetailModal = ({ isOpen, onClose, questionnaireId, onUpdate }
 
   return (
     <div className="modal-overlay" onClick={onClose}>
-      <div className="modal-content questionnaire-detail-modal" onClick={(e) => e.stopPropagation()} style={{ width: '95%', maxWidth: '1000px', maxHeight: '90vh', overflowY: 'auto' }}>
+      <div className="modal-content questionnaire-detail-modal" onClick={(e) => e.stopPropagation()} style={{ width: '95%', maxWidth: '1250px', maxHeight: '90vh', overflowY: 'auto' }}>
         <div className="modal-header" style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '20px', borderBottom: '1px solid rgba(255,255,255,0.1)', paddingBottom: '15px' }}>
           <h2 style={{ margin: 0, color: 'var(--dtm-gold)' }}>
             {isEditing ? "Edit Questionnaire" : "Questionnaire Details"}
@@ -215,7 +218,7 @@ const QuestionnaireDetailModal = ({ isOpen, onClose, questionnaireId, onUpdate }
             {!isEditing ? (
               /* VIEW MODE */
               <div className="view-mode-container">
-                <div className="detail-grid" style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '20px', marginBottom: '30px' }}>
+                <div className="detail-grid" style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(250px, 1fr))', gap: '20px', marginBottom: '30px' }}>
                   <div className="detail-item">
                     <label style={{ display: 'block', fontSize: '12px', color: 'var(--dtm-muted)', textTransform: 'uppercase', marginBottom: '5px' }}>Title</label>
                     <div style={{ fontSize: '18px', fontWeight: '600' }}>{questionnaire.title}</div>
@@ -308,7 +311,7 @@ const QuestionnaireDetailModal = ({ isOpen, onClose, questionnaireId, onUpdate }
               /* EDIT MODE */
               <div className="edit-mode-container" style={{ display: 'flex', flexDirection: 'column', height: '100%' }}>
                 <form onSubmit={handleSaveChanges} style={{ display: 'flex', flexDirection: 'column', flex: 1 }}>
-                  <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '24px' }}>
+                  <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(350px, 1fr))', gap: '24px' }}>
                     {/* LEFT COLUMN - SECTION EDITOR & QUESTIONS */}
                     <div className="questionnaire-preview-panel" style={{ display: 'flex', flexDirection: 'column' }}>
                       {formData.sections[activeSectionIndex] && (
@@ -490,35 +493,40 @@ const QuestionnaireDetailModal = ({ isOpen, onClose, questionnaireId, onUpdate }
                             value={formData.title}
                             onChange={(e) => setFormData({ ...formData, title: e.target.value })}
                             required
-                            placeholder="e.g., Team Performance Evaluation"
+                            placeholder={formData.target === 'STUDENT' ? "e.g., Peer Performance Evaluation" : "e.g., Team Performance Evaluation"}
                             style={{ fontSize: '11px' }}
                           />
                         </div>
                         <div className="form-group" style={{ minWidth: '200px' }}>
                           <label>Questionnaire For</label>
-                          <select
+                          <CustomSelect
                             value={formData.target}
-                            onChange={(e) => {
-                              const newTarget = e.target.value;
+                            onChange={(newTarget) => {
                               setFormData({ ...formData, target: newTarget });
                               if (newTarget === 'STUDENT' && !['RATING', 'TEXT'].includes(newQuestion.questionType)) {
                                 setNewQuestion({ ...newQuestion, questionType: 'RATING', maxScore: 10 });
                               }
                             }}
-                            style={{ fontSize: '11px' }}
-                          >
-                            <option value="ADVISER">Team</option>
-                            <option value="STUDENT">Peer-to-Peer</option>
-                          </select>
+                            options={[
+                              { value: 'ADVISER', label: 'Team' },
+                              { value: 'STUDENT', label: 'Peer-to-Peer' }
+                            ]}
+                          />
                         </div>
                       </div>
 
                       <div className="form-group" style={{ marginBottom: '4px', marginTop: '-6px' }}>
-                        <label>Description</label>
+                        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                          <label style={{ marginBottom: '4px' }}>Description</label>
+                          <span style={{ fontSize: '9px', color: 'var(--dtm-muted)' }}>
+                            {formData.description?.length || 0}/250
+                          </span>
+                        </div>
                         <textarea
                           value={formData.description}
                           onChange={(e) => setFormData({ ...formData, description: e.target.value })}
                           rows="2"
+                          maxLength={250}
                           placeholder="What is this questionnaire about?"
                           style={{ fontSize: '11px' }}
                         />
@@ -546,8 +554,8 @@ const QuestionnaireDetailModal = ({ isOpen, onClose, questionnaireId, onUpdate }
                         <div className="add-question-box">
                           <div className="form-group">
                             <label>Question Text *</label>
-                            <div style={{ display: 'flex', gap: '8px', alignItems: 'center', justifyContent: 'space-between' }}>
-                              <div style={{ display: 'flex', gap: '8px', alignItems: 'center', flex: 1 }}>
+                            <div style={{ display: 'flex', gap: '8px', alignItems: 'center', justifyContent: 'space-between', flexWrap: 'wrap' }}>
+                              <div style={{ display: 'flex', gap: '8px', alignItems: 'center', flex: 1, minWidth: '250px', flexWrap: 'wrap' }}>
                                 <input
                                   type="text"
                                   value={newQuestion.questionText}
@@ -555,32 +563,26 @@ const QuestionnaireDetailModal = ({ isOpen, onClose, questionnaireId, onUpdate }
                                   placeholder="Ask your question..."
                                   style={{ fontSize: '11px', flex: 1, minWidth: '200px' }}
                                 />
-                                <select
+                                <CustomSelect
                                   value={newQuestion.questionType}
-                                  onChange={(e) => {
-                                    const qType = e.target.value;
+                                  onChange={(qType) => {
                                     setNewQuestion({ 
                                       ...newQuestion, 
                                       questionType: qType,
                                       maxScore: qType === 'RATING' && formData.target === 'STUDENT' ? 10 : newQuestion.maxScore
                                     });
                                   }}
-                                  style={{ fontSize: '11px', width: '115px', flexShrink: 0 }}
-                                >
-                                  {formData.target === 'STUDENT' ? (
-                                    <>
-                                      <option value="RATING">Rating</option>
-                                      <option value="TEXT">Text Response</option>
-                                    </>
-                                  ) : (
-                                    <>
-                                      <option value="NUMERIC_SCALE">Numeric Scale</option>
-                                      <option value="RATING">Rating</option>
-                                      <option value="TEXT">Text Response</option>
-                                      <option value="MULTIPLE_CHOICE">Multiple Choice</option>
-                                    </>
-                                  )}
-                                </select>
+                                  options={formData.target === 'STUDENT' ? [
+                                    { value: 'RATING', label: 'Rating' },
+                                    { value: 'TEXT', label: 'Text Response' }
+                                  ] : [
+                                    { value: 'NUMERIC_SCALE', label: 'Numeric Scale' },
+                                    { value: 'RATING', label: 'Rating' },
+                                    { value: 'TEXT', label: 'Text Response' },
+                                    { value: 'MULTIPLE_CHOICE', label: 'Multiple Choice' }
+                                  ]}
+                                  style={{ width: '135px', flexShrink: 0 }}
+                                />
                               </div>
 
                               <div style={{ display: 'flex', gap: '8px', alignItems: 'center' }}>
@@ -617,6 +619,7 @@ const QuestionnaireDetailModal = ({ isOpen, onClose, questionnaireId, onUpdate }
                                       setEditingQuestionIndex(null);
                                       setNewQuestion({
                                         questionText: "",
+                                        questionDescription: "",
                                         questionType: formData.target === 'STUDENT' ? "RATING" : "NUMERIC_SCALE",
                                         minScore: 1,
                                         maxScore: formData.target === 'STUDENT' ? 10 : 5,
@@ -647,6 +650,27 @@ const QuestionnaireDetailModal = ({ isOpen, onClose, questionnaireId, onUpdate }
                                 </button>
                               </div>
                             </div>
+
+                            {/* Description field for Peer-to-Peer Questionnaires */}
+                            {(formData.target === 'STUDENT' || formData.sections[activeSectionIndex]?.evaluateIndividuals) && (
+                              <div className="form-group" style={{ marginTop: '8px', marginBottom: '12px' }}>
+                                <label style={{ fontSize: '11px', opacity: 0.8 }}>Question Description (Optional)</label>
+                                <textarea
+                                  className="custom-textarea"
+                                  value={newQuestion.questionDescription || ""}
+                                  onChange={(e) => setNewQuestion({ ...newQuestion, questionDescription: e.target.value })}
+                                  placeholder="Add more details or instructions for this question..."
+                                  style={{ 
+                                    fontSize: '11px', 
+                                    minHeight: '60px',
+                                    resize: 'vertical',
+                                    marginTop: '4px',
+                                    width: '100%',
+                                    padding: '10px'
+                                  }}
+                                />
+                              </div>
+                            )}
                           </div>
 
                           {(newQuestion.questionType === 'NUMERIC_SCALE' || newQuestion.questionType === 'RATING') && (
@@ -656,8 +680,14 @@ const QuestionnaireDetailModal = ({ isOpen, onClose, questionnaireId, onUpdate }
                                 <input
                                   type="number"
                                   value={newQuestion.minScore}
-                                  onChange={(e) => setNewQuestion({ ...newQuestion, minScore: parseInt(e.target.value) })}
-                                  min="0"
+                                  onChange={(e) => {
+                                    let val = parseInt(e.target.value);
+                                    if (isNaN(val) || val < 1) val = 1;
+                                    if (val > 10) val = 10;
+                                    setNewQuestion({ ...newQuestion, minScore: val });
+                                  }}
+                                  min="1"
+                                  max="10"
                                   style={{ fontSize: '11px' }}
                                 />
                               </div>
@@ -666,8 +696,14 @@ const QuestionnaireDetailModal = ({ isOpen, onClose, questionnaireId, onUpdate }
                                 <input
                                   type="number"
                                   value={newQuestion.maxScore}
-                                  onChange={(e) => setNewQuestion({ ...newQuestion, maxScore: parseInt(e.target.value) })}
+                                  onChange={(e) => {
+                                    let val = parseInt(e.target.value);
+                                    if (isNaN(val) || val < 1) val = 1;
+                                    if (val > 10) val = 10;
+                                    setNewQuestion({ ...newQuestion, maxScore: val });
+                                  }}
                                   min="1"
+                                  max="10"
                                   style={{ fontSize: '11px' }}
                                 />
                               </div>
@@ -730,13 +766,14 @@ const QuestionnaireDetailModal = ({ isOpen, onClose, questionnaireId, onUpdate }
                           <div style={{ marginTop: '8px', borderTop: '1px solid rgba(255, 255, 255, 0.1)', paddingTop: '8px' }}>
                             <div className="form-group" style={{ margin: 0 }}>
                               <label>Requirement</label>
-                              <select
+                              <CustomSelect
                                 value={newQuestion.required ? 'REQUIRED' : 'OPTIONAL'}
-                                onChange={(e) => setNewQuestion({ ...newQuestion, required: e.target.value === 'REQUIRED' })}
-                              >
-                                <option value="REQUIRED">Required</option>
-                                <option value="OPTIONAL">Optional</option>
-                              </select>
+                                onChange={(val) => setNewQuestion({ ...newQuestion, required: val === 'REQUIRED' })}
+                                options={[
+                                  { value: 'REQUIRED', label: 'Required' },
+                                  { value: 'OPTIONAL', label: 'Optional' }
+                                ]}
+                              />
                             </div>
                             {formData.target !== 'STUDENT' && (
                               <>

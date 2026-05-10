@@ -565,7 +565,14 @@
   display: flex;
   align-items: center;
   justify-content: center;
-  padding: 20px;
+  padding: 20px 20px 20px 280px; /* 260px sidebar + 20px padding */
+  box-sizing: border-box;
+}
+
+@media (max-width: 1024px) {
+  .evaluation-info-modal-overlay {
+    padding-left: 20px;
+  }
 }
 
 .evaluation-info-modal {
@@ -1074,6 +1081,14 @@
   justify-content: center;
   align-items: center;
   z-index: 1000;
+  padding-left: 260px; /* Shift past the sidebar */
+  box-sizing: border-box;
+}
+
+@media (max-width: 1024px) {
+  .modal-overlay {
+    padding-left: 0;
+  }
 }
 
 .modal-content {
@@ -1089,6 +1104,24 @@
   overflow-y: auto;
   box-shadow: 0 20px 60px rgba(0, 0, 0, 0.5);
   color: var(--dtm-text);
+}
+
+.modal-content::-webkit-scrollbar {
+  width: 8px;
+}
+
+.modal-content::-webkit-scrollbar-track {
+  background: rgba(255, 255, 255, 0.05);
+  border-radius: 10px;
+}
+
+.modal-content::-webkit-scrollbar-thumb {
+  background: #f2c94c;
+  border-radius: 10px;
+}
+
+.modal-content::-webkit-scrollbar-thumb:hover {
+  background: #ffdb70;
 }
 
 .modal-content h2 {
@@ -2090,7 +2123,7 @@
 }
 
 .questions-list::-webkit-scrollbar-thumb {
-  background: rgba(242, 201, 76, 0.3);
+  background: #f2c94c;
   border-radius: 3px;
 }
 
@@ -4281,7 +4314,14 @@
   display: flex;
   align-items: center;
   justify-content: center;
-  padding: 20px;
+  padding: 20px 20px 20px 280px; /* 260px sidebar + 20px padding */
+  box-sizing: border-box;
+}
+
+@media (max-width: 1024px) {
+  .perf-modal-overlay {
+    padding-left: 20px;
+  }
 }
 
 .perf-modal {

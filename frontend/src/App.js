@@ -33,11 +33,13 @@ import MyTeam from './pages/DashboardStudent/MyTeam';
 // Profile
 import Profile from './pages/Profile/Profile';
 import GoogleCallback from './pages/Profile/GoogleCallback';
+import InactivityTimeout from './components/InactivityTimeout';
 
 function App() {
   return (
     <ToastProvider>
       <Router>
+        <InactivityTimeout timeout={3600000} /> {/* 1 hour timeout */}
         <Routes>
         {/* Public */}
         <Route path="/" element={<Navigate to="/login" />} />

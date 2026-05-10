@@ -6,6 +6,14 @@
   align-items: center;
   justify-content: center;
   z-index: 1000;
+  padding-left: 260px; /* Shift past the sidebar */
+  box-sizing: border-box;
+}
+
+@media (max-width: 1024px) {
+  .modal-overlay {
+    padding-left: 0;
+  }
 }
 
 .modal-content {
@@ -67,6 +75,24 @@
   flex: 1;
   overflow-y: auto;
   padding: 20px;
+}
+
+.modal-body::-webkit-scrollbar {
+  width: 8px;
+}
+
+.modal-body::-webkit-scrollbar-track {
+  background: rgba(255, 255, 255, 0.05);
+  border-radius: 10px;
+}
+
+.modal-body::-webkit-scrollbar-thumb {
+  background: #f2c94c;
+  border-radius: 10px;
+}
+
+.modal-body::-webkit-scrollbar-thumb:hover {
+  background: #ffdb70;
 }
 
 .empty-state {
