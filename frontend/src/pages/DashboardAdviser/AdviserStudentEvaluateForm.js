@@ -108,6 +108,21 @@ const AdviserStudentEvaluateForm = () => {
   };
 
   const handleSubmit = () => {
+    // Validation
+    let isComplete = true;
+    for (const item of allItems) {
+      const val = answers[item.id];
+      if (item.required !== false && (val === undefined || val === null || val === "")) {
+        isComplete = false;
+        break;
+      }
+    }
+
+    if (!isComplete) {
+      toast.error("Please answer all questions before submitting.");
+      return;
+    }
+
     setConfirmSubmit(true);
   };
 
@@ -228,8 +243,9 @@ const AdviserStudentEvaluateForm = () => {
                   {currentItem.sectionTitle}
                 </div>
               )}
-              <h2 style={{ fontSize: "1.4rem", marginBottom: "20px", lineHeight: "1.4" }}>
+              <h2 style={{ fontSize: '1.4rem', marginBottom: '20px', lineHeight: '1.4' }}>
                 {currentItem.questionText}
+                {currentItem.required !== false && <span style={{ color: '#ff4d4f', marginLeft: '4px' }} title="Required">*</span>}
               </h2>
               <p style={{ color: "var(--dtm-muted)", lineHeight: "1.6", fontSize: "1rem" }}>
                 {currentItem.questionDescription ||

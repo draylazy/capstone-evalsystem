@@ -1,6 +1,7 @@
 import React, { useState, useEffect, useRef } from "react";
 import { useLocation, useNavigate } from "react-router-dom";
 import { authAPI } from "../../services/api";
+import logo from '../Logo/LOGO test.png';
 import { LayoutDashboard, CheckCircle } from "lucide-react";
 import "./Sidebar.css";
 
@@ -51,7 +52,10 @@ const AdviserSidebar = () => {
 
   return (
     <div className="sidebar sidebar--adviser">
-      <h2>Adviser Panel</h2>
+      <div className="sidebar-header" style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', padding: '20px 0', borderBottom: '1px solid rgba(255,255,255,0.08)' }}>
+        <img src={logo} alt="Logo" style={{ width: '50px', height: '50px', marginBottom: '8px', objectFit: 'contain' }} />
+        <h2 style={{ fontSize: '1.1rem', margin: 0, color: 'var(--dtm-gold)' }}>Adviser Panel</h2>
+      </div>
       <ul>
         {menuItems.map((item) => (
           <li

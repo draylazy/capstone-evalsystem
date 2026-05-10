@@ -40,8 +40,10 @@ export const ToastProvider = ({ children }) => {
     showToast(message, 'info', duration);
   }, [showToast]);
 
+  const value = React.useMemo(() => ({ showToast, success, error, warning, info }), [showToast, success, error, warning, info]);
+
   return (
-    <ToastContext.Provider value={{ showToast, success, error, warning, info }}>
+    <ToastContext.Provider value={value}>
       {children}
       <div className="toast-container">
         {toasts.map(toast => (

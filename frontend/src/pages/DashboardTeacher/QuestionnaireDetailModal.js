@@ -302,7 +302,19 @@ const QuestionnaireDetailModal = ({ isOpen, onClose, questionnaireId, onUpdate }
                 </div>
 
                 <div className="modal-actions" style={{ display: 'flex', justifyContent: 'flex-end', gap: '10px', borderTop: '1px solid rgba(255,255,255,0.1)', paddingTop: '20px' }}>
-                  <button className="btn btn-secondary" onClick={() => setIsEditing(true)}>Edit Details & Questions</button>
+                  <button 
+                    className="btn btn-secondary" 
+                    onClick={() => {
+                      if (questionnaire.target === 'STUDENT' && questionnaire.isActive) {
+                        toast.error("Active peer-to-peer questionnaires cannot be edited. Please deactivate it first.");
+                        return;
+                      }
+                      setIsEditing(true);
+                    }}
+                    title={questionnaire.target === 'STUDENT' && questionnaire.isActive ? "Deactivate to edit" : ""}
+                  >
+                    Edit Details & Questions
+                  </button>
                   <button className="btn btn-primary" onClick={() => window.open(questionnaire.googleFormUrl, '_blank')}>View Form</button>
                   <button className="btn btn-secondary" onClick={onClose}>Close</button>
                 </div>
