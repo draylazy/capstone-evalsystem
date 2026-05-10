@@ -1013,6 +1013,33 @@ export const performanceAPI = {
     if (!response.ok) await throwApiError(response, 'Failed to fetch peer performance');
     return await response.json();
   },
+
+  getTeamQuestionnaires: async (teamId) => {
+    const response = await fetch(
+      `${API_BASE_URL}/teacher/performance/teams/${teamId}/questionnaires`,
+      { method: 'GET', headers: getHeaders() }
+    );
+    if (!response.ok) await throwApiError(response, 'Failed to fetch team questionnaires');
+    return await response.json();
+  },
+
+  getTeamQuestionnaireResponses: async (teamId, questionnaireId) => {
+    const response = await fetch(
+      `${API_BASE_URL}/teacher/performance/teams/${teamId}/questionnaires/${questionnaireId}/responses`,
+      { method: 'GET', headers: getHeaders() }
+    );
+    if (!response.ok) await throwApiError(response, 'Failed to fetch questionnaire responses');
+    return await response.json();
+  },
+
+  getTeamIndividualScores: async (teamId) => {
+    const response = await fetch(
+      `${API_BASE_URL}/teacher/performance/teams/${teamId}/individual-scores`,
+      { method: 'GET', headers: getHeaders() }
+    );
+    if (!response.ok) await throwApiError(response, 'Failed to fetch individual scores');
+    return await response.json();
+  },
 };
 
 export default {

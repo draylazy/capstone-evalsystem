@@ -11,6 +11,9 @@ import CreateQuestionnaire from './pages/DashboardTeacher/CreateQuestionnaire';
 import Reports from './pages/DashboardTeacher/Reports';
 import Performance from './pages/DashboardTeacher/Performance';
 import StudentPerformance from './pages/DashboardTeacher/StudentPerformance';
+import TeamPerformancePage from './pages/DashboardTeacher/TeamPerformancePage';
+import TeamFormsPage from './pages/DashboardTeacher/TeamFormsPage';
+import TeamFormResponsesPage from './pages/DashboardTeacher/TeamFormResponsesPage';
 import EvaluationDetail from './pages/DashboardTeacher/EvaluationDetail';
 import StudentEvaluationDetail from './pages/DashboardTeacher/StudentEvaluationDetail';
 import Students from './pages/DashboardTeacher/Students';
@@ -91,6 +94,21 @@ function App() {
         <Route path="/teacher/performance/student/:studentId" element={
           <ProtectedRoute allowedRoles={['TEACHER']}>
             <StudentPerformance />
+          </ProtectedRoute>
+        } />
+        <Route path="/teacher/performance/team/:teamId" element={
+          <ProtectedRoute allowedRoles={['TEACHER']}>
+            <TeamPerformancePage />
+          </ProtectedRoute>
+        } />
+        <Route path="/teacher/performance/team/:teamId/forms" element={
+          <ProtectedRoute allowedRoles={['TEACHER']}>
+            <TeamFormsPage />
+          </ProtectedRoute>
+        } />
+        <Route path="/teacher/performance/team/:teamId/forms/:questionnaireId" element={
+          <ProtectedRoute allowedRoles={['TEACHER']}>
+            <TeamFormResponsesPage />
           </ProtectedRoute>
         } />
 

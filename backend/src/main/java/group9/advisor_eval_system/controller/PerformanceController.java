@@ -375,5 +375,239 @@ public class PerformanceController {
         summary.put("numericCount", numericCount);
         return summary;
     }
+
+    // ─── New performance-page endpoints ────────────────────────────────────────
+
+    /**
+     * GET /api/teacher/performance/teams/{teamId}/questionnaires
+     * Returns all questionnaires that have submitted student evaluations for students in this team.
+     */
+    @GetMapping("/teams/{teamId}/questionnaires")
+    public ResponseEntity<?> getTeamQuestionnaires(@PathVariable Long teamId, HttpServletRequest request) {
+        try {
+            Long teacherId = getTeacherId(request);
+            if (!isTeacherRole(teacherId)) {
+                return ResponseEntity.status(HttpStatus.FORBIDDEN)
+                        .body(Map.of("error", "Only teachers can access performance data"));
+            }
+
+            Team team = teamRepository.findById(teamId)
+                    .orElseThrow(() -> new RuntimeException("Team not found"));
+
+            if (team.getSchoolClass() == null || !teacherId.equals(team.getSchoolClass().getTeacherId())) {
+                return ResponseEntity.status(HttpStatus.FORBIDDEN)
+                        .body(Map.of("error", "You can only view teams from your own classes"));
+            }
+
+            List<TeamStudent> teamStudents = teamStudentRepository.findByTeamId(teamId);
+            List<Long> studentIds = teamStudents.stream()
+                    .map(ts -> ts.getStudent().getId())
+                    .collect(Collectors.toList());
+
+            if (studentIds.isEmpty()) {
+                return ResponseEntity.ok(Collections.emptyList());
+            }
+
+            // Collect unique questionnaires from all submitted evaluations for team members
+            Map<Long, Map<String, Object>> questionnaireMap = new LinkedHashMap<>();
+            for (Long studentId : studentIds) {
+                List<StudentEvaluation> evals = studentEvaluationRepository
+                        .findByEvaluateeIdAndStatus(studentId, StudentEvaluation.EvaluationStatus.SUBMITTED);
+                for (StudentEvaluation eval : evals) {
+                    if (eval.getQuestionnaire() == null) continue;
+                    Questionnaire q = eval.getQuestionnaire();
+                    questionnaireMap.computeIfAbsent(q.getId(), id -> {
+                        Map<String, Object> qInfo = new HashMap<>();
+                        qInfo.put("questionnaireId", q.getId());
+                        qInfo.put("title", q.getTitle());
+                        qInfo.put("description", q.getDescription());
+                        qInfo.put("target", q.getTarget() != null ? q.getTarget().name() : null);
+                        qInfo.put("submissionCount", 0L);
+                        return qInfo;
+                    });
+                    Long current = (Long) questionnaireMap.get(q.getId()).get("submissionCount");
+                    questionnaireMap.get(q.getId()).put("submissionCount", current + 1);
+                }
+            }
+
+            return ResponseEntity.ok(new ArrayList<>(questionnaireMap.values()));
+        } catch (Exception e) {
+            log.error("Error fetching team questionnaires for performance teamId={}", teamId, e);
+            return ResponseEntity.status(HttpStatus.BAD_REQUEST).body(Map.of("error", e.getMessage()));
+        }
+    }
+
+    /**
+     * GET /api/teacher/performance/teams/{teamId}/questionnaires/{questionnaireId}/responses
+     * Returns per-student Q&A responses for a specific questionnaire in this team.
+     */
+    @GetMapping("/teams/{teamId}/questionnaires/{questionnaireId}/responses")
+    public ResponseEntity<?> getTeamQuestionnaireResponses(
+            @PathVariable Long teamId,
+            @PathVariable Long questionnaireId,
+            HttpServletRequest request) {
+        try {
+            Long teacherId = getTeacherId(request);
+            if (!isTeacherRole(teacherId)) {
+                return ResponseEntity.status(HttpStatus.FORBIDDEN)
+                        .body(Map.of("error", "Only teachers can access performance data"));
+            }
+
+            Team team = teamRepository.findById(teamId)
+                    .orElseThrow(() -> new RuntimeException("Team not found"));
+
+            if (team.getSchoolClass() == null || !teacherId.equals(team.getSchoolClass().getTeacherId())) {
+                return ResponseEntity.status(HttpStatus.FORBIDDEN)
+                        .body(Map.of("error", "You can only view teams from your own classes"));
+            }
+
+            List<TeamStudent> teamStudents = teamStudentRepository.findByTeamId(teamId);
+            String questionnaireTitle = "";
+            List<Map<String, Object>> studentResponses = new ArrayList<>();
+
+            for (TeamStudent ts : teamStudents) {
+                Student student = ts.getStudent();
+                List<StudentEvaluation> evals = studentEvaluationRepository
+                        .findByEvaluateeIdAndStatusWithDetails(student.getId(), StudentEvaluation.EvaluationStatus.SUBMITTED)
+                        .stream()
+                        .filter(e -> e.getQuestionnaire() != null
+                                && e.getQuestionnaire().getId().equals(questionnaireId))
+                        .collect(Collectors.toList());
+
+                if (questionnaireTitle.isEmpty() && !evals.isEmpty()
+                        && evals.get(0).getQuestionnaire() != null) {
+                    questionnaireTitle = evals.get(0).getQuestionnaire().getTitle();
+                }
+
+                List<Map<String, Object>> evalMaps = evals.stream()
+                        .map(this::buildAdviserStudentEvalMap)
+                        .collect(Collectors.toList());
+
+                Map<String, Object> studentMap = new HashMap<>();
+                studentMap.put("studentId", student.getId());
+                studentMap.put("studentName", student.getFirstName() + " " + student.getLastName());
+                studentMap.put("evaluations", evalMaps);
+                studentResponses.add(studentMap);
+            }
+
+            Map<String, Object> result = new HashMap<>();
+            result.put("questionnaireId", questionnaireId);
+            result.put("questionnaireTitle", questionnaireTitle);
+            result.put("teamId", teamId);
+            result.put("teamName", team.getName());
+            result.put("students", studentResponses);
+            return ResponseEntity.ok(result);
+        } catch (Exception e) {
+            log.error("Error fetching team questionnaire responses teamId={} qId={}", teamId, questionnaireId, e);
+            return ResponseEntity.status(HttpStatus.BAD_REQUEST).body(Map.of("error", e.getMessage()));
+        }
+    }
+
+    /**
+     * GET /api/teacher/performance/teams/{teamId}/individual-scores
+     * Returns each student's aggregated scores from sections where evaluateIndividuals=true.
+     * Used by the AI on the Team Performance page.
+     */
+    @GetMapping("/teams/{teamId}/individual-scores")
+    public ResponseEntity<?> getTeamIndividualScores(@PathVariable Long teamId, HttpServletRequest request) {
+        try {
+            Long teacherId = getTeacherId(request);
+            if (!isTeacherRole(teacherId)) {
+                return ResponseEntity.status(HttpStatus.FORBIDDEN)
+                        .body(Map.of("error", "Only teachers can access performance data"));
+            }
+
+            Team team = teamRepository.findById(teamId)
+                    .orElseThrow(() -> new RuntimeException("Team not found"));
+
+            if (team.getSchoolClass() == null || !teacherId.equals(team.getSchoolClass().getTeacherId())) {
+                return ResponseEntity.status(HttpStatus.FORBIDDEN)
+                        .body(Map.of("error", "You can only view teams from your own classes"));
+            }
+
+            List<TeamStudent> teamStudents = teamStudentRepository.findByTeamId(teamId);
+            List<Map<String, Object>> result = new ArrayList<>();
+
+            for (TeamStudent ts : teamStudents) {
+                Student student = ts.getStudent();
+                List<StudentEvaluation> evals = studentEvaluationRepository
+                        .findByEvaluateeIdAndStatusWithDetails(student.getId(),
+                                StudentEvaluation.EvaluationStatus.SUBMITTED);
+
+                double totalScore = 0;
+                double totalMax = 0;
+                int totalNumericScores = 0;
+                int evalCountWithIndividual = 0;
+                List<Map<String, Object>> questionnaireSummaries = new ArrayList<>();
+
+                for (StudentEvaluation eval : evals) {
+                    if (eval.getQuestionnaire() == null) continue;
+
+                    // Collect item IDs that belong to evaluateIndividuals=true sections
+                    Set<Long> individualItemIds = new HashSet<>();
+                    if (eval.getQuestionnaire().getSections() != null) {
+                        eval.getQuestionnaire().getSections().forEach(section -> {
+                            if (Boolean.TRUE.equals(section.getEvaluateIndividuals())
+                                    && section.getItems() != null) {
+                                section.getItems().forEach(item -> individualItemIds.add(item.getId()));
+                            }
+                        });
+                    }
+                    if (individualItemIds.isEmpty()) continue;
+
+                    double evalTotal = 0;
+                    double evalMax = 0;
+                    int evalNumeric = 0;
+                    if (eval.getScores() != null) {
+                        for (StudentEvaluationScore score : eval.getScores()) {
+                            if (score.getQuestionnaireItem() == null) continue;
+                            if (!individualItemIds.contains(score.getQuestionnaireItem().getId())) continue;
+                            if (score.getNumericScore() != null) {
+                                evalTotal += score.getNumericScore();
+                                evalNumeric++;
+                                if (score.getQuestionnaireItem().getMaxScore() != null) {
+                                    evalMax += score.getQuestionnaireItem().getMaxScore();
+                                }
+                            }
+                        }
+                    }
+
+                    if (evalNumeric == 0) continue;
+
+                    evalCountWithIndividual++;
+                    totalScore += evalTotal;
+                    totalMax += evalMax;
+                    totalNumericScores += evalNumeric;
+
+                    Map<String, Object> qSummary = new HashMap<>();
+                    qSummary.put("questionnaireId", eval.getQuestionnaire().getId());
+                    qSummary.put("title", eval.getQuestionnaire().getTitle());
+                    qSummary.put("score", Math.round(evalTotal * 100.0) / 100.0);
+                    qSummary.put("maxScore", evalMax > 0 ? Math.round(evalMax * 100.0) / 100.0 : null);
+                    qSummary.put("percentage", evalMax > 0
+                            ? Math.round((evalTotal / evalMax) * 10000.0) / 100.0 : null);
+                    questionnaireSummaries.add(qSummary);
+                }
+
+                Map<String, Object> studentMap = new HashMap<>();
+                studentMap.put("studentId", student.getId());
+                studentMap.put("studentName", student.getFirstName() + " " + student.getLastName());
+                studentMap.put("evalCount", evalCountWithIndividual);
+                studentMap.put("totalScore",
+                        totalNumericScores > 0 ? Math.round(totalScore * 100.0) / 100.0 : null);
+                studentMap.put("maxPossible",
+                        totalMax > 0 ? Math.round(totalMax * 100.0) / 100.0 : null);
+                studentMap.put("percentage", (totalNumericScores > 0 && totalMax > 0)
+                        ? Math.round((totalScore / totalMax) * 10000.0) / 100.0 : null);
+                studentMap.put("questionnaires", questionnaireSummaries);
+                result.add(studentMap);
+            }
+
+            return ResponseEntity.ok(result);
+        } catch (Exception e) {
+            log.error("Error fetching team individual scores teamId={}", teamId, e);
+            return ResponseEntity.status(HttpStatus.BAD_REQUEST).body(Map.of("error", e.getMessage()));
+        }
+    }
 }
 

@@ -37,7 +37,7 @@ public class GeminiClient {
     /**
      * Generate text using the user-provided API key and provider.
      * Falls back to the server default Gemini key when the user has no key configured.
-     * Supported providers: "gemini", "openai", "anthropic".
+     * Supported providers: "gemini", "openai", "anthropic", "groq".
      */
     public String generateText(String systemInstruction, String userPrompt,
             String userApiKey, String userProvider) {
@@ -58,6 +58,7 @@ public class GeminiClient {
             return switch (provider) {
                 case "openai" -> callOpenAi(resolvedKey, systemInstruction, userPrompt);
                 case "anthropic" -> callAnthropic(resolvedKey, systemInstruction, userPrompt);
+                case "groq" -> callGroq(resolvedKey, systemInstruction, userPrompt);
                 default -> callGemini(resolvedKey, systemInstruction, userPrompt);
             };
         } catch (ExternalServiceException e) {
@@ -164,6 +165,44 @@ public class GeminiClient {
         String text = json.path("content").get(0).path("text").asText();
         if (text == null || text.isBlank()) {
             throw new RuntimeException("Anthropic returned an empty response");
+        }
+        return text.trim();
+    }
+
+    private String callGroq(String apiKey, String systemInstruction, String userPrompt)
+            throws Exception {
+        List<Map<String, String>> messages = new ArrayList<>();
+        if (systemInstruction != null && !systemInstruction.isBlank()) {
+            messages.add(Map.of("role", "system", "content", systemInstruction));
+        }
+        messages.add(Map.of("role", "user", "content", userPrompt));
+
+        Map<String, Object> bodyMap = new LinkedHashMap<>();
+        bodyMap.put("model", "llama-3.3-70b-versatile");
+        bodyMap.put("messages", messages);
+        bodyMap.put("max_tokens", 1024);
+        bodyMap.put("temperature", 0.7);
+
+        String body = objectMapper.writeValueAsString(bodyMap);
+
+        HttpRequest request = HttpRequest.newBuilder()
+                .uri(URI.create("https://api.groq.com/openai/v1/chat/completions"))
+                .header("Content-Type", "application/json")
+                .header("Authorization", "Bearer " + apiKey)
+                .POST(HttpRequest.BodyPublishers.ofString(body))
+                .build();
+
+        HttpResponse<String> response = httpClient.send(request, HttpResponse.BodyHandlers.ofString());
+
+        if (response.statusCode() != 200) {
+            throw new ExternalServiceException(
+                    "Groq API error " + response.statusCode() + ": " + response.body(), null);
+        }
+
+        JsonNode json = objectMapper.readTree(response.body());
+        String text = json.path("choices").get(0).path("message").path("content").asText();
+        if (text == null || text.isBlank()) {
+            throw new RuntimeException("Groq returned an empty response");
         }
         return text.trim();
     }
