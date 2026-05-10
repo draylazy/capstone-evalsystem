@@ -212,6 +212,48 @@ const EvaluateForm = () => {
   };
 
   const handleSubmit = () => {
+    // Validation
+    let isComplete = true;
+
+    if (isMixedQuestionnaire) {
+      for (const section of sections) {
+        if (section.evaluateIndividuals) {
+          for (const member of teamMembers) {
+            for (const item of section.items) {
+              const val = answers[member.studentId]?.[item.id];
+              if (val === undefined || val === null || val === "") {
+                isComplete = false;
+                break;
+              }
+            }
+            if (!isComplete) break;
+          }
+        } else {
+          for (const item of section.items) {
+            const val = answers[item.id];
+            if (item.required !== false && (val === undefined || val === null || val === "")) {
+              isComplete = false;
+              break;
+            }
+          }
+        }
+        if (!isComplete) break;
+      }
+    } else {
+      for (const item of allItems) {
+        const val = answers[item.id];
+        if (item.required !== false && (val === undefined || val === null || val === "")) {
+          isComplete = false;
+          break;
+        }
+      }
+    }
+
+    if (!isComplete) {
+      toast.error("Please answer all required questions before submitting.");
+      return;
+    }
+
     setConfirmSubmit(true);
   };
 
@@ -319,6 +361,7 @@ const EvaluateForm = () => {
                           }}>
                             <label style={{ fontSize: '1rem', fontWeight: '500', display: 'block', marginBottom: '12px' }}>
                               {item.questionText}
+                              {item.required !== false && <span style={{ color: '#ff4d4f', marginLeft: '4px' }} title="Required">*</span>}
                             </label>
 
                             {item.questionType === 'TEXT' ? (
@@ -537,7 +580,10 @@ const EvaluateForm = () => {
                   {currentItem.sectionTitle}
                 </div>
               )}
-              <h2 style={{ fontSize: '1.4rem', marginBottom: '20px', lineHeight: '1.4' }}>{currentItem.questionText}</h2>
+              <h2 style={{ fontSize: '1.4rem', marginBottom: '20px', lineHeight: '1.4' }}>
+                {currentItem.questionText}
+                {currentItem.required !== false && <span style={{ color: '#ff4d4f', marginLeft: '4px' }} title="Required">*</span>}
+              </h2>
               <p style={{ color: 'var(--dtm-muted)', lineHeight: '1.6', fontSize: '1rem' }}>
                 {currentItem.questionDescription || "Please provide your evaluation for this criteria."}
               </p>

@@ -12,8 +12,8 @@ export const generateDecimalRatingRange = (minScore, maxScore) => {
   // Add the highest value
   range.push(max);
 
-  // Add 9 decimal increments from max-0.1 to max-0.9
-  for (let i = 9; i >= 1; i--) {
+  // Add 9 decimal increments from max-0.1 down to max-0.9
+  for (let i = 1; i <= 9; i++) {
     const decimalValue = parseFloat((max - (i / 10)).toFixed(1));
     range.push(decimalValue);
   }

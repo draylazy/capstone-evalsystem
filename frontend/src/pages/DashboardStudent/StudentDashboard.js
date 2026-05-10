@@ -44,7 +44,7 @@ const StudentDashboard = () => {
     };
     
     fetchQuestionnaires();
-  }, [currentUser, toast]);
+  }, [currentUser]);
 
   const handleActionClick = (q) => {
     navigate(`/student/evaluate/${q.id}`);
