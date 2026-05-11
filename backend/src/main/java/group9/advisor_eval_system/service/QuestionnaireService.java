@@ -404,7 +404,7 @@ public class QuestionnaireService {
     }
 
     /**
-     * Hard delete questionnaire (preserves evaluations and scores by disconnecting FKs)
+     * Hard delete questionnaire and all associated responses
      */
     @Transactional
     public void deleteQuestionnaire(Long questionnaireId, Long teacherId) {
@@ -416,19 +416,12 @@ public class QuestionnaireService {
             throw new RuntimeException("You can only delete your own questionnaires");
         }
 
-        // Disconnect all evaluation scores from questionnaire items (keep evaluations for Reports)
-        List<EvaluationScore> evaluationScores = evaluationScoreRepository.findByQuestionnaireId(questionnaireId);
-        for (EvaluationScore score : evaluationScores) {
-            score.setQuestionnaireItem(null);
-        }
-        evaluationScoreRepository.saveAll(evaluationScores);
-
-        // Disconnect all evaluations from this questionnaire (preserve for Reports)
+        // Hard delete all adviser/team-level evaluations for this questionnaire
+        // CascadeType.ALL on Evaluation.scores will also delete their EvaluationScore rows,
+        // so we do NOT need to disconnect scores separately — just delete the parent records.
         List<Evaluation> evaluations = evaluationRepository.findByQuestionnaireId(questionnaireId);
-        for (Evaluation evaluation : evaluations) {
-            evaluation.setQuestionnaire(null);
-        }
-        evaluationRepository.saveAll(evaluations);
+        evaluationRepository.deleteAll(evaluations);
+        evaluationRepository.flush();
 
         // Hard delete all student evaluations for this questionnaire.
         // CascadeType.ALL on StudentEvaluation.scores will also delete their StudentEvaluationScore rows,
@@ -440,8 +433,8 @@ public class QuestionnaireService {
         // Hard delete the questionnaire (cascades to items and sections)
         questionnaireRepository.deleteById(questionnaireId);
 
-        log.info("Hard deleted questionnaire {} — disconnected {} evaluations/{} eval scores, hard-deleted {} student evaluations",
-                questionnaireId, evaluations.size(), evaluationScores.size(), studentEvaluations.size());
+        log.info("Hard deleted questionnaire {} — deleted {} adviser evaluations and {} student evaluations",
+                questionnaireId, evaluations.size(), studentEvaluations.size());
 
         userManagementService.asyncSyncAllDataToGoogleSheets(questionnaire.getCreatedByTeacher().getEmail());
     }

@@ -11,13 +11,11 @@
   justify-content: center;
   z-index: 10000;
   animation: fadeIn 0.2s ease-out;
-  padding-left: 260px; /* Shift past the sidebar */
-  box-sizing: border-box;
 }
 
 @media (max-width: 1024px) {
   .confirm-modal-overlay {
-    padding-left: 0;
+    /* No special handling needed for smaller screens */
   }
 }
 
@@ -66,6 +64,7 @@
   font-size: 15px;
   line-height: 1.5;
   color: #a09890;
+  text-align: center;
 }
 
 .confirm-modal-actions {
