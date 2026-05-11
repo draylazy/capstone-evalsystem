@@ -2,6 +2,9 @@ import React, { useEffect, useState, useMemo } from "react";
 import { useParams, useNavigate } from "react-router-dom";
 import AdviserSidebar from "../../components/Sidebar/AdviserSidebar";
 import { adviserAPI } from "../../services/api";
+import { useToast } from "../../contexts/ToastContext";
+import { generateDecimalRatingRange, generateNumericRange } from "../../utils/ratingUtils";
+import ConfirmModal from "../../components/ConfirmModal/ConfirmModal";
 import "../DashboardTeacher/Teacher.css";
 import "./Adviser.css";
 
@@ -16,6 +19,9 @@ const AdviserStudentEvaluateForm = () => {
   const [saving, setSaving] = useState(false);
   const [submitting, setSubmitting] = useState(false);
   const [currentQuestionIndex, setCurrentQuestionIndex] = useState(0);
+  const [confirmSubmit, setConfirmSubmit] = useState(false);
+
+  const toast = useToast();
 
   const goBack = () => navigate(`/adviser/student-evaluations/${teamId}`);
 
@@ -93,22 +99,35 @@ const AdviserStudentEvaluateForm = () => {
         evaluationId: evaluation.id,
         answers,
       });
-      alert("Draft saved successfully!");
+      toast.success("Draft saved successfully!");
     } catch (e) {
-      alert("Error saving: " + e.message);
+      toast.error("Error saving: " + e.message);
     } finally {
       setSaving(false);
     }
   };
 
-  const handleSubmit = async () => {
-    if (
-      !window.confirm(
-        "Are you sure you want to submit this evaluation? You cannot edit it after submission."
-      )
-    )
-      return;
+  const handleSubmit = () => {
+    // Validation
+    let isComplete = true;
+    for (const item of allItems) {
+      const val = answers[item.id];
+      if (item.required !== false && (val === undefined || val === null || val === "")) {
+        isComplete = false;
+        break;
+      }
+    }
 
+    if (!isComplete) {
+      toast.error("Please answer all questions before submitting.");
+      return;
+    }
+
+    setConfirmSubmit(true);
+  };
+
+  const doSubmit = async () => {
+    setConfirmSubmit(false);
     setSubmitting(true);
     try {
       await adviserAPI.saveStudentEvaluation({
@@ -118,7 +137,7 @@ const AdviserStudentEvaluateForm = () => {
       await adviserAPI.submitStudentEvaluation(evaluation.id);
       navigate(`/adviser/student-evaluations/${teamId}`);
     } catch (e) {
-      alert("Error submitting: " + e.message);
+      toast.error("Error submitting: " + e.message);
       setSubmitting(false);
     }
   };
@@ -152,12 +171,10 @@ const AdviserStudentEvaluateForm = () => {
       </div>
     );
 
-  const min = currentItem.minScore ?? 1;
-  const max = currentItem.maxScore ?? 5;
-  const range = Array.from(
-    { length: Math.abs(max - min) + 1 },
-    (_, i) => (max > min ? max - i : min - i)
-  );
+  const isRating = currentItem.questionType === "RATING";
+  const range = isRating
+    ? generateDecimalRatingRange(currentItem.minScore, currentItem.maxScore)
+    : generateNumericRange(currentItem.minScore, currentItem.maxScore);
 
   return (
     <div className="teacher-container">
@@ -226,8 +243,9 @@ const AdviserStudentEvaluateForm = () => {
                   {currentItem.sectionTitle}
                 </div>
               )}
-              <h2 style={{ fontSize: "1.4rem", marginBottom: "20px", lineHeight: "1.4" }}>
+              <h2 style={{ fontSize: '1.4rem', marginBottom: '20px', lineHeight: '1.4' }}>
                 {currentItem.questionText}
+                {currentItem.required !== false && <span style={{ color: '#ff4d4f', marginLeft: '4px' }} title="Required">*</span>}
               </h2>
               <p style={{ color: "var(--dtm-muted)", lineHeight: "1.6", fontSize: "1rem" }}>
                 {currentItem.questionDescription ||
@@ -500,6 +518,15 @@ const AdviserStudentEvaluateForm = () => {
           </div>
         </div>
       </div>
+      <ConfirmModal
+        isOpen={confirmSubmit}
+        title="Submit Evaluation"
+        message="Are you sure you want to submit this evaluation? You cannot edit it after submission."
+        confirmText="Submit"
+        cancelText="Cancel"
+        onConfirm={doSubmit}
+        onCancel={() => setConfirmSubmit(false)}
+      />
     </div>
   );
 };

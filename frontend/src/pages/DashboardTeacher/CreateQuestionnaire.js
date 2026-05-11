@@ -5,6 +5,7 @@ import { questionnaireAPI } from "../../services/api";
 import { useToast } from "../../contexts/ToastContext";
 import "./Teacher.css";
 import "./QuestionnaireTwoColumn.css";
+import CustomSelect from "../../components/CustomSelect/CustomSelect";
 
 const API_BASE_URL = (process.env.REACT_APP_API_BASE_URL || 'http://localhost:8080/api').replace(/\/api\/?$/, '');
 const LOCAL_API_BASE_URL = 'http://localhost:8080';
@@ -51,6 +52,7 @@ const CreateQuestionnaire = () => {
 
   const [newQuestion, setNewQuestion] = useState({
     questionText: "",
+    questionDescription: "",
     questionType: "NUMERIC_SCALE",
     minScore: 1,
     maxScore: 5,
@@ -61,6 +63,7 @@ const CreateQuestionnaire = () => {
   });
 
   const [activeSectionIndex, setActiveSectionIndex] = useState(0);
+  const [editingQuestionIndex, setEditingQuestionIndex] = useState(null);
   const [usesSections, setUsesSections] = useState(true);
 
   useEffect(() => {
@@ -155,12 +158,20 @@ const CreateQuestionnaire = () => {
 
     if (activeSectionIndex !== null) {
       const updatedSections = [...formData.sections];
-      updatedSections[activeSectionIndex].items.push({ ...newQuestion });
+      
+      if (editingQuestionIndex !== null) {
+        updatedSections[activeSectionIndex].items[editingQuestionIndex] = { ...newQuestion };
+        setEditingQuestionIndex(null);
+      } else {
+        updatedSections[activeSectionIndex].items.push({ ...newQuestion });
+      }
+      
       setFormData({ ...formData, sections: updatedSections });
     }
 
     setNewQuestion({
       questionText: "",
+      questionDescription: "",
       questionType: formData.target === 'STUDENT' ? "RATING" : "NUMERIC_SCALE",
       minScore: 1,
       maxScore: formData.target === 'STUDENT' ? 10 : 5,
@@ -170,7 +181,15 @@ const CreateQuestionnaire = () => {
       required: true,
     });
 
-    toast.success('Question added!');
+    toast.success(editingQuestionIndex !== null ? 'Question updated!' : 'Question added!');
+  };
+
+  const handleEditQuestion = (index) => {
+    if (activeSectionIndex !== null) {
+      const q = formData.sections[activeSectionIndex].items[index];
+      setNewQuestion({ ...q });
+      setEditingQuestionIndex(index);
+    }
   };
 
   const handleRemoveQuestion = (index) => {
@@ -270,7 +289,7 @@ const CreateQuestionnaire = () => {
           </div>
         )}
 
-        <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '24px', marginTop: '20px' }}>
+        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(350px, 1fr))', gap: '24px', marginTop: '20px' }}>
           {/* LEFT COLUMN - SECTION EDITOR & QUESTIONS */}
           <div className="questionnaire-preview-panel">
             {activeSectionIndex !== null && formData.sections[activeSectionIndex] && (
@@ -306,28 +325,30 @@ const CreateQuestionnaire = () => {
                     />
                   </div>
 
-                  <div className="form-group" style={{ marginBottom: '8px' }}>
-                    <label style={{ fontSize: '11px', fontWeight: '600', color: 'var(--dtm-gold)', margin: 0, display: 'flex', alignItems: 'center', gap: '8px' }}>
-                      <input
-                        type="checkbox"
-                        checked={formData.sections[activeSectionIndex].evaluateIndividuals || false}
-                        onChange={(e) => {
-                          const updatedSections = [...formData.sections];
-                          updatedSections[activeSectionIndex].evaluateIndividuals = e.target.checked;
-                          setFormData({ ...formData, sections: updatedSections });
-                          // If enabling individual eval and current question type is not compatible, reset to RATING
-                          if (e.target.checked && !['RATING', 'TEXT'].includes(newQuestion.questionType)) {
-                            setNewQuestion({ ...newQuestion, questionType: 'RATING', maxScore: 10 });
-                          }
-                        }}
-                        style={{ width: '14px', height: '14px', cursor: 'pointer' }}
-                      />
-                      Evaluate Individual Students
-                    </label>
-                    <small style={{ display: 'block', color: 'var(--dtm-muted)', fontSize: '9px', marginTop: '4px', marginLeft: '22px' }}>
-                      When enabled, advisers will answer these questions for each student individually instead of for the team as a whole. Questions follow the peer-to-peer format (Rating and Text only).
-                    </small>
-                  </div>
+                  {formData.target !== 'STUDENT' && (
+                    <div className="form-group" style={{ marginBottom: '8px' }}>
+                      <label style={{ fontSize: '11px', fontWeight: '600', color: 'var(--dtm-gold)', margin: 0, display: 'flex', alignItems: 'center', gap: '8px' }}>
+                        <input
+                          type="checkbox"
+                          checked={formData.sections[activeSectionIndex].evaluateIndividuals || false}
+                          onChange={(e) => {
+                            const updatedSections = [...formData.sections];
+                            updatedSections[activeSectionIndex].evaluateIndividuals = e.target.checked;
+                            setFormData({ ...formData, sections: updatedSections });
+                            // If enabling individual eval and current question type is not compatible, reset to RATING
+                            if (e.target.checked && !['RATING', 'TEXT'].includes(newQuestion.questionType)) {
+                              setNewQuestion({ ...newQuestion, questionType: 'RATING', maxScore: 10 });
+                            }
+                          }}
+                          style={{ width: '14px', height: '14px', cursor: 'pointer' }}
+                        />
+                        Evaluate Individual Students
+                      </label>
+                      <small style={{ display: 'block', color: 'var(--dtm-muted)', fontSize: '9px', marginTop: '4px', marginLeft: '22px' }}>
+                        When enabled, advisers will answer these questions for each student individually instead of for the team as a whole. Questions follow the peer-to-peer format (Rating and Text only).
+                      </small>
+                    </div>
+                  )}
                 </div>
 
                 <div style={{
@@ -352,9 +373,21 @@ const CreateQuestionnaire = () => {
                         className={`section-tab ${activeSectionIndex === idx ? 'active' : ''}`}
                         onClick={() => {
                           setActiveSectionIndex(idx);
+                          setEditingQuestionIndex(null);
                           // If switching to a section with individual eval and current question type is not compatible, reset to RATING
                           if (section.evaluateIndividuals && !['RATING', 'TEXT'].includes(newQuestion.questionType)) {
                             setNewQuestion({ ...newQuestion, questionType: 'RATING', maxScore: 10 });
+                          } else {
+                            setNewQuestion({
+                              questionText: "",
+                              questionType: formData.target === 'STUDENT' ? "RATING" : "NUMERIC_SCALE",
+                              minScore: 1,
+                              maxScore: formData.target === 'STUDENT' ? 10 : 5,
+                              choices: [],
+                              correctAnswer: "",
+                              pointsValue: 1,
+                              required: true,
+                            });
                           }
                         }}
                       >
@@ -393,16 +426,27 @@ const CreateQuestionnaire = () => {
                               {q.required === false ? ' • Optional' : ' • Required'}
                             </small>
                           </div>
-                          <button
-                            type="button"
-                            className="btn btn-sm btn-danger"
-                            onClick={() => handleRemoveQuestion(index)}
-                            style={{ padding: '4px 8px', fontSize: '10px', flexShrink: 0 }}
-                            title="Delete question"
-                          >
-                            ×
-                          </button>
-                        </div>
+                            <div style={{ display: 'flex', gap: '4px', flexShrink: 0 }}>
+                              <button
+                                type="button"
+                                className="btn btn-sm btn-secondary"
+                                onClick={() => handleEditQuestion(index)}
+                                style={{ padding: '4px 8px', fontSize: '10px' }}
+                                title="Edit question"
+                              >
+                                ✎
+                              </button>
+                              <button
+                                type="button"
+                                className="btn btn-sm btn-danger"
+                                onClick={() => handleRemoveQuestion(index)}
+                                style={{ padding: '4px 8px', fontSize: '10px' }}
+                                title="Delete question"
+                              >
+                                ×
+                              </button>
+                            </div>
+                          </div>
                       ))}
                     </div>
                   ) : (
@@ -426,27 +470,26 @@ const CreateQuestionnaire = () => {
                     value={formData.title}
                     onChange={(e) => setFormData({ ...formData, title: e.target.value })}
                     required
-                    placeholder="e.g., Team Performance Evaluation"
+                    placeholder={formData.target === 'STUDENT' ? "e.g., Peer Performance Evaluation" : "e.g., Team Performance Evaluation"}
                     style={{ fontSize: '11px' }}
                   />
                 </div>
 
-                <div className="form-group" style={{ width: '120px' }}>
+                <div className="form-group" style={{ minWidth: '200px' }}>
                   <label>Questionnaire For</label>
-                  <select
+                  <CustomSelect
                     value={formData.target}
-                    onChange={(e) => {
-                      const newTarget = e.target.value;
+                    onChange={(newTarget) => {
                       setFormData({ ...formData, target: newTarget });
                       if (newTarget === 'STUDENT' && !['RATING', 'TEXT'].includes(newQuestion.questionType)) {
                         setNewQuestion({ ...newQuestion, questionType: 'RATING', maxScore: 10 });
                       }
                     }}
-                    style={{ fontSize: '11px' }}
-                  >
-                    <option value="ADVISER">Team</option>
-                    <option value="STUDENT">Peer-to-Peer</option>
-                  </select>
+                    options={[
+                      { value: 'ADVISER', label: 'Team' },
+                      { value: 'STUDENT', label: 'Peer-to-Peer' }
+                    ]}
+                  />
                 </div>
                 <button
                   type="submit"
@@ -459,11 +502,17 @@ const CreateQuestionnaire = () => {
               </div>
 
               <div className="form-group" style={{ marginBottom: '4px', marginTop: '-6px' }}>
-                <label>Description</label>
+                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                  <label style={{ marginBottom: '4px' }}>Description</label>
+                  <span style={{ fontSize: '9px', color: 'var(--dtm-muted)' }}>
+                    {formData.description?.length || 0}/250
+                  </span>
+                </div>
                 <textarea
                   value={formData.description}
                   onChange={(e) => setFormData({ ...formData, description: e.target.value })}
                   rows="2"
+                  maxLength={250}
                   placeholder="What is this questionnaire about?"
                   style={{ fontSize: '11px' }}
                 />
@@ -485,27 +534,28 @@ const CreateQuestionnaire = () => {
 
               {/* Questions Display */}
               <div style={{ marginBottom: '8px', marginTop: '4px' }}>
-                <h3 style={{ margin: '0 0 8px 0', fontSize: '12px', fontWeight: '600', color: 'var(--dtm-gold)' }}>Add Question</h3>
+                <h3 style={{ margin: '0 0 8px 0', fontSize: '12px', fontWeight: '600', color: 'var(--dtm-gold)' }}>
+                  {editingQuestionIndex !== null ? 'Edit Question' : 'Add Question'}
+                </h3>
 
                 {/* Add Question Form */}
                 {activeSectionIndex !== null && (
                   <div className="add-question-box">
                     <div className="form-group">
                       <label>Question Text *</label>
-                      <div style={{ display: 'flex', gap: '8px', alignItems: 'center', justifyContent: 'space-between' }}>
-                        <div style={{ display: 'flex', gap: '8px', alignItems: 'center', flex: 1 }}>
+                      <div style={{ display: 'flex', gap: '8px', alignItems: 'center', justifyContent: 'space-between', flexWrap: 'wrap' }}>
+                        <div style={{ display: 'flex', gap: '8px', alignItems: 'center', flex: 1, minWidth: '250px', flexWrap: 'wrap' }}>
                           <input
                             type="text"
                             value={newQuestion.questionText}
                             onChange={(e) => setNewQuestion({ ...newQuestion, questionText: e.target.value })}
                             placeholder="Ask your question..."
-                            style={{ fontSize: '11px', flex: 1 }}
+                            style={{ fontSize: '11px', flex: 1, minWidth: '200px' }}
                           />
 
-                            <select
+                            <CustomSelect
                               value={newQuestion.questionType}
-                              onChange={(e) => {
-                                const qType = e.target.value;
+                              onChange={(qType) => {
                                 const isIndividualSection = formData.sections[activeSectionIndex]?.evaluateIndividuals;
                                 setNewQuestion({ 
                                   ...newQuestion, 
@@ -513,22 +563,17 @@ const CreateQuestionnaire = () => {
                                   maxScore: (qType === 'RATING' && (formData.target === 'STUDENT' || isIndividualSection)) ? 10 : newQuestion.maxScore
                                 });
                               }}
-                              style={{ fontSize: '11px', minWidth: '140px' }}
-                            >
-                              {formData.target === 'STUDENT' || formData.sections[activeSectionIndex]?.evaluateIndividuals ? (
-                                <>
-                                  <option value="RATING">Rating</option>
-                                  <option value="TEXT">Text Response</option>
-                                </>
-                              ) : (
-                                <>
-                                  <option value="NUMERIC_SCALE">Numeric Scale</option>
-                                  <option value="RATING">Rating</option>
-                                  <option value="TEXT">Text Response</option>
-                                  <option value="MULTIPLE_CHOICE">Multiple Choice</option>
-                                </>
-                              )}
-                            </select>
+                              options={(formData.target === 'STUDENT' || formData.sections[activeSectionIndex]?.evaluateIndividuals) ? [
+                                { value: 'RATING', label: 'Rating' },
+                                { value: 'TEXT', label: 'Text Response' }
+                              ] : [
+                                { value: 'NUMERIC_SCALE', label: 'Numeric Scale' },
+                                { value: 'RATING', label: 'Rating' },
+                                { value: 'TEXT', label: 'Text Response' },
+                                { value: 'MULTIPLE_CHOICE', label: 'Multiple Choice' }
+                              ]}
+                              style={{ width: '135px', flexShrink: 0 }}
+                            />
                         </div>
 
                         <div style={{ display: 'flex', gap: '8px', alignItems: 'center' }}>
@@ -554,9 +599,34 @@ const CreateQuestionnaire = () => {
                               flexShrink: 0,
                               position: 'relative'
                             }}
+                            title={editingQuestionIndex !== null ? "Update Question" : "Add Question"}
                           >
-                            +
+                            {editingQuestionIndex !== null ? '✓' : '+'}
                           </button>
+
+                          {editingQuestionIndex !== null && (
+                            <button
+                              type="button"
+                              onClick={() => {
+                                setEditingQuestionIndex(null);
+                                setNewQuestion({
+                                  questionText: "",
+                                  questionType: formData.target === 'STUDENT' ? "RATING" : "NUMERIC_SCALE",
+                                  minScore: 1,
+                                  maxScore: formData.target === 'STUDENT' ? 10 : 5,
+                                  choices: [],
+                                  correctAnswer: "",
+                                  pointsValue: 1,
+                                  required: true,
+                                });
+                              }}
+                              className="btn btn-sm btn-secondary"
+                              style={{ flexShrink: 0, padding: '0 8px', height: '36px', fontSize: '11px', borderRadius: '4px' }}
+                              title="Cancel Edit"
+                            >
+                              Cancel
+                            </button>
+                          )}
 
                           <button
                             type="button"
@@ -571,6 +641,27 @@ const CreateQuestionnaire = () => {
                           </button>
                         </div>
                       </div>
+
+                      {/* Description field for Peer-to-Peer Questionnaires */}
+                      {(formData.target === 'STUDENT' || formData.sections[activeSectionIndex]?.evaluateIndividuals) && (
+                        <div className="form-group" style={{ marginTop: '8px', marginBottom: '12px' }}>
+                          <label style={{ fontSize: '11px', opacity: 0.8 }}>Question Description (Optional)</label>
+                          <textarea
+                            className="custom-textarea"
+                            value={newQuestion.questionDescription || ""}
+                            onChange={(e) => setNewQuestion({ ...newQuestion, questionDescription: e.target.value })}
+                            placeholder="Add more details or instructions for this question..."
+                            style={{ 
+                              fontSize: '11px', 
+                              minHeight: '60px',
+                              resize: 'vertical',
+                              marginTop: '4px',
+                              width: '100%',
+                              padding: '10px'
+                            }}
+                          />
+                        </div>
+                      )}
                     </div>
 
                     {(newQuestion.questionType === 'NUMERIC_SCALE' || newQuestion.questionType === 'RATING') && (
@@ -580,8 +671,14 @@ const CreateQuestionnaire = () => {
                           <input
                             type="number"
                             value={newQuestion.minScore}
-                            onChange={(e) => setNewQuestion({ ...newQuestion, minScore: parseInt(e.target.value) })}
-                            min="0"
+                            onChange={(e) => {
+                              let val = parseInt(e.target.value);
+                              if (isNaN(val) || val < 1) val = 1;
+                              if (val > 10) val = 10;
+                              setNewQuestion({ ...newQuestion, minScore: val });
+                            }}
+                            min="1"
+                            max="10"
                             style={{ fontSize: '11px' }}
                           />
                         </div>
@@ -590,8 +687,14 @@ const CreateQuestionnaire = () => {
                           <input
                             type="number"
                             value={newQuestion.maxScore}
-                            onChange={(e) => setNewQuestion({ ...newQuestion, maxScore: parseInt(e.target.value) })}
+                            onChange={(e) => {
+                              let val = parseInt(e.target.value);
+                              if (isNaN(val) || val < 1) val = 1;
+                              if (val > 10) val = 10;
+                              setNewQuestion({ ...newQuestion, maxScore: val });
+                            }}
                             min="1"
+                            max="10"
                             style={{ fontSize: '11px' }}
                           />
                         </div>
@@ -654,13 +757,14 @@ const CreateQuestionnaire = () => {
                     <div style={{ marginTop: '8px', borderTop: '1px solid rgba(255, 255, 255, 0.1)', paddingTop: '8px' }}>
                       <div className="form-group" style={{ margin: 0 }}>
                         <label>Requirement</label>
-                        <select
+                        <CustomSelect
                           value={newQuestion.required ? 'REQUIRED' : 'OPTIONAL'}
-                          onChange={(e) => setNewQuestion({ ...newQuestion, required: e.target.value === 'REQUIRED' })}
-                        >
-                          <option value="REQUIRED">Required</option>
-                          <option value="OPTIONAL">Optional</option>
-                        </select>
+                          onChange={(val) => setNewQuestion({ ...newQuestion, required: val === 'REQUIRED' })}
+                          options={[
+                            { value: 'REQUIRED', label: 'Required' },
+                            { value: 'OPTIONAL', label: 'Optional' }
+                          ]}
+                        />
                       </div>
                       {formData.target !== 'STUDENT' && (
                         <>

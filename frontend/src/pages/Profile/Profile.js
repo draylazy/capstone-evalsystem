@@ -20,9 +20,10 @@ const fetchWithLocalFallback = async (path, options = {}) => {
 };
 
 const AI_PROVIDERS = [
-  { value: 'gemini',    label: 'Google Gemini',  hint: 'Get your key at aistudio.google.com' },
-  { value: 'openai',    label: 'OpenAI (ChatGPT)', hint: 'Get your key at platform.openai.com/api-keys' },
+  { value: 'gemini',    label: 'Google Gemini',       hint: 'Get your key at aistudio.google.com' },
+  { value: 'openai',   label: 'OpenAI (ChatGPT)',     hint: 'Get your key at platform.openai.com/api-keys' },
   { value: 'anthropic', label: 'Anthropic (Claude)', hint: 'Get your key at console.anthropic.com' },
+  { value: 'groq',     label: 'Groq',                hint: 'Get your key at console.groq.com/keys' },
 ];
 
 const Profile = () => {

@@ -2,8 +2,11 @@ import React, { useEffect, useState, useMemo } from "react";
 import { useParams, useNavigate } from "react-router-dom";
 import StudentSidebar from "../../components/Sidebar/StudentSidebar";
 import { useToast } from "../../contexts/ToastContext";
+import { generateDecimalRatingRange, generateNumericRange } from "../../utils/ratingUtils";
 import "../DashboardTeacher/Teacher.css";
 import "./StudentResponsive.css";
+import ConfirmModal from "../../components/ConfirmModal/ConfirmModal";
+import ExitConfirmModal from "../../components/ConfirmModal/ExitConfirmModal";
 
 const API_BASE_URL = "http://localhost:8080";
 
@@ -20,8 +23,13 @@ const StudentEvaluateForm = () => {
   const [members, setMembers] = useState([]);
   const [answers, setAnswers] = useState({}); // { evaluationId: { itemId: value } }
   const [status, setStatus] = useState("IN_PROGRESS");
+  const isSubmitted = status === 'SUBMITTED';
   
   const [currentPageIndex, setCurrentPageIndex] = useState(0);
+  const [showConfirmModal, setShowConfirmModal] = useState(false);
+  const [showExitModal, setShowExitModal] = useState(false);
+  const [isDirty, setIsDirty] = useState(false);
+  const [pendingPath, setPendingPath] = useState(null);
 
   const currentUser = useMemo(() => {
     const raw = localStorage.getItem("user");
@@ -58,7 +66,18 @@ const StudentEvaluateForm = () => {
       }
     };
     fetchGroupForm();
-  }, [questionnaireId, currentUser, toast]);
+  }, [questionnaireId, currentUser]);
+
+  useEffect(() => {
+    const handleBeforeUnload = (e) => {
+      if (isDirty && !isSubmitted) {
+        e.preventDefault();
+        e.returnValue = '';
+      }
+    };
+    window.addEventListener('beforeunload', handleBeforeUnload);
+    return () => window.removeEventListener('beforeunload', handleBeforeUnload);
+  }, [isDirty, isSubmitted]);
 
   // Group items by sections for sequential navigation
   const pages = useMemo(() => {
@@ -97,10 +116,10 @@ const StudentEvaluateForm = () => {
   }, [questionnaire]);
 
   const currentPage = pages[currentPageIndex];
-  const isSubmitted = status === 'SUBMITTED';
 
   const handleScoreChange = (evaluationId, itemId, val) => {
     if (isSubmitted) return;
+    setIsDirty(true);
     setAnswers(prev => ({
       ...prev,
       [evaluationId]: {
@@ -124,8 +143,11 @@ const StudentEvaluateForm = () => {
       });
       if (!res.ok) throw new Error("Failed to save draft");
       toast.success("Draft saved successfully!");
+      setIsDirty(false);
+      return true;
     } catch (err) {
       toast.error(err.message);
+      return false;
     } finally {
       setSaving(false);
     }
@@ -138,7 +160,7 @@ const StudentEvaluateForm = () => {
       for (const item of page.items) {
         for (const member of members) {
           const val = answers[member.evaluationId]?.[item.id];
-          if (val === undefined || val === null || val === "") {
+          if (item.required !== false && (val === undefined || val === null || val === "")) {
             isComplete = false;
             break;
           }
@@ -153,8 +175,11 @@ const StudentEvaluateForm = () => {
       return;
     }
 
-    if (!window.confirm("Are you sure you want to submit all evaluations? You cannot edit them after submission.")) return;
-    
+    setShowConfirmModal(true);
+  };
+
+  const handleConfirmSubmit = async () => {
+    setShowConfirmModal(false);
     setSubmitting(true);
     try {
       const token = currentUser?.token;
@@ -179,6 +204,7 @@ const StudentEvaluateForm = () => {
       
       if (!res.ok) throw new Error("Failed to submit");
       toast.success("All evaluations submitted successfully!");
+      setIsDirty(false);
       navigate('/student/dashboard');
     } catch (err) {
       toast.error(err.message);
@@ -186,12 +212,43 @@ const StudentEvaluateForm = () => {
     }
   };
 
+  const handleExitClick = () => {
+    setPendingPath('/student/dashboard');
+    if (isDirty && !isSubmitted) {
+      setShowExitModal(true);
+    } else {
+      navigate('/student/dashboard');
+    }
+  };
+
+  const handleExitWithSave = async () => {
+    const success = await handleSaveDraft();
+    if (success) {
+      setShowExitModal(false);
+      navigate(pendingPath || '/student/dashboard');
+    }
+  };
+
+  const handleExitWithoutSave = () => {
+    setShowExitModal(false);
+    navigate(pendingPath || '/student/dashboard');
+  };
+
+  const onBeforeNavigate = (path) => {
+    if (isDirty && !isSubmitted) {
+      setPendingPath(path);
+      setShowExitModal(true);
+      return true; // Block
+    }
+    return false; // Allow
+  };
+
   if (loading) return <div className="teacher-container"><StudentSidebar /><div className="teacher-content">Loading evaluation form...</div></div>;
   if (!questionnaire || pages.length === 0) return <div className="teacher-container"><StudentSidebar /><div className="teacher-content">No questions found.</div></div>;
 
   return (
     <div className="teacher-container">
-      <StudentSidebar />
+      <StudentSidebar onBeforeNavigate={onBeforeNavigate} />
       <div className="teacher-content eval-content-wrapper">
         {/* Header */}
         <div className="eval-header">
@@ -199,7 +256,7 @@ const StudentEvaluateForm = () => {
             <h1 className="eval-title" style={{ margin: 0, color: 'var(--dtm-gold)' }}>{questionnaire.title}</h1>
             <p className="eval-subtitle" style={{ margin: '4px 0 0 0', color: 'var(--dtm-muted)' }}>Evaluating all team members</p>
           </div>
-          <button className="btn-secondary" onClick={() => navigate('/student/dashboard')}>Exit</button>
+          <button className="btn-secondary" onClick={handleExitClick}>Exit</button>
         </div>
 
         {/* Main Content Pane */}
@@ -235,21 +292,19 @@ const StudentEvaluateForm = () => {
             <div style={{ maxWidth: '800px', margin: '0 auto' }}>
               {currentPage.items.map((item) => {
                 const isRating = item.questionType === "RATING";
-                const customRatingRange = [10, 9.9, 9.8, 9.7, 9.6, 9.5, 9.4, 9.3, 9.2, 9.1, 9, 8, 7, 6, 5, 4, 3, 2, 1];
                 let finalRange = [];
                 if (isRating) {
-                  finalRange = customRatingRange;
+                  finalRange = generateDecimalRatingRange(item.minScore, item.maxScore);
                 } else {
-                  const min = item.minScore ?? 1;
-                  const max = item.maxScore ?? 5;
-                  finalRange = Array.from({ length: Math.abs(max - min) + 1 }, (_, i) => {
-                    return max > min ? max - i : min - i;
-                  });
+                  finalRange = generateNumericRange(item.minScore, item.maxScore);
                 }
 
                 return (
                   <div key={item.id} style={{ marginBottom: '40px', padding: '24px', background: 'rgba(255,255,255,0.02)', borderRadius: '12px', border: '1px solid rgba(255,255,255,0.05)' }}>
-                    <h3 className="eval-question-title" style={{ marginBottom: '8px', color: 'var(--dtm-text)' }}>{item.questionText}</h3>
+                    <h3 className="eval-question-title" style={{ marginBottom: '8px', color: 'var(--dtm-text)' }}>
+                      {item.questionText}
+                      {item.required !== false && <span style={{ color: '#ff4d4f', marginLeft: '4px' }} title="Required">*</span>}
+                    </h3>
                     {item.questionDescription && (
                       <p className="eval-question-desc" style={{ color: 'var(--dtm-muted)', marginBottom: '20px' }}>{item.questionDescription}</p>
                     )}
@@ -408,6 +463,23 @@ const StudentEvaluateForm = () => {
           </div>
         </div>
       </div>
+
+      <ConfirmModal
+        isOpen={showConfirmModal}
+        title="Confirm Submission"
+        message="Are you sure you want to submit all evaluations? You cannot edit them after submission."
+        confirmText="Submit Evaluations"
+        cancelText="Cancel"
+        onConfirm={handleConfirmSubmit}
+        onCancel={() => setShowConfirmModal(false)}
+      />
+
+      <ExitConfirmModal
+        isOpen={showExitModal}
+        onSave={handleExitWithSave}
+        onDiscard={handleExitWithoutSave}
+        onCancel={() => setShowExitModal(false)}
+      />
     </div>
   );
 };

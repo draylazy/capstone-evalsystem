@@ -107,7 +107,7 @@ const Questionnaires = () => {
     setConfirmModal({
       isOpen: true,
       title: "Delete Questionnaire",
-      message: "Are you sure you want to delete this questionnaire? This action cannot be undone.",
+      message: "Are you sure you want to delete this questionnaire? This will also delete all associated responses from advisers and students. This action cannot be undone.",
       onConfirm: async () => {
         setConfirmModal({ ...confirmModal, isOpen: false });
         try {
@@ -291,8 +291,7 @@ const Questionnaires = () => {
                         <button
                           className="btn btn-sm btn-danger"
                           onClick={() => handleDeleteQuestionnaire(q.id)}
-                          disabled={q.isLocked}
-                          title={q.isLocked ? "Cannot delete - questionnaire is locked" : "Delete"}
+                          title="Delete"
                         >
                           Delete
                         </button>

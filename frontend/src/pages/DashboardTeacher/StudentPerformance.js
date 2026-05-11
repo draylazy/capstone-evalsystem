@@ -1,4 +1,5 @@
 import React, { useEffect, useMemo, useState, useCallback, useRef } from "react";
+import ReactDOM from "react-dom";
 import { useParams, useNavigate, useSearchParams } from "react-router-dom";
 import { ChevronRight, X, RefreshCw } from "lucide-react";
 import TeacherSidebar from "../../components/Sidebar/TeacherSidebar";
@@ -268,7 +269,25 @@ const QAModal = ({ evalData, onClose, label }) => {
     };
   }, [onClose]);
 
-  return (
+  // Group filtered rows by section for display
+  const groups = useMemo(() => {
+    const result = [];
+    const map = new Map();
+    filtered.forEach((row) => {
+      const key = row.sectionTitle ?? "__general__";
+      if (!map.has(key)) {
+        const g = { sectionTitle: row.sectionTitle, rows: [] };
+        map.set(key, g);
+        result.push(g);
+      }
+      map.get(key).rows.push(row);
+    });
+    return result;
+  }, [filtered]);
+
+  let globalQ = 0;
+
+  return ReactDOM.createPortal(
     <div
       className="evaluation-info-modal-overlay"
       onClick={onClose}
@@ -280,13 +299,12 @@ const QAModal = ({ evalData, onClose, label }) => {
         onClick={(e) => e.stopPropagation()}
       >
         <div className="evaluation-info-modal-header">
-          <h2>
-            {label} — {evalData.questionnaireTitle || "N/A"}
-          </h2>
+          <div>
+            <h2>{evalData.questionnaireTitle || "N/A"}</h2>
+            <span className="perf-modal-subtitle">{label}</span>
+          </div>
           <div className="evaluation-info-modal-actions">
-            <button className="btn-secondary" onClick={onClose}>
-              Close
-            </button>
+            <button className="btn-secondary" onClick={onClose}>Close</button>
           </div>
         </div>
 
@@ -299,7 +317,7 @@ const QAModal = ({ evalData, onClose, label }) => {
 
           <div className="evaluation-modal-filter-row">
             {QA_FILTER_OPTIONS.map((key) => {
-              const label =
+              const chipLabel =
                 key === "all" ? "All"
                 : key === "withScores" ? "With Scores"
                 : key === "textAnswers" ? "Text Answers"
@@ -311,28 +329,44 @@ const QAModal = ({ evalData, onClose, label }) => {
                   className={`evaluation-filter-chip ${qaFilter === key ? "is-active" : ""}`}
                   onClick={() => setQaFilter(key)}
                 >
-                  {label}
+                  {chipLabel}
                 </button>
               );
             })}
           </div>
 
-          {filtered.length > 0 ? (
-            filtered.map((row, i) => (
-              <div key={row.key} className="evaluation-response-item">
-                {row.sectionTitle && (
-                  <div className="evaluation-response-section">
-                    Section: {row.sectionTitle}
+          {groups.length > 0 ? (
+            groups.map((group, gIdx) => {
+              return (
+                <div key={group.sectionTitle ?? `group-${gIdx}`} className="qa-section-group">
+                  {group.sectionTitle && (
+                    <div className="qa-section-header">
+                      <div className="qa-section-header-left">
+                        <span className="qa-section-title">{group.sectionTitle}</span>
+                      </div>
+                      <span className="qa-section-q-count">{group.rows.length} Q</span>
+                    </div>
+                  )}
+                  <div className="qa-question-list">
+                    {group.rows.map((row) => {
+                      globalQ += 1;
+                      const qNum = globalQ;
+                      return (
+                        <div key={row.key} className={`qa-question-row ${!row.isAnswered ? "is-unanswered" : ""}`}>
+                          <div className="qa-question-top">
+                            <span className="qa-question-num">Q{qNum}</span>
+                            <span className="qa-question-text">{row.questionText}</span>
+                          </div>
+                          <div className={`qa-answer-block ${!row.isAnswered ? "is-empty" : ""}`}>
+                            {row.answerText}
+                          </div>
+                        </div>
+                      );
+                    })}
                   </div>
-                )}
-                <div className="evaluation-response-question">
-                  <strong>Q{i + 1}:</strong> {row.questionText}
                 </div>
-                <div className="evaluation-response-answer">
-                  <strong>Answer:</strong> {row.answerText}
-                </div>
-              </div>
-            ))
+              );
+            })
           ) : (
             <p className="pending">No responses match this filter.</p>
           )}
@@ -347,7 +381,8 @@ const QAModal = ({ evalData, onClose, label }) => {
           <span>{filtered.length} visible question(s)</span>
         </div>
       </div>
-    </div>
+    </div>,
+    document.body
   );
 };
 
@@ -465,6 +500,60 @@ const EvalRow = ({ ev, onViewDetails, type }) => {
   );
 };
 
+// ─── Eval List Modal ────────────────────────────────────────────────────────
+
+const EvalListModal = ({ title, evaluations, type, onClose, onViewDetails }) => {
+  useEffect(() => {
+    const handle = (e) => { if (e.key === "Escape") onClose(); };
+    const prev = document.body.style.overflow;
+    document.body.style.overflow = "hidden";
+    window.addEventListener("keydown", handle);
+    return () => {
+      document.body.style.overflow = prev;
+      window.removeEventListener("keydown", handle);
+    };
+  }, [onClose]);
+
+  return ReactDOM.createPortal(
+    <div className="evaluation-info-modal-overlay" onClick={onClose}>
+      <div
+        className="evaluation-info-modal"
+        role="dialog"
+        aria-modal="true"
+        onClick={(e) => e.stopPropagation()}
+      >
+        <div className="evaluation-info-modal-header">
+          <div>
+            <h2>{title}</h2>
+            <span className="perf-modal-subtitle">{evaluations.length} evaluation{evaluations.length !== 1 ? "s" : ""}</span>
+          </div>
+          <div className="evaluation-info-modal-actions">
+            <button className="btn-secondary" onClick={onClose}>Close</button>
+          </div>
+        </div>
+
+        <div className="evaluation-info-modal-body">
+          <div className="perf-eval-list">
+            {evaluations.map((ev) => (
+              <EvalRow
+                key={ev.id}
+                ev={ev}
+                type={type}
+                onViewDetails={onViewDetails}
+              />
+            ))}
+          </div>
+        </div>
+
+        <div className="evaluation-info-modal-footer">
+          <span>{evaluations.length} questionnaire{evaluations.length !== 1 ? "s" : ""} listed</span>
+        </div>
+      </div>
+    </div>,
+    document.body
+  );
+};
+
 // ─── Performance Card ─────────────────────────────────────────────────────────
 
 const PerformanceCard = ({
@@ -480,6 +569,7 @@ const PerformanceCard = ({
   onRegenerate,
   token,
 }) => {
+  const [listModalOpen, setListModalOpen] = useState(false);
   const [qaModalEval, setQaModalEval] = useState(null);
 
   const aggregate = useMemo(
@@ -488,6 +578,10 @@ const PerformanceCard = ({
   );
 
   const pct = aggregate.percentage;
+
+  const handleViewDetails = useCallback((ev) => {
+    setQaModalEval(ev);
+  }, []);
 
   return (
     <div className="section perf-card">
@@ -522,15 +616,17 @@ const PerformanceCard = ({
 
       {!loading && !error && evaluations.length > 0 && (
         <>
-          <div className="perf-eval-list">
-            {evaluations.map((ev) => (
-              <EvalRow
-                key={ev.id}
-                ev={ev}
-                type={type}
-                onViewDetails={setQaModalEval}
-              />
-            ))}
+          <div className="perf-eval-summary-row">
+            <span className="perf-eval-count-chip">
+              {evaluations.length} questionnaire{evaluations.length !== 1 ? "s" : ""} evaluated
+            </span>
+            <button
+              type="button"
+              className="btn-secondary perf-view-all-btn"
+              onClick={() => setListModalOpen(true)}
+            >
+              View All Evaluations
+            </button>
           </div>
 
           <AiPanel
@@ -547,6 +643,16 @@ const PerformanceCard = ({
             token={token}
           />
         </>
+      )}
+
+      {listModalOpen && (
+        <EvalListModal
+          title={title}
+          evaluations={evaluations}
+          type={type}
+          onClose={() => setListModalOpen(false)}
+          onViewDetails={handleViewDetails}
+        />
       )}
 
       {qaModalEval && (

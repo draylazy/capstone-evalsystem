@@ -1,4 +1,5 @@
 import React, { useState, useMemo } from "react";
+import { generateDecimalRatingRange, generateNumericRange } from "../../utils/ratingUtils";
 import "./Adviser.css";
 
 const IndividualEvaluationGrid = ({
@@ -24,11 +25,10 @@ const IndividualEvaluationGrid = ({
   };
 
   const renderScaleButtons = (item, studentId, currentValue) => {
-    const min = item.minScore ?? 1;
-    const max = item.maxScore ?? 5;
-    const range = Array.from({ length: Math.abs(max - min) + 1 }, (_, i) => {
-      return max > min ? max - i : min - i;
-    });
+    const isRating = item.questionType === "RATING";
+    const range = isRating
+      ? generateDecimalRatingRange(item.minScore, item.maxScore)
+      : generateNumericRange(item.minScore, item.maxScore);
 
     return (
       <div style={{ display: 'flex', justifyContent: 'center', gap: '8px' }}>

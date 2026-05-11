@@ -90,12 +90,14 @@ public class QuestionnaireService {
 
             // Create Google Form with sections and page breaks
             googleForm = googleFormsService.createGoogleFormWithSections(
-                    teacherId, title, description, questions != null ? questions : List.of(), sectionEntities);
+                    teacherId, title, description, questions != null ? questions : List.of(), sectionEntities,
+                    "STUDENT".equalsIgnoreCase(targetRole));
         } else {
             // Create Google Form without sections (legacy)
             List<QuestionnaireItem> allQuestions = new ArrayList<>(questions != null ? questions : List.of());
             totalQuestionCount = allQuestions.size();
-            googleForm = googleFormsService.createGoogleForm(teacherId, title, description, allQuestions);
+            googleForm = googleFormsService.createGoogleForm(teacherId, title, description, allQuestions,
+                    "STUDENT".equalsIgnoreCase(targetRole));
         }
 
         // Also count loose questions if they exist
@@ -402,7 +404,7 @@ public class QuestionnaireService {
     }
 
     /**
-     * Hard delete questionnaire (preserves evaluations and scores by disconnecting FKs)
+     * Hard delete questionnaire and all associated responses
      */
     @Transactional
     public void deleteQuestionnaire(Long questionnaireId, Long teacherId) {
@@ -414,39 +416,25 @@ public class QuestionnaireService {
             throw new RuntimeException("You can only delete your own questionnaires");
         }
 
-        // Disconnect all evaluation scores from questionnaire items
-        List<EvaluationScore> evaluationScores = evaluationScoreRepository.findByQuestionnaireId(questionnaireId);
-        for (EvaluationScore score : evaluationScores) {
-            score.setQuestionnaireItem(null);
-        }
-        evaluationScoreRepository.saveAll(evaluationScores);
-
-        // Disconnect all student evaluation scores from questionnaire items
-        List<StudentEvaluationScore> studentEvaluationScores = studentEvaluationScoreRepository.findByQuestionnaireId(questionnaireId);
-        for (StudentEvaluationScore score : studentEvaluationScores) {
-            score.setQuestionnaireItem(null);
-        }
-        studentEvaluationScoreRepository.saveAll(studentEvaluationScores);
-
-        // Disconnect all evaluations from this questionnaire
+        // Hard delete all adviser/team-level evaluations for this questionnaire
+        // CascadeType.ALL on Evaluation.scores will also delete their EvaluationScore rows,
+        // so we do NOT need to disconnect scores separately — just delete the parent records.
         List<Evaluation> evaluations = evaluationRepository.findByQuestionnaireId(questionnaireId);
-        for (Evaluation evaluation : evaluations) {
-            evaluation.setQuestionnaire(null);
-        }
-        evaluationRepository.saveAll(evaluations);
+        evaluationRepository.deleteAll(evaluations);
+        evaluationRepository.flush();
 
-        // Disconnect all student evaluations from this questionnaire
+        // Hard delete all student evaluations for this questionnaire.
+        // CascadeType.ALL on StudentEvaluation.scores will also delete their StudentEvaluationScore rows,
+        // so we do NOT need to disconnect scores separately — just delete the parent records.
         List<StudentEvaluation> studentEvaluations = studentEvaluationRepository.findByQuestionnaireId(questionnaireId);
-        for (StudentEvaluation studentEvaluation : studentEvaluations) {
-            studentEvaluation.setQuestionnaire(null);
-        }
-        studentEvaluationRepository.saveAll(studentEvaluations);
+        studentEvaluationRepository.deleteAll(studentEvaluations);
+        studentEvaluationRepository.flush();
 
         // Hard delete the questionnaire (cascades to items and sections)
         questionnaireRepository.deleteById(questionnaireId);
 
-        log.info("Hard deleted questionnaire {} and disconnected {} evaluations, {} student evaluations, {} evaluation scores, and {} student evaluation scores",
-                questionnaireId, evaluations.size(), studentEvaluations.size(), evaluationScores.size(), studentEvaluationScores.size());
+        log.info("Hard deleted questionnaire {} — deleted {} adviser evaluations and {} student evaluations",
+                questionnaireId, evaluations.size(), studentEvaluations.size());
 
         userManagementService.asyncSyncAllDataToGoogleSheets(questionnaire.getCreatedByTeacher().getEmail());
     }
@@ -467,6 +455,11 @@ public class QuestionnaireService {
         // Check if questionnaire is locked (has responses)
         if (questionnaire.getIsLocked() != null && questionnaire.getIsLocked()) {
             throw new RuntimeException("Cannot edit locked questionnaire. It has been answered by advisers.");
+        }
+
+        // Check if active peer-to-peer questionnaire
+        if (questionnaire.getTarget() == Questionnaire.QuestionnaireTarget.STUDENT && Boolean.TRUE.equals(questionnaire.getIsActive())) {
+            throw new RuntimeException("Active peer-to-peer questionnaires cannot be edited. Please deactivate it first.");
         }
 
         if (request.getTitle() != null && !request.getTitle().isEmpty()) {
@@ -624,7 +617,8 @@ public class QuestionnaireService {
                     questionnaire.getTitle(),
                     questionnaire.getDescription(),
                     looseQuestions,
-                    allSections
+                    allSections,
+                    questionnaire.getTarget() == Questionnaire.QuestionnaireTarget.STUDENT
             );
             syncGoogleQuestionMappings(questionnaire.getId(), teacherId);
             return;
@@ -641,14 +635,16 @@ public class QuestionnaireService {
                         questionnaire.getTitle(),
                         questionnaire.getDescription(),
                         looseQuestions != null ? looseQuestions : List.of(),
-                        allSections
+                        allSections,
+                        questionnaire.getTarget() == Questionnaire.QuestionnaireTarget.STUDENT
                 );
             } else {
                 replacementForm = googleFormsService.createGoogleForm(
                         teacherId,
                         questionnaire.getTitle(),
                         questionnaire.getDescription(),
-                        looseQuestions != null ? looseQuestions : List.of()
+                        looseQuestions != null ? looseQuestions : List.of(),
+                        questionnaire.getTarget() == Questionnaire.QuestionnaireTarget.STUDENT
                 );
             }
 
@@ -726,6 +722,7 @@ public class QuestionnaireService {
                                 Questionnaire questionnaire,
                                 QuestionnaireSection section) {
         target.setQuestionText(source.getQuestionText());
+        target.setQuestionDescription(source.getQuestionDescription());
         target.setQuestionType(QuestionnaireItem.QuestionType.valueOf(source.getQuestionType()));
         target.setMaxScore(source.getMaxScore());
         target.setMinScore(source.getMinScore());
@@ -769,6 +766,7 @@ public class QuestionnaireService {
                             .map(item -> {
                                 CreateQuestionnaireRequest.QuestionnaireItemDto dto = new CreateQuestionnaireRequest.QuestionnaireItemDto();
                                 dto.setQuestionText(item.getQuestionText());
+                                dto.setQuestionDescription(item.getQuestionDescription());
                                 dto.setOrderIndex(item.getOrderIndex());
                                 dto.setQuestionType(item.getQuestionType().name());
                                 dto.setMaxScore(item.getMaxScore());
@@ -842,6 +840,11 @@ public class QuestionnaireService {
         // Check if questionnaire is locked
         if (questionnaire.getIsLocked() != null && questionnaire.getIsLocked()) {
             throw new RuntimeException("Cannot edit locked questionnaire. It has been answered by advisers.");
+        }
+
+        // Check if active peer-to-peer questionnaire
+        if (questionnaire.getTarget() == Questionnaire.QuestionnaireTarget.STUDENT && Boolean.TRUE.equals(questionnaire.getIsActive())) {
+            throw new RuntimeException("Active peer-to-peer questionnaires cannot be edited. Please deactivate it first.");
         }
 
         QuestionnaireItem item = questionnaireItemRepository.findById(itemId)

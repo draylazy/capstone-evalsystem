@@ -1,10 +1,11 @@
 import React, { useState, useEffect, useRef } from "react";
 import { useLocation, useNavigate } from "react-router-dom";
 import { authAPI } from "../../services/api";
+import logo from '../Logo/LOGO test.png';
 import { LayoutDashboard, Users, Menu, X } from "lucide-react";
 import "./Sidebar.css";
 
-const StudentSidebar = () => {
+const StudentSidebar = ({ onBeforeNavigate }) => {
   const navigate = useNavigate();
   const location = useLocation();
   const [showProfileMenu, setShowProfileMenu] = useState(false);
@@ -30,6 +31,10 @@ const StudentSidebar = () => {
   }, []);
 
   const handleLogout = () => {
+    if (onBeforeNavigate) {
+      const shouldBlock = onBeforeNavigate('/login');
+      if (shouldBlock) return;
+    }
     if (authAPI && authAPI.logout) {
       authAPI.logout();
     } else {
@@ -40,6 +45,10 @@ const StudentSidebar = () => {
   };
 
   const handleNavigate = (path) => {
+    if (onBeforeNavigate) {
+      const shouldBlock = onBeforeNavigate(path);
+      if (shouldBlock) return;
+    }
     setIsOpen(false);
     navigate(path);
   };
@@ -75,7 +84,10 @@ const StudentSidebar = () => {
       )}
 
       <div className={`sidebar sidebar--student ${isOpen ? 'is-open' : ''}`}>
-      <h2>Student Panel</h2>
+        <div className="sidebar-header" style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', padding: '20px 0', borderBottom: '1px solid rgba(255,255,255,0.08)' }}>
+          <img src={logo} alt="Logo" style={{ width: '50px', height: '50px', marginBottom: '8px', objectFit: 'contain' }} />
+          <h2 style={{ fontSize: '1.1rem', margin: 0, color: 'var(--dtm-gold)' }}>Student Panel</h2>
+        </div>
       <ul>
         {menuItems.map((item) => (
           <li

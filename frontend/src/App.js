@@ -11,6 +11,9 @@ import CreateQuestionnaire from './pages/DashboardTeacher/CreateQuestionnaire';
 import Reports from './pages/DashboardTeacher/Reports';
 import Performance from './pages/DashboardTeacher/Performance';
 import StudentPerformance from './pages/DashboardTeacher/StudentPerformance';
+import TeamPerformancePage from './pages/DashboardTeacher/TeamPerformancePage';
+import TeamFormsPage from './pages/DashboardTeacher/TeamFormsPage';
+import TeamFormResponsesPage from './pages/DashboardTeacher/TeamFormResponsesPage';
 import EvaluationDetail from './pages/DashboardTeacher/EvaluationDetail';
 import StudentEvaluationDetail from './pages/DashboardTeacher/StudentEvaluationDetail';
 import Students from './pages/DashboardTeacher/Students';
@@ -33,11 +36,13 @@ import MyTeam from './pages/DashboardStudent/MyTeam';
 // Profile
 import Profile from './pages/Profile/Profile';
 import GoogleCallback from './pages/Profile/GoogleCallback';
+import InactivityTimeout from './components/InactivityTimeout';
 
 function App() {
   return (
     <ToastProvider>
       <Router>
+        <InactivityTimeout timeout={3600000} /> {/* 1 hour timeout */}
         <Routes>
         {/* Public */}
         <Route path="/" element={<Navigate to="/login" />} />
@@ -89,6 +94,21 @@ function App() {
         <Route path="/teacher/performance/student/:studentId" element={
           <ProtectedRoute allowedRoles={['TEACHER']}>
             <StudentPerformance />
+          </ProtectedRoute>
+        } />
+        <Route path="/teacher/performance/team/:teamId" element={
+          <ProtectedRoute allowedRoles={['TEACHER']}>
+            <TeamPerformancePage />
+          </ProtectedRoute>
+        } />
+        <Route path="/teacher/performance/team/:teamId/forms" element={
+          <ProtectedRoute allowedRoles={['TEACHER']}>
+            <TeamFormsPage />
+          </ProtectedRoute>
+        } />
+        <Route path="/teacher/performance/team/:teamId/forms/:questionnaireId" element={
+          <ProtectedRoute allowedRoles={['TEACHER']}>
+            <TeamFormResponsesPage />
           </ProtectedRoute>
         } />
 

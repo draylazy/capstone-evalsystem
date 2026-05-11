@@ -354,9 +354,9 @@ public class UserManagementController {
 
             String provider = request.getAiProvider();
             if (provider == null
-                    || !java.util.List.of("gemini", "openai", "anthropic").contains(provider.toLowerCase())) {
+                    || !java.util.List.of("gemini", "openai", "anthropic", "groq").contains(provider.toLowerCase())) {
                 return ResponseEntity.badRequest()
-                        .body(new MessageResponse("Unsupported AI provider. Choose: gemini, openai, or anthropic"));
+                        .body(new MessageResponse("Unsupported AI provider. Choose: gemini, openai, anthropic, or groq"));
             }
 
             teacher.setAiApiKey(request.getAiApiKey());

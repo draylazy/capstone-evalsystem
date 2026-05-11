@@ -40,6 +40,8 @@ public interface EvaluationRepository extends JpaRepository<Evaluation, Long> {
         @Query("SELECT DISTINCT e FROM Evaluation e " +
                         "LEFT JOIN FETCH e.questionnaire q " +
                         "LEFT JOIN FETCH q.items " +
+                        "LEFT JOIN FETCH q.sections qs " +
+                        "LEFT JOIN FETCH qs.items " +
                         "LEFT JOIN FETCH e.scores " +
                         "WHERE e.adviser.id = :adviserId AND e.team.id = :teamId")
         List<Evaluation> findByAdviserIdAndTeamIdWithProgress(
@@ -68,4 +70,17 @@ public interface EvaluationRepository extends JpaRepository<Evaluation, Long> {
                         "WHERE sc.teacher.id = :teacherId " +
                         "AND e.status = 'SUBMITTED'")
         List<Evaluation> findSubmittedByTeacherId(@Param("teacherId") Long teacherId);
+
+        @Query("SELECT DISTINCT e FROM Evaluation e " +
+                        "LEFT JOIN FETCH e.team t " +
+                        "LEFT JOIN FETCH t.schoolClass sc " +
+                        "LEFT JOIN FETCH e.questionnaire q " +
+                        "LEFT JOIN FETCH q.items " +
+                        "LEFT JOIN FETCH q.sections qs " +
+                        "LEFT JOIN FETCH qs.items " +
+                        "LEFT JOIN FETCH e.scores s " +
+                        "LEFT JOIN FETCH s.questionnaireItem " +
+                        "LEFT JOIN FETCH e.adviser " +
+                        "WHERE e.id = :id")
+        Optional<Evaluation> findByIdWithFullDetails(@Param("id") Long id);
 }

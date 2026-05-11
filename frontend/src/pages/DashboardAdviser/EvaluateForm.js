@@ -3,6 +3,9 @@ import { useParams, useNavigate } from "react-router-dom";
 import AdviserSidebar from "../../components/Sidebar/AdviserSidebar";
 import { adviserAPI } from "../../services/api";
 import IndividualEvaluationGrid from "./IndividualEvaluationGrid";
+import { useToast } from "../../contexts/ToastContext";
+import { generateDecimalRatingRange, generateNumericRange } from "../../utils/ratingUtils";
+import ConfirmModal from "../../components/ConfirmModal/ConfirmModal";
 import "../DashboardTeacher/Teacher.css";
 import "./Adviser.css";
 
@@ -28,6 +31,9 @@ const EvaluateForm = () => {
   const [submitting, setSubmitting] = useState(false);
   const [currentSectionIndex, setCurrentSectionIndex] = useState(0);
   const [currentQuestionIndex, setCurrentQuestionIndex] = useState(0);
+  const [confirmSubmit, setConfirmSubmit] = useState(false);
+
+  const toast = useToast();
 
   // Organize sections with proper structure
   const sections = useMemo(() => {
@@ -145,9 +151,9 @@ const EvaluateForm = () => {
           generalComments: comments,
         });
       }
-      alert("Draft saved successfully!");
+      toast.success("Draft saved successfully!");
     } catch (e) {
-      alert("Error saving evaluation: " + e.message);
+      toast.error("Error saving evaluation: " + e.message);
     } finally {
       setSaving(false);
     }
@@ -205,9 +211,54 @@ const EvaluateForm = () => {
     await adviserAPI.saveMixedEvaluation(payload);
   };
 
-  const handleSubmit = async () => {
-    if (!window.confirm("Are you sure you want to submit this evaluation? You cannot edit it after submission.")) return;
-    
+  const handleSubmit = () => {
+    // Validation
+    let isComplete = true;
+
+    if (isMixedQuestionnaire) {
+      for (const section of sections) {
+        if (section.evaluateIndividuals) {
+          for (const member of teamMembers) {
+            for (const item of section.items) {
+              const val = answers[member.studentId]?.[item.id];
+              if (val === undefined || val === null || val === "") {
+                isComplete = false;
+                break;
+              }
+            }
+            if (!isComplete) break;
+          }
+        } else {
+          for (const item of section.items) {
+            const val = answers[item.id];
+            if (item.required !== false && (val === undefined || val === null || val === "")) {
+              isComplete = false;
+              break;
+            }
+          }
+        }
+        if (!isComplete) break;
+      }
+    } else {
+      for (const item of allItems) {
+        const val = answers[item.id];
+        if (item.required !== false && (val === undefined || val === null || val === "")) {
+          isComplete = false;
+          break;
+        }
+      }
+    }
+
+    if (!isComplete) {
+      toast.error("Please answer all required questions before submitting.");
+      return;
+    }
+
+    setConfirmSubmit(true);
+  };
+
+  const doSubmit = async () => {
+    setConfirmSubmit(false);
     setSubmitting(true);
     try {
       if (isMixedQuestionnaire) {
@@ -222,7 +273,7 @@ const EvaluateForm = () => {
       }
       navigate("/adviser/completed");
     } catch (e) {
-      alert("Error submitting evaluation: " + e.message);
+      toast.error("Error submitting evaluation: " + e.message);
       setSubmitting(false);
     }
   };
@@ -296,11 +347,10 @@ const EvaluateForm = () => {
                     <div style={{ display: 'flex', flexDirection: 'column', gap: '24px' }}>
                       {currentSection.items.map((item) => {
                         const currentValue = answers[item.id];
-                        const min = item.minScore ?? 1;
-                        const max = item.maxScore ?? 5;
-                        const range = Array.from({ length: Math.abs(max - min) + 1 }, (_, i) => {
-                          return max > min ? max - i : min - i;
-                        });
+                        const isRating = item.questionType === "RATING";
+                        const range = isRating 
+                          ? generateDecimalRatingRange(item.minScore, item.maxScore)
+                          : generateNumericRange(item.minScore, item.maxScore);
 
                         return (
                           <div key={item.id} style={{
@@ -311,6 +361,7 @@ const EvaluateForm = () => {
                           }}>
                             <label style={{ fontSize: '1rem', fontWeight: '500', display: 'block', marginBottom: '12px' }}>
                               {item.questionText}
+                              {item.required !== false && <span style={{ color: '#ff4d4f', marginLeft: '4px' }} title="Required">*</span>}
                             </label>
 
                             {item.questionType === 'TEXT' ? (
@@ -479,6 +530,15 @@ const EvaluateForm = () => {
             </div>
           </div>
         </div>
+        <ConfirmModal
+          isOpen={confirmSubmit}
+          title="Submit Evaluation"
+          message="Are you sure you want to submit this evaluation? You cannot edit it after submission."
+          confirmText="Submit"
+          cancelText="Cancel"
+          onConfirm={doSubmit}
+          onCancel={() => setConfirmSubmit(false)}
+        />
       </div>
     );
   }
@@ -491,11 +551,10 @@ const EvaluateForm = () => {
     </div>
   );
 
-  const min = currentItem.minScore ?? 1;
-  const max = currentItem.maxScore ?? 5;
-  const range = Array.from({ length: Math.abs(max - min) + 1 }, (_, i) => {
-    return max > min ? max - i : min - i;
-  });
+  const isRating = currentItem.questionType === "RATING";
+  const range = isRating 
+    ? generateDecimalRatingRange(currentItem.minScore, currentItem.maxScore)
+    : generateNumericRange(currentItem.minScore, currentItem.maxScore);
 
   return (
     <div className="teacher-container">
@@ -521,7 +580,10 @@ const EvaluateForm = () => {
                   {currentItem.sectionTitle}
                 </div>
               )}
-              <h2 style={{ fontSize: '1.4rem', marginBottom: '20px', lineHeight: '1.4' }}>{currentItem.questionText}</h2>
+              <h2 style={{ fontSize: '1.4rem', marginBottom: '20px', lineHeight: '1.4' }}>
+                {currentItem.questionText}
+                {currentItem.required !== false && <span style={{ color: '#ff4d4f', marginLeft: '4px' }} title="Required">*</span>}
+              </h2>
               <p style={{ color: 'var(--dtm-muted)', lineHeight: '1.6', fontSize: '1rem' }}>
                 {currentItem.questionDescription || "Please provide your evaluation for this criteria."}
               </p>
@@ -714,6 +776,15 @@ const EvaluateForm = () => {
           </div>
         </div>
       </div>
+      <ConfirmModal
+        isOpen={confirmSubmit}
+        title="Submit Evaluation"
+        message="Are you sure you want to submit this evaluation? You cannot edit it after submission."
+        confirmText="Submit"
+        cancelText="Cancel"
+        onConfirm={doSubmit}
+        onCancel={() => setConfirmSubmit(false)}
+      />
     </div>
   );
 };
