@@ -53,6 +53,7 @@ public class AiChatService {
         private final EvaluationRepository evaluationRepository;
         private final StudentRepository studentRepository;
         private final StudentEvaluationRepository studentEvaluationRepository;
+        private final StudentEvaluationService studentEvaluationService;
 
         @Transactional(readOnly = true)
         public String chat(User user, AiChatRequest request) {
@@ -372,6 +373,9 @@ public class AiChatService {
                 // Peer evaluations where student is evaluatee
                 List<StudentEvaluation> evalsReceived = studentEvaluationRepository.findByEvaluateeIdAndStatus(
                                 student.getId(), StudentEvaluation.EvaluationStatus.SUBMITTED);
+
+                // Apply trimmed mean logic (exclude highest and lowest peer scores)
+                evalsReceived = studentEvaluationService.filterEvaluationsForTrimmedMean(evalsReceived);
 
                 if (evalsReceived.isEmpty()) {
                         return "No peer evaluations have been submitted for you yet.";

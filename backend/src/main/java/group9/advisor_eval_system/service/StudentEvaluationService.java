@@ -262,6 +262,9 @@ public class StudentEvaluationService {
                     .filter(e -> e.getStatus() == StudentEvaluation.EvaluationStatus.SUBMITTED)
                     .collect(Collectors.toList());
 
+            // Apply trimmed mean logic (exclude highest and lowest peer scores)
+            submittedPeerEvals = filterEvaluationsForTrimmedMean(submittedPeerEvals);
+
             if (submittedPeerEvals.isEmpty()) continue;
 
             // Calculate aggregates
@@ -310,6 +313,50 @@ public class StudentEvaluationService {
                 .teamName(teamName)
                 .summaries(summaries)
                 .build();
+    }
+
+    public List<StudentEvaluation> filterEvaluationsForTrimmedMean(List<StudentEvaluation> evaluations) {
+        if (evaluations == null || evaluations.size() < 3) return evaluations;
+
+        // Separate peer evaluations from adviser evaluations
+        List<StudentEvaluation> peerEvaluations = evaluations.stream()
+                .filter(e -> e.getStudent() != null)
+                .collect(Collectors.toList());
+
+        List<StudentEvaluation> nonPeerEvaluations = evaluations.stream()
+                .filter(e -> e.getStudent() == null)
+                .collect(Collectors.toList());
+
+        if (peerEvaluations.size() < 3) {
+            return evaluations; // Not enough peer evaluations to trim
+        }
+
+        // Calculate overall average for each peer evaluation
+        Map<StudentEvaluation, Double> evalAverages = new HashMap<>();
+        for (StudentEvaluation eval : peerEvaluations) {
+            double avg = 0;
+            if (eval.getScores() != null && !eval.getScores().isEmpty()) {
+                avg = eval.getScores().stream()
+                        .filter(s -> s.getNumericScore() != null)
+                        .mapToDouble(s -> s.getNumericScore())
+                        .average()
+                        .orElse(0.0);
+            }
+            evalAverages.put(eval, avg);
+        }
+
+        // Sort by average
+        List<StudentEvaluation> sortedPeers = peerEvaluations.stream()
+                .sorted(Comparator.comparingDouble(evalAverages::get))
+                .collect(Collectors.toList());
+
+        // Trim lowest and highest
+        List<StudentEvaluation> trimmedPeers = sortedPeers.subList(1, sortedPeers.size() - 1);
+
+        // Combine back
+        List<StudentEvaluation> result = new ArrayList<>(trimmedPeers);
+        result.addAll(nonPeerEvaluations);
+        return result;
     }
 
     public String getStudentOwnScoreSummary(Long studentId, Long questionnaireId) {
