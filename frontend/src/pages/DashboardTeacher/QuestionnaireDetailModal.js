@@ -4,6 +4,7 @@ import { useToast } from "../../contexts/ToastContext";
 import "./Teacher.css";
 import "./QuestionnaireTwoColumn.css";
 import CustomSelect from "../../components/CustomSelect/CustomSelect";
+import ConfirmModal from "../../components/ConfirmModal/ConfirmModal";
 
 const QuestionnaireDetailModal = ({ isOpen, onClose, questionnaireId, onUpdate }) => {
   const toast = useToast();
@@ -32,12 +33,16 @@ const QuestionnaireDetailModal = ({ isOpen, onClose, questionnaireId, onUpdate }
     required: true,
   });
 
+  const [initialFormData, setInitialFormData] = useState(null);
+  const [showConfirmClose, setShowConfirmClose] = useState(false);
+
   useEffect(() => {
     if (isOpen && questionnaireId) {
       fetchQuestionnaireDetails();
     } else {
       setIsEditing(false);
       setQuestionnaire(null);
+      setShowConfirmClose(false);
     }
   }, [isOpen, questionnaireId]);
 
@@ -57,13 +62,16 @@ const QuestionnaireDetailModal = ({ isOpen, onClose, questionnaireId, onUpdate }
         }];
       }
 
-      setFormData({
+      const initialData = {
         title: data.title || "",
         description: data.description || "",
         deadlineAt: data.deadlineAt ? data.deadlineAt.slice(0, 16) : "",
         sections: finalSections,
         target: data.target || "ADVISER"
-      });
+      };
+
+      setFormData(initialData);
+      setInitialFormData(initialData);
       setActiveSectionIndex(0);
     } catch (err) {
       toast.error("Failed to fetch questionnaire details: " + err.message);
@@ -197,16 +205,52 @@ const QuestionnaireDetailModal = ({ isOpen, onClose, questionnaireId, onUpdate }
     });
   };
 
+  const checkIsDirty = () => {
+    if (!isEditing || !initialFormData) return false;
+
+    // Check if main form data is different
+    const currentData = JSON.stringify({
+      title: formData.title,
+      description: formData.description,
+      deadlineAt: formData.deadlineAt,
+      sections: formData.sections,
+      target: formData.target
+    });
+    const originalData = JSON.stringify(initialFormData);
+
+    if (currentData !== originalData) return true;
+
+    // Check if newQuestion has any unsaved content
+    if (editingQuestionIndex === null) {
+      // Adding new: check if question text is entered
+      if (newQuestion.questionText.trim() !== "") return true;
+    } else {
+      // Editing existing: check if modified from what's in the sections
+      const originalQuestion = formData.sections[activeSectionIndex].items[editingQuestionIndex];
+      if (JSON.stringify(newQuestion) !== JSON.stringify(originalQuestion)) return true;
+    }
+
+    return false;
+  };
+
+  const handleRequestClose = () => {
+    if (checkIsDirty()) {
+      setShowConfirmClose(true);
+    } else {
+      onClose();
+    }
+  };
+
   if (!isOpen) return null;
 
   return (
-    <div className="modal-overlay" onClick={onClose}>
+    <div className="modal-overlay" onClick={handleRequestClose}>
       <div className="modal-content questionnaire-detail-modal" onClick={(e) => e.stopPropagation()} style={{ width: '95%', maxWidth: '1250px', maxHeight: '90vh', overflowY: 'auto' }}>
         <div className="modal-header" style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '20px', borderBottom: '1px solid rgba(255,255,255,0.1)', paddingBottom: '15px' }}>
           <h2 style={{ margin: 0, color: 'var(--dtm-gold)' }}>
             {isEditing ? "Edit Questionnaire" : "Questionnaire Details"}
           </h2>
-          <button className="close-btn" onClick={onClose} style={{ background: 'none', border: 'none', color: 'var(--dtm-muted)', fontSize: '24px', cursor: 'pointer' }}>&times;</button>
+          <button className="close-btn" onClick={handleRequestClose} style={{ background: 'none', border: 'none', color: 'var(--dtm-muted)', fontSize: '24px', cursor: 'pointer' }}>&times;</button>
         </div>
 
         {loading || !questionnaire ? (
@@ -316,7 +360,7 @@ const QuestionnaireDetailModal = ({ isOpen, onClose, questionnaireId, onUpdate }
                     Edit Details & Questions
                   </button>
                   <button className="btn btn-primary" onClick={() => window.open(questionnaire.googleFormUrl, '_blank')}>View Form</button>
-                  <button className="btn btn-secondary" onClick={onClose}>Close</button>
+                  <button className="btn btn-secondary" onClick={handleRequestClose}>Close</button>
                 </div>
               </div>
             ) : (
@@ -832,6 +876,19 @@ const QuestionnaireDetailModal = ({ isOpen, onClose, questionnaireId, onUpdate }
           </>
         )}
       </div>
+      <ConfirmModal
+        isOpen={showConfirmClose}
+        title="Unsaved Changes"
+        message="You have unsaved changes in the questionnaire. Are you sure you want to exit without saving?"
+        onConfirm={() => {
+          setShowConfirmClose(false);
+          onClose();
+        }}
+        onCancel={() => setShowConfirmClose(false)}
+        confirmText="Exit without saving"
+        cancelText="Stay and Edit"
+        isDanger={true}
+      />
     </div>
   );
 };

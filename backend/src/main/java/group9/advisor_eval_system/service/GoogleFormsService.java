@@ -438,7 +438,7 @@ public class GoogleFormsService {
 
             if (item.getQuestionType() == QuestionnaireItem.QuestionType.NUMERIC_SCALE ||
                     item.getQuestionType() == QuestionnaireItem.QuestionType.RATING) {
-                // Create numeric scale columns with decimals between highest and 2nd highest
+                // Create numeric scale columns with decimals between high and high-1 if high is 10
                 // e.g., 10, 9.9, 9.8, ..., 9.1, 9, 8, 7, ..., 1
                 int low = item.getMinScore() != null ? item.getMinScore() : 1;
                 int high = item.getMaxScore() != null ? item.getMaxScore() : 5;
@@ -448,11 +448,13 @@ public class GoogleFormsService {
                 option.put("value", String.valueOf(high));
                 options.add(option);
                 
-                // Add decimal values from high-0.1 to high-0.9
-                for (int i = 9; i >= 1; i--) {
-                    java.util.Map<String, String> decimalOption = new java.util.HashMap<>();
-                    decimalOption.put("value", String.format("%.1f", high - (i / 10.0)));
-                    options.add(decimalOption);
+                // Add decimal values from high-0.1 down to high-0.9 if high is 10
+                if (high == 10) {
+                    for (int i = 1; i <= 9; i++) {
+                        java.util.Map<String, String> decimalOption = new java.util.HashMap<>();
+                        decimalOption.put("value", String.format(java.util.Locale.US, "%.1f", high - (i / 10.0)));
+                        options.add(decimalOption);
+                    }
                 }
                 
                 // Add remaining integer values
@@ -575,7 +577,23 @@ public class GoogleFormsService {
                 // Create numeric scale columns (e.g., 1-5) - in reverse order for better UX
                 int low = item.getMinScore() != null ? item.getMinScore() : 1;
                 int high = item.getMaxScore() != null ? item.getMaxScore() : 5;
-                for (int i = high; i >= low; i--) {
+                
+                // Add high value
+                java.util.Map<String, String> highCol = new java.util.HashMap<>();
+                highCol.put("title", String.valueOf(high));
+                columns.add(highCol);
+
+                // Add decimals if high is 10
+                if (high == 10) {
+                    for (int i = 1; i <= 9; i++) {
+                        java.util.Map<String, String> col = new java.util.HashMap<>();
+                        col.put("title", String.format(java.util.Locale.US, "%.1f", high - (i / 10.0)));
+                        columns.add(col);
+                    }
+                }
+
+                // Add remaining integers
+                for (int i = high - 1; i >= low; i--) {
                     java.util.Map<String, String> col = new java.util.HashMap<>();
                     col.put("title", String.valueOf(i));
                     columns.add(col);
@@ -668,19 +686,37 @@ public class GoogleFormsService {
 
         switch (item.getQuestionType()) {
             case NUMERIC_SCALE:
-                ScaleQuestion scaleQuestion = new ScaleQuestion();
-                scaleQuestion.setLow(item.getMinScore() != null ? item.getMinScore() : 1);
-                scaleQuestion.setHigh(item.getMaxScore() != null ? item.getMaxScore() : 5);
-                scaleQuestion.setLowLabel("Low");
-                scaleQuestion.setHighLabel("High");
-                question.setScaleQuestion(scaleQuestion);
-                break;
-
             case RATING:
-                ScaleQuestion ratingQuestion = new ScaleQuestion();
-                ratingQuestion.setLow(item.getMinScore() != null ? item.getMinScore() : 1);
-                ratingQuestion.setHigh(item.getMaxScore() != null ? item.getMaxScore() : 5);
-                question.setScaleQuestion(ratingQuestion);
+                int low = item.getMinScore() != null ? item.getMinScore() : 1;
+                int high = item.getMaxScore() != null ? item.getMaxScore() : 5;
+
+                if (high == 10) {
+                    // Use ChoiceQuestion (Multiple Choice) to support decimals
+                    ChoiceQuestion choiceQuestion = new ChoiceQuestion();
+                    choiceQuestion.setType("RADIO");
+                    List<Option> options = new ArrayList<>();
+
+                    // Add 10, 9.9, ..., 9.1, 9, 8, ..., 1
+                    options.add(new Option().setValue(String.valueOf(high)));
+                    for (int i = 1; i <= 9; i++) {
+                        options.add(new Option().setValue(String.format(java.util.Locale.US, "%.1f", high - (i / 10.0))));
+                    }
+                    for (int i = high - 1; i >= low; i--) {
+                        options.add(new Option().setValue(String.valueOf(i)));
+                    }
+                    choiceQuestion.setOptions(options);
+                    question.setChoiceQuestion(choiceQuestion);
+                } else {
+                    // Use standard ScaleQuestion
+                    ScaleQuestion scaleQuestion = new ScaleQuestion();
+                    scaleQuestion.setLow(low);
+                    scaleQuestion.setHigh(high);
+                    if (item.getQuestionType() == QuestionnaireItem.QuestionType.NUMERIC_SCALE) {
+                        scaleQuestion.setLowLabel("Low");
+                        scaleQuestion.setHighLabel("High");
+                    }
+                    question.setScaleQuestion(scaleQuestion);
+                }
                 break;
 
             case TEXT:
