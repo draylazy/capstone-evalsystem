@@ -298,6 +298,21 @@ public class UserManagementController {
             if (type.equalsIgnoreCase("STUDENT")) {
                 googleSheetsService.writeDataToSheet(teacher, headers, rows, "Adviser Evaluation Data");
 
+                // Also sync individual evaluations
+                List<Map<String, String>> individualRows = userManagementService.getIndividualEvaluationsExportRows();
+                if (!individualRows.isEmpty()) {
+                    List<String> indHeaders = new ArrayList<>(individualRows.get(0).keySet());
+                    List<List<String>> indRowData = new ArrayList<>();
+                    for (Map<String, String> row : individualRows) {
+                        List<String> rowData = new ArrayList<>();
+                        for (String header : indHeaders) {
+                            rowData.add(row.getOrDefault(header, ""));
+                        }
+                        indRowData.add(rowData);
+                    }
+                    googleSheetsService.writeDataToSheet(teacher, indHeaders, indRowData, "Individual Evaluations");
+                }
+
                 List<Map<String, String>> reportRows = userManagementService.getStudentReportsExportRows();
                 if (!reportRows.isEmpty()) {
                     List<String> reportHeaders = new ArrayList<>();

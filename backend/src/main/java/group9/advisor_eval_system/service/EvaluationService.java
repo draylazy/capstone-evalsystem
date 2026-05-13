@@ -202,6 +202,60 @@ public class EvaluationService {
         return submitted;
     }
 
+    @Transactional
+    public Evaluation submitEvaluationWithoutSync(Long adviserId, Long evaluationId) {
+        Evaluation evaluation = evaluationRepository.findById(evaluationId)
+                .orElseThrow(() -> new RuntimeException("Evaluation not found"));
+
+        if (!evaluation.getAdviser().getId().equals(adviserId)) {
+            throw new RuntimeException("Unauthorized evaluation submission");
+        }
+        questionnaireService.ensureQuestionnaireOpenForResponses(evaluation.getQuestionnaire());
+
+        try {
+            autoGradeEvaluation(evaluation);
+        } catch (Exception e) {
+            log.error("Error during auto-grading: {}", e.getMessage(), e);
+        }
+
+        evaluation.setStatus(Evaluation.EvaluationStatus.SUBMITTED);
+        evaluation.setSubmittedAt(LocalDateTime.now());
+        evaluation.setAllowEdit(false);
+
+        Evaluation submitted = evaluationRepository.save(evaluation);
+
+        Questionnaire questionnaire = evaluation.getQuestionnaire();
+        if (questionnaire != null && !Boolean.TRUE.equals(questionnaire.getIsLocked())) {
+            questionnaire.setIsLocked(true);
+            questionnaire.setLockedAt(LocalDateTime.now());
+            questionnaireRepository.save(questionnaire);
+            log.info("Auto-locked questionnaire {} on first evaluation submission", questionnaire.getId());
+        }
+
+        return submitted;
+    }
+
+    @Transactional
+    public StudentEvaluation submitAdviserStudentEvaluationWithoutSync(Long adviserId, Long evaluationId) {
+        StudentEvaluation evaluation = studentEvaluationRepository.findByIdWithDetails(evaluationId)
+                .orElseThrow(() -> new RuntimeException("Student evaluation not found"));
+
+        if (evaluation.getAdviser() == null || !evaluation.getAdviser().getId().equals(adviserId)) {
+            throw new RuntimeException("Unauthorized: This evaluation does not belong to you");
+        }
+        if (evaluation.getStatus() == StudentEvaluation.EvaluationStatus.SUBMITTED) {
+            throw new RuntimeException("Evaluation already submitted");
+        }
+        questionnaireService.ensureQuestionnaireOpenForResponses(evaluation.getQuestionnaire());
+
+        evaluation.setStatus(StudentEvaluation.EvaluationStatus.SUBMITTED);
+        evaluation.setSubmittedAt(LocalDateTime.now());
+        StudentEvaluation submitted = studentEvaluationRepository.save(evaluation);
+        log.info("Submitted adviser-student evaluation {} (without sync)", evaluationId);
+
+        return submitted;
+    }
+
     private void autoGradeEvaluation(Evaluation evaluation) {
         Set<EvaluationScore> scores = evaluation.getScores();
 

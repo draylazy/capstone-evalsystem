@@ -11,6 +11,7 @@ import group9.advisor_eval_system.repository.QuestionnaireRepository;
 import group9.advisor_eval_system.service.EvaluationService;
 import group9.advisor_eval_system.service.QuestionnaireService;
 import group9.advisor_eval_system.service.TeamService;
+import group9.advisor_eval_system.service.UserManagementService;
 import group9.advisor_eval_system.util.JwtUtil;
 import jakarta.servlet.http.HttpServletRequest;
 import lombok.RequiredArgsConstructor;
@@ -31,6 +32,7 @@ public class AdviserEvaluationController {
     private final EvaluationService evaluationService;
     private final TeamService teamService;
     private final QuestionnaireService questionnaireService;
+    private final UserManagementService userManagementService;
     private final JwtUtil jwtUtil;
     private final EvaluationRepository evaluationRepository;
     private final EvaluationScoreRepository evaluationScoreRepository;
@@ -418,7 +420,9 @@ public class AdviserEvaluationController {
             // If this is a submit request, mark the team-level evaluation as SUBMITTED
             Boolean isSubmit = Boolean.TRUE.equals(payload.get("submit"));
             if (isSubmit) {
-                evaluationService.submitEvaluation(adviserId, evaluationId);
+                // Don't trigger sync in submitEvaluation - we'll do it once at the end
+                Evaluation eval = evaluationService.submitEvaluationWithoutSync(adviserId, evaluationId);
+                
                 // Also submit all adviser-student evals created for this questionnaire/team
                 List<StudentEvaluation> adviserStudentEvals =
                         studentEvaluationRepository.findByAdviserIdAndTeamId(adviserId, teamId);
@@ -426,8 +430,16 @@ public class AdviserEvaluationController {
                     if (studentEval.getQuestionnaire() != null
                             && studentEval.getQuestionnaire().getId().equals(questionnaireId)
                             && studentEval.getStatus() == StudentEvaluation.EvaluationStatus.IN_PROGRESS) {
-                        evaluationService.submitAdviserStudentEvaluation(adviserId, studentEval.getId());
+                        evaluationService.submitAdviserStudentEvaluationWithoutSync(adviserId, studentEval.getId());
                     }
+                }
+                
+                // Sync once after all evaluations are submitted
+                if (eval.getTeam() != null && eval.getTeam().getSchoolClass() != null 
+                    && eval.getTeam().getSchoolClass().getTeacher() != null) {
+                    userManagementService.asyncSyncAllDataToGoogleSheets(
+                        eval.getTeam().getSchoolClass().getTeacher().getEmail()
+                    );
                 }
                 log.info("Submitted mixed evaluation {} and associated student evals", evaluationId);
             }
