@@ -1,8 +1,8 @@
 import React, { useEffect, useMemo, useState } from "react";
+import { UserCheck, GraduationCap } from "lucide-react";
 import { createPortal } from "react-dom";
 import { useNavigate } from "react-router-dom";
 import TeacherSidebar from "../../components/Sidebar/TeacherSidebar";
-import SummaryCard from "../../components/Cards/SummaryCard";
 import PendingEvaluationsModal from "../../components/Modal/PendingEvaluationsModal";
 import { classAPI, studentAPI, teamAPI, questionnaireAPI, teacherReportAPI } from "../../services/api";
 import { usePagination } from "../../hooks/usePagination";
@@ -25,6 +25,9 @@ const Teacher = () => {
   const [pendingEvaluations, setPendingEvaluations] = useState([]);
   const [pendingCount, setPendingCount] = useState(0);
   const [showPendingModal, setShowPendingModal] = useState(false);
+  const [activityLogs, setActivityLogs] = useState([]);
+  const [logsLoading, setLogsLoading] = useState(false);
+  const [logSearch, setLogSearch] = useState("");
 
   const currentUser = useMemo(() => {
     const raw = localStorage.getItem("user");
@@ -89,6 +92,17 @@ const Teacher = () => {
           setPendingCount(0);
           setPendingEvaluations([]);
         }
+
+        // Load Activity Logs
+        try {
+          setLogsLoading(true);
+          const logs = await teacherReportAPI.getActivityLogs();
+          setActivityLogs(logs || []);
+        } catch (err) {
+          console.error("Error fetching activity logs:", err);
+        } finally {
+          setLogsLoading(false);
+        }
       } catch (e) {
         setError(e?.message || "Failed to load dashboard data");
       } finally {
@@ -139,6 +153,16 @@ const Teacher = () => {
     });
   }, [classes, classSearch]);
 
+  const filteredLogs = useMemo(() => {
+    const term = logSearch.trim().toLowerCase();
+    if (!term) return activityLogs;
+    return activityLogs.filter(log => 
+      log.message?.toLowerCase().includes(term)
+    );
+  }, [activityLogs, logSearch]);
+
+  const { currentPage: curPageLogs, totalPages: totPageLogs, paginatedData: pagLogs, goToPage: goPageLogs } = usePagination(filteredLogs, 5);
+
   const getStudentsForTeam = (team) => {
     if (!team || !team.memberIds || team.memberIds.length === 0) return [];
     // Convert memberIds to strings for comparison since IDs can be stored as different types
@@ -183,80 +207,80 @@ const Teacher = () => {
           </div>
         </section>
 
-        <div className="summary-row">
-          <SummaryCard title="Total Classes" value={loading ? "-" : String(classes.length)} />
-          <SummaryCard title="Total Students" value={loading ? "-" : String(students.length)} />
-          <SummaryCard title="Total Teams" value={loading ? "-" : String(teams.length)} />
-          <div className="summary-card-wrapper" onClick={() => setShowPendingModal(true)}>
-            <SummaryCard title="Pending Evaluations" value={loading ? "-" : String(pendingCount)} />
-          </div>
-        </div>
+
 
         {error && <div className="error-message">{error}</div>}
 
-        <div className="section">
-          <div className="classes-header">
-            <h2>Your Classes</h2>
+        <div className="section activity-logs-section">
+          <div className="section-header">
+            <div className="header-left">
+              <h2>Recent Submission Logs</h2>
+              <input 
+                type="text" 
+                className="log-search-input" 
+                placeholder="Search logs..." 
+                value={logSearch}
+                onChange={(e) => setLogSearch(e.target.value)}
+              />
+            </div>
+            <div className="header-actions">
+              <button 
+                className="btn btn-secondary btn-sm" 
+                onClick={async () => {
+                  setLogsLoading(true);
+                  try {
+                    const logs = await teacherReportAPI.getActivityLogs();
+                    setActivityLogs(logs || []);
+                  } finally {
+                    setLogsLoading(false);
+                  }
+                }}
+                disabled={logsLoading}
+              >
+                {logsLoading ? "Refreshing..." : "Refresh"}
+              </button>
+            </div>
           </div>
 
-          {loading ? (
-            <p>Loading...</p>
-          ) : classes.length === 0 ? (
-            <p>No classes found.</p>
-          ) : filteredClasses.length === 0 ? (
-            <p>No classes matched your current filter.</p>
+          {logsLoading && activityLogs.length === 0 ? (
+            <div className="logs-loading">
+              <div className="spinner"></div>
+              <p>Fetching latest updates...</p>
+            </div>
+          ) : activityLogs.length === 0 ? (
+            <div className="no-logs-message">
+              <p>No submission logs available yet.</p>
+            </div>
           ) : (
-          <>
-          <table className="class-table">
-            <thead>
-              <tr>
-                <th>#</th>
-                <th>Class</th>
-                <th>Section</th>
-                <th>School Year</th>
-                <th>Students</th>
-                <th>Teams</th>
-                <th>Questionnaires</th>
-                <th>Action</th>
-              </tr>
-            </thead>
-
-            <tbody>
-              {pagClasses.map((c, index) => {
-                const questionnaireCount = getQuestionnairesForClass(c.id).length;
-                const hasQuestionnaire = questionnaireCount > 0;
-
-                return (
-                <tr key={c.id}>
-                  <td>{(curPageClasses - 1) * 10 + index + 1}</td>
-                  <td>{c.name}</td>
-                  <td>{c.section || "N/A"}</td>
-                  <td>{c.schoolYear}</td>
-                  <td>{getStudentsForClass(c.id).length} Students</td>
-                  <td>{teamsByClassId.get(c.id) || 0} Teams</td>
-                  <td className="table-chip-cell">
-                    {hasQuestionnaire ? (
-                      <span className="questionnaire-count-badge is-available">
-                        {questionnaireCount} {questionnaireCount === 1 ? "assigned" : "assigned"}
+            <>
+              <div className="logs-feed">
+                {pagLogs.map((log, idx) => (
+                  <div key={idx} className={`log-item ${log.type?.toLowerCase()}`}>
+                    <div className="log-icon">
+                      {log.type === "ADVISER_SUBMISSION" ? (
+                        <UserCheck size={20} color="#64b4ff" />
+                      ) : (
+                        <GraduationCap size={20} color="var(--dtm-gold)" />
+                      )}
+                    </div>
+                    <div className="log-content">
+                      <p className="log-message">{log.message}</p>
+                      <span className="log-time">
+                        {new Date(log.timestamp).toLocaleString(undefined, {
+                          dateStyle: 'medium',
+                          timeStyle: 'short'
+                        })}
                       </span>
-                    ) : (
-                      <span className="questionnaire-count-badge is-zero">
-                        0 assigned
-                      </span>
-                    )}
-                  </td>
-                  <td className="table-action-cell">
-                    <button className="btn" onClick={() => handleManageClass(c)}>
-                      Manage Class
-                    </button>
-                  </td>
-                </tr>
-              );})}
-            </tbody>
-          </table>
-          <Pagination currentPage={curPageClasses} totalPages={totPageClasses} onPageChange={goPageClasses} />
-          </>
-
+                    </div>
+                  </div>
+                ))}
+              </div>
+              <Pagination 
+                currentPage={curPageLogs} 
+                totalPages={totPageLogs} 
+                onPageChange={goPageLogs} 
+              />
+            </>
           )}
         </div>
 

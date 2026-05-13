@@ -132,4 +132,13 @@ public interface StudentEvaluationRepository extends JpaRepository<StudentEvalua
                         AND e.status = 'SUBMITTED'
                         """)
         List<StudentEvaluation> findAdviserStudentByEvaluateeWithDetails(@Param("evaluateeId") Long evaluateeId);
+
+        @Query("SELECT e FROM StudentEvaluation e " +
+                "JOIN e.questionnaire q " +
+                "LEFT JOIN e.student s " +
+                "LEFT JOIN e.adviser a " +
+                "WHERE q.createdByTeacher.id = :teacherId " +
+                "AND e.status = 'SUBMITTED' " +
+                "ORDER BY e.submittedAt DESC")
+        List<StudentEvaluation> findRecentSubmittedByTeacherId(@Param("teacherId") Long teacherId);
 }
