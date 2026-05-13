@@ -876,6 +876,15 @@ export const teacherReportAPI = {
     if (!response.ok) await throwApiError(response, 'Failed to fetch pending evaluations');
     return await response.json();
   },
+  
+  getActivityLogs: async () => {
+    const response = await fetch(
+      `${API_BASE_URL}/teacher/reports/activity-logs`,
+      { method: 'GET', headers: getHeaders() }
+    );
+    if (!response.ok) await throwApiError(response, 'Failed to fetch activity logs');
+    return await response.json();
+  },
 };
 
 // User Management API

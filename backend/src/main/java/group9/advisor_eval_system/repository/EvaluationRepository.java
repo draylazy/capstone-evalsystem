@@ -105,4 +105,13 @@ public interface EvaluationRepository extends JpaRepository<Evaluation, Long> {
                 ")", 
                 nativeQuery = true)
         List<Object[]> findAllPendingEvaluationCombinationsByTeacherId(@Param("teacherId") Long teacherId);
+
+        @Query("SELECT e FROM Evaluation e " +
+                "JOIN e.questionnaire q " +
+                "JOIN e.team t " +
+                "JOIN t.schoolClass sc " +
+                "WHERE sc.teacher.id = :teacherId " +
+                "AND e.status = 'SUBMITTED' " +
+                "ORDER BY e.submittedAt DESC")
+        List<Evaluation> findRecentSubmittedByTeacherId(@Param("teacherId") Long teacherId);
 }

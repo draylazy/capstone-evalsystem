@@ -22,7 +22,8 @@ import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
 import jakarta.servlet.http.HttpServletRequest;
-import java.util.ArrayList;
+import java.util.*;
+import java.util.stream.Collectors;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
@@ -388,6 +389,147 @@ public class TeacherReportController {
             return ResponseEntity.ok(result);
         } catch (Exception e) {
             log.error("Error fetching pending evaluations", e);
+            return ResponseEntity.status(HttpStatus.BAD_REQUEST)
+                    .body(Map.of("error", e.getMessage()));
+        }
+    }
+
+    @GetMapping("/activity-logs")
+    public ResponseEntity<?> getActivityLogs(HttpServletRequest request) {
+        try {
+            Long teacherId = getTeacherId(request);
+            
+            List<Evaluation> adviserTeamEvals = evaluationRepository.findRecentSubmittedByTeacherId(teacherId);
+            List<StudentEvaluation> studentEvals = studentEvaluationRepository.findRecentSubmittedByTeacherId(teacherId);
+
+            List<Map<String, Object>> logs = new ArrayList<>();
+
+            // Process Adviser-Team Evaluations
+            for (Evaluation e : adviserTeamEvals) {
+                Map<String, Object> logEntry = new HashMap<>();
+                String adviserName = e.getAdviser().getFirstName() + " " + e.getAdviser().getLastName();
+                String teamName = e.getTeam().getName();
+                String classDisplay = e.getTeam().getSchoolClass().getName() + 
+                    (e.getTeam().getSchoolClass().getSection() != null && !e.getTeam().getSchoolClass().getSection().isEmpty() 
+                    ? " " + e.getTeam().getSchoolClass().getSection() : "");
+                String questTitle = e.getQuestionnaire().getTitle();
+
+                String message = String.format("Adviser %s has submitted the questionnaire \"%s\" assigned to %s – %s.",
+                        adviserName, questTitle, classDisplay, teamName);
+
+                logEntry.put("message", message);
+                logEntry.put("timestamp", e.getSubmittedAt());
+                logEntry.put("type", "ADVISER_SUBMISSION");
+                logs.add(logEntry);
+            }
+
+            // Group Student Evaluations (Peer, Self, or Adviser-Student) by Actor and Questionnaire
+            Map<String, List<StudentEvaluation>> groupedStudentEvals = new LinkedHashMap<>();
+            for (StudentEvaluation e : studentEvals) {
+                String key;
+                if (e.getAdviser() != null) {
+                    key = "ADVISER_" + e.getAdviser().getId() + "_" + e.getQuestionnaire().getId();
+                } else {
+                    key = "STUDENT_" + e.getStudent().getId() + "_" + e.getQuestionnaire().getId();
+                }
+                groupedStudentEvals.computeIfAbsent(key, k -> new ArrayList<>()).add(e);
+            }
+
+            for (List<StudentEvaluation> group : groupedStudentEvals.values()) {
+                StudentEvaluation first = group.get(0);
+                Map<String, Object> logEntry = new HashMap<>();
+                String actorName;
+                String type;
+                String teamName = "Unknown Team";
+                String className = "Unknown Class";
+
+                if (first.getAdviser() != null) {
+                    actorName = "Adviser " + first.getAdviser().getFirstName() + " " + first.getAdviser().getLastName();
+                    type = "ADVISER_SUBMISSION";
+                    if (first.getTeam() != null) {
+                        teamName = first.getTeam().getName();
+                        className = first.getTeam().getSchoolClass().getName() + 
+                            (first.getTeam().getSchoolClass().getSection() != null && !first.getTeam().getSchoolClass().getSection().isEmpty() 
+                            ? " " + first.getTeam().getSchoolClass().getSection() : "");
+                    }
+                } else {
+                    actorName = "Student " + first.getStudent().getFirstName() + " " + first.getStudent().getLastName();
+                    type = "STUDENT_SUBMISSION";
+                    if (first.getStudent().getTeamStudents() != null && !first.getStudent().getTeamStudents().isEmpty()) {
+                        Team t = first.getStudent().getTeamStudents().get(0).getTeam();
+                        teamName = t.getName();
+                        className = t.getSchoolClass().getName() + 
+                            (t.getSchoolClass().getSection() != null && !t.getSchoolClass().getSection().isEmpty() 
+                            ? " " + t.getSchoolClass().getSection() : "");
+                    }
+                }
+
+                // Summarize evaluatees
+                List<String> evaluatees = new ArrayList<>();
+                String actorFullName = "";
+                if (first.getAdviser() != null) {
+                    actorFullName = first.getAdviser().getFirstName() + " " + first.getAdviser().getLastName();
+                } else if (first.getStudent() != null) {
+                    actorFullName = first.getStudent().getFirstName() + " " + first.getStudent().getLastName();
+                }
+
+                for (StudentEvaluation e : group) {
+                    String name = (e.getEvaluatee() != null) ? (e.getEvaluatee().getFirstName() + " " + e.getEvaluatee().getLastName()) : "themselves";
+                    if (!evaluatees.contains(name)) {
+                        evaluatees.add(name);
+                    }
+                }
+
+                // Sort evaluatees alphabetically
+                Collections.sort(evaluatees);
+
+                // If the actor is in the list, move them to the front
+                if (evaluatees.contains(actorFullName)) {
+                    evaluatees.remove(actorFullName);
+                    evaluatees.add(0, actorFullName);
+                } else if (evaluatees.contains("themselves")) {
+                    evaluatees.remove("themselves");
+                    evaluatees.add(0, actorFullName); // Replace "themselves" with actual name for clarity if requested
+                }
+
+                String evaluateesStr;
+                if (evaluatees.size() == 1) {
+                    evaluateesStr = evaluatees.get(0);
+                } else if (evaluatees.size() == 2) {
+                    evaluateesStr = evaluatees.get(0) + " and " + evaluatees.get(1);
+                } else {
+                    evaluateesStr = evaluatees.get(0) + " and " + (evaluatees.size() - 1) + " others";
+                }
+
+                String questTitle = first.getQuestionnaire().getTitle();
+                String message = String.format("%s has submitted the questionnaire \"%s\" evaluating %s in %s – %s.",
+                        actorName, questTitle, evaluateesStr, className, teamName);
+
+                logEntry.put("message", message);
+                // Use the latest submission time in the group
+                java.time.LocalDateTime latest = group.stream()
+                        .map(StudentEvaluation::getSubmittedAt)
+                        .filter(Objects::nonNull)
+                        .max(java.time.LocalDateTime::compareTo)
+                        .orElse(first.getSubmittedAt());
+                
+                logEntry.put("timestamp", latest);
+                logEntry.put("type", type);
+                logs.add(logEntry);
+            }
+
+            // Sort logs by timestamp descending
+            logs.sort((a, b) -> {
+                java.time.LocalDateTime t1 = (java.time.LocalDateTime) a.get("timestamp");
+                java.time.LocalDateTime t2 = (java.time.LocalDateTime) b.get("timestamp");
+                if (t1 == null) return 1;
+                if (t2 == null) return -1;
+                return t2.compareTo(t1);
+            });
+
+            return ResponseEntity.ok(logs);
+        } catch (Exception e) {
+            log.error("Error fetching activity logs", e);
             return ResponseEntity.status(HttpStatus.BAD_REQUEST)
                     .body(Map.of("error", e.getMessage()));
         }
