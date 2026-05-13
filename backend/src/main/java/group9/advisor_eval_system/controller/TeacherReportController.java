@@ -6,11 +6,13 @@ import group9.advisor_eval_system.dto.PendingEvaluationDto;
 import group9.advisor_eval_system.dto.StudentEvaluationResponse;
 import group9.advisor_eval_system.entity.Evaluation;
 import group9.advisor_eval_system.entity.Questionnaire;
+import group9.advisor_eval_system.entity.Team;
 import group9.advisor_eval_system.entity.User;
 import group9.advisor_eval_system.entity.StudentEvaluation;
 import group9.advisor_eval_system.repository.EvaluationRepository;
 import group9.advisor_eval_system.repository.QuestionnaireRepository;
 import group9.advisor_eval_system.repository.StudentEvaluationRepository;
+import group9.advisor_eval_system.repository.TeamRepository;
 import group9.advisor_eval_system.repository.UserRepository;
 import group9.advisor_eval_system.util.JwtUtil;
 import lombok.RequiredArgsConstructor;
@@ -36,6 +38,7 @@ public class TeacherReportController {
     private final EvaluationRepository evaluationRepository;
     private final StudentEvaluationRepository studentEvaluationRepository;
     private final UserRepository userRepository;
+    private final TeamRepository teamRepository;
     private final JwtUtil jwtUtil;
 
     private Long getTeacherId(HttpServletRequest request) {
@@ -315,27 +318,70 @@ public class TeacherReportController {
                         .body(Map.of("error", "Only teachers can access this"));
             }
 
-            // Get all pending evaluations for this teacher's classes
-            List<Evaluation> pendingEvaluations = evaluationRepository.findPendingEvaluationsByTeacherId(teacherId);
+            // Get all pending evaluations (including not-yet-started) for accurate count
+            List<Object[]> allPendingCombinations = evaluationRepository.findAllPendingEvaluationCombinationsByTeacherId(teacherId);
+            Long totalPendingCount = (long) allPendingCombinations.size();
 
-            // Convert to DTOs
-            List<PendingEvaluationDto> response = pendingEvaluations.stream()
-                    .map(eval -> new PendingEvaluationDto(
-                            eval.getId(),
-                            eval.getAdviser().getId(),
-                            (eval.getAdviser().getFirstName() != null ? eval.getAdviser().getFirstName() : "") + " " +
-                            (eval.getAdviser().getLastName() != null ? eval.getAdviser().getLastName() : ""),
-                            eval.getTeam().getSchoolClass().getId(),
-                            eval.getTeam().getSchoolClass().getName(),
-                            eval.getTeam().getId(),
-                            eval.getTeam().getName(),
-                            eval.getQuestionnaire().getId(),
-                            eval.getQuestionnaire().getTitle()
-                    ))
+            // Get detailed evaluation records that have been started
+            List<Evaluation> startedEvaluations = evaluationRepository.findPendingEvaluationsByTeacherId(teacherId);
+            
+            // Create a map of started evaluations for quick lookup
+            Map<String, Evaluation> startedEvalMap = startedEvaluations.stream()
+                    .collect(Collectors.toMap(
+                            e -> e.getAdviser().getId() + "-" + e.getTeam().getId() + "-" + e.getQuestionnaire().getId(),
+                            e -> e
+                    ));
+
+            // Convert all pending combinations to DTOs (including not-started ones)
+            List<PendingEvaluationDto> response = allPendingCombinations.stream()
+                    .map(combo -> {
+                        Long adviserId = ((Number) combo[0]).longValue();
+                        Long teamId = ((Number) combo[1]).longValue();
+                        Long questionnaireId = ((Number) combo[2]).longValue();
+                        String key = adviserId + "-" + teamId + "-" + questionnaireId;
+                        
+                        Evaluation eval = startedEvalMap.get(key);
+                        
+                        // Get adviser, team, questionnaire details from the started evaluation if available
+                        User adviser;
+                        Team team;
+                        Questionnaire questionnaire;
+                        Long evaluationId = null;
+                        
+                        if (eval != null) {
+                            adviser = eval.getAdviser();
+                            team = eval.getTeam();
+                            questionnaire = eval.getQuestionnaire();
+                            evaluationId = eval.getId();
+                        } else {
+                            // For not-started evaluations, fetch the objects
+                            adviser = userRepository.findById(adviserId).orElse(null);
+                            team = teamRepository.findById(teamId).orElse(null);
+                            questionnaire = questionnaireRepository.findById(questionnaireId).orElse(null);
+                        }
+                        
+                        if (adviser == null || team == null || questionnaire == null) {
+                            return null;
+                        }
+                        
+                        return new PendingEvaluationDto(
+                                evaluationId,
+                                adviser.getId(),
+                                (adviser.getFirstName() != null ? adviser.getFirstName() : "") + " " +
+                                (adviser.getLastName() != null ? adviser.getLastName() : ""),
+                                team.getSchoolClass().getId(),
+                                team.getSchoolClass().getName(),
+                                team.getId(),
+                                team.getName(),
+                                questionnaire.getId(),
+                                questionnaire.getTitle()
+                        );
+                    })
+                    .filter(dto -> dto != null)
                     .collect(Collectors.toList());
 
             Map<String, Object> result = Map.of(
-                    "total", response.size(),
+                    "total", totalPendingCount,
                     "pending", response
             );
 

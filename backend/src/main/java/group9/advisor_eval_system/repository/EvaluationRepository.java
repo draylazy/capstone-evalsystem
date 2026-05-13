@@ -52,9 +52,10 @@ public interface EvaluationRepository extends JpaRepository<Evaluation, Long> {
                         "JOIN e.questionnaire q " +
                         "JOIN e.team t " +
                         "JOIN t.schoolClass sc " +
-                        "JOIN e.adviser a " +
                         "WHERE sc.teacher.id = :teacherId " +
-                        "AND e.status = 'IN_PROGRESS'")
+                        "AND q.target = 'ADVISER' " +
+                        "AND q.isActive = true " +
+                        "AND e.status NOT IN ('SUBMITTED', 'REVIEWED')")
         List<Evaluation> findPendingEvaluationsByTeacherId(@Param("teacherId") Long teacherId);
 
         @Query("SELECT DISTINCT e FROM Evaluation e " +
@@ -83,4 +84,25 @@ public interface EvaluationRepository extends JpaRepository<Evaluation, Long> {
                         "LEFT JOIN FETCH e.adviser " +
                         "WHERE e.id = :id")
         Optional<Evaluation> findByIdWithFullDetails(@Param("id") Long id);
+
+        @Query(value = 
+                "SELECT DISTINCT a.id as adviser_id, t.id as team_id, q.id as questionnaire_id " +
+                "FROM teams t " +
+                "JOIN team_advisers ta ON t.id = ta.team_id " +
+                "JOIN users a ON ta.adviser_id = a.id " +
+                "JOIN classes c ON t.class_id = c.id " +
+                "JOIN class_questionnaires cq ON c.id = cq.class_id " +
+                "JOIN questionnaires q ON cq.questionnaire_id = q.id " +
+                "WHERE c.teacher_id = :teacherId " +
+                "AND q.target = 'ADVISER' " +
+                "AND q.is_active = true " +
+                "AND NOT EXISTS (" +
+                "  SELECT 1 FROM evaluations e " +
+                "  WHERE e.adviser_id = a.id " +
+                "  AND e.team_id = t.id " +
+                "  AND e.questionnaire_id = q.id " +
+                "  AND e.status IN ('SUBMITTED', 'REVIEWED')" +
+                ")", 
+                nativeQuery = true)
+        List<Object[]> findAllPendingEvaluationCombinationsByTeacherId(@Param("teacherId") Long teacherId);
 }
