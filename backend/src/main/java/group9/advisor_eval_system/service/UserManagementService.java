@@ -203,6 +203,11 @@ public class UserManagementService {
         }
 
         rows.sort((r1, r2) -> {
+            String class1 = r1.getOrDefault("CLASS", "");
+            String class2 = r2.getOrDefault("CLASS", "");
+            int classCompare = class1.compareToIgnoreCase(class2);
+            if (classCompare != 0) return classCompare;
+            
             String team1 = r1.getOrDefault("TEAMCODE", "");
             String team2 = r2.getOrDefault("TEAMCODE", "");
             int teamCompare = team1.compareToIgnoreCase(team2);
@@ -293,6 +298,11 @@ public class UserManagementService {
         }
 
         rows.sort((r1, r2) -> {
+            String class1 = r1.getOrDefault("CLASS", "");
+            String class2 = r2.getOrDefault("CLASS", "");
+            int classCompare = class1.compareToIgnoreCase(class2);
+            if (classCompare != 0) return classCompare;
+            
             String team1 = r1.getOrDefault("TEAMCODE", "");
             String team2 = r2.getOrDefault("TEAMCODE", "");
             int teamCompare = team1.compareToIgnoreCase(team2);
@@ -331,15 +341,14 @@ public class UserManagementService {
 
     public List<Map<String, String>> getIndividualEvaluationsExportRows() {
         List<Map<String, String>> rows = new ArrayList<>();
+        
+        // Get all evaluations for lookup
         List<StudentEvaluation> allIndividualEvals = studentEvaluationRepository.findAll();
-
+        
+        // Create map for quick lookup: adviser_id-student_id -> List<StudentEvaluation>
+        java.util.Map<String, java.util.List<StudentEvaluation>> evalLookup = new java.util.LinkedHashMap<>();
         java.util.Map<Long, Questionnaire> questionnaireMap = new java.util.LinkedHashMap<>();
-        java.util.Set<Long> questionnaireIds = new java.util.LinkedHashSet<>();
-
-        // Collect all questionnaires and evaluations
-        // Only include ADVISER_STUDENT evaluations (adviser != null, student == null, evaluatee != null)
-        java.util.Map<String, java.util.List<StudentEvaluation>> evaluationsByAdviserStudent = new java.util.LinkedHashMap<>();
-
+        
         for (StudentEvaluation eval : allIndividualEvals) {
             // Only include ADVISER_STUDENT evaluations
             if (eval.getAdviser() == null || eval.getEvaluatee() == null || eval.getStudent() != null) {
@@ -347,111 +356,148 @@ public class UserManagementService {
             }
             
             if (eval.getQuestionnaire() != null) {
-                questionnaireIds.add(eval.getQuestionnaire().getId());
                 questionnaireMap.put(eval.getQuestionnaire().getId(), eval.getQuestionnaire());
                 
-                // Create unique key: adviser_id-student_id (NOT including questionnaire)
                 String key = eval.getAdviser().getId() + "-" + eval.getEvaluatee().getId();
-                evaluationsByAdviserStudent.computeIfAbsent(key, k -> new ArrayList<>()).add(eval);
+                evalLookup.computeIfAbsent(key, k -> new ArrayList<>()).add(eval);
             }
         }
 
-        List<Questionnaire> sortedQuestionnaires = new ArrayList<>(questionnaireMap.values());
-        sortedQuestionnaires.sort((q1, q2) -> q1.getId().compareTo(q2.getId()));
-
-        for (java.util.List<StudentEvaluation> evals : evaluationsByAdviserStudent.values()) {
-            if (evals.isEmpty()) continue;
+        // Get all classes and build complete adviser-student pairs
+        List<SchoolClass> allClasses = schoolClassRepository.findAll();
+        
+        for (SchoolClass schoolClass : allClasses) {
+            // Get all questionnaires for this class
+            List<Questionnaire> classQuestionnaires = questionnaireRepository.findByAssignedClassesContaining(schoolClass);
+            for (Questionnaire q : classQuestionnaires) {
+                questionnaireMap.put(q.getId(), q);
+            }
             
-            StudentEvaluation firstEval = evals.get(0);
-            if (firstEval.getAdviser() == null || firstEval.getEvaluatee() == null) {
-                continue;
+            // Get all teams in this class
+            java.util.Set<Team> classTeams = new java.util.LinkedHashSet<>();
+            if (schoolClass.getTeams() != null) {
+                classTeams.addAll(schoolClass.getTeams());
             }
-
-            Map<String, String> row = new LinkedHashMap<>();
             
-            String className = "";
-            Team studentTeam = null;
-            if (firstEval.getTeam() != null && firstEval.getTeam().getSchoolClass() != null) {
-                className = firstEval.getTeam().getSchoolClass().getName();
-                studentTeam = firstEval.getTeam();
-            } else if (firstEval.getEvaluatee() != null && firstEval.getEvaluatee().getClasses() != null && !firstEval.getEvaluatee().getClasses().isEmpty()) {
-                className = firstEval.getEvaluatee().getClasses().get(0).getName();
-            }
-
-            String teamCode = "";
-            if (studentTeam != null) {
-                teamCode = studentTeam.getName() == null ? "" : studentTeam.getName();
-            }
-
-            row.put("CLASS", className);
-            row.put("TEAMCODE", teamCode);
-            row.put("STUDENTID", firstEval.getEvaluatee().getStudentId() == null ? "" : firstEval.getEvaluatee().getStudentId());
-            row.put("STUDENTNAME", (firstEval.getEvaluatee().getFirstName() == null ? "" : firstEval.getEvaluatee().getFirstName()) + " " + 
-                                    (firstEval.getEvaluatee().getLastName() == null ? "" : firstEval.getEvaluatee().getLastName()));
-            row.put("ADVISERNAME", (firstEval.getAdviser().getFirstName() == null ? "" : firstEval.getAdviser().getFirstName()) + " " + 
-                                    (firstEval.getAdviser().getLastName() == null ? "" : firstEval.getAdviser().getLastName()));
-            row.put("ADVISEREMAIL", firstEval.getAdviser().getEmail() == null ? "" : firstEval.getAdviser().getEmail());
+            // Collect all students and advisers in this class
+            java.util.Map<String, User> adviserMap = new java.util.LinkedHashMap<>();
+            java.util.Map<String, Student> studentMap = new java.util.LinkedHashMap<>();
             
-            // Determine overall status (SUBMITTED if any evaluation is submitted)
-            String status = "Not Started";
-            for (StudentEvaluation eval : evals) {
-                if (eval.getStatus() == StudentEvaluation.EvaluationStatus.SUBMITTED) {
-                    status = "SUBMITTED";
-                    break;
-                }
-            }
-            row.put("STATUS", status);
-
-            // Create map of questionnaire scores for this adviser-student pair
-            java.util.Map<Long, StudentEvaluation> questionnaireEvals = new java.util.HashMap<>();
-            for (StudentEvaluation eval : evals) {
-                if (eval.getQuestionnaire() != null) {
-                    questionnaireEvals.put(eval.getQuestionnaire().getId(), eval);
-                }
-            }
-
-            // Add score columns for each questionnaire
-            for (Questionnaire questionnaire : sortedQuestionnaires) {
-                String scoreValue = "";
-                StudentEvaluation eval = questionnaireEvals.get(questionnaire.getId());
-                
-                if (eval != null) {
-                    if (eval.getScores() != null && !eval.getScores().isEmpty()) {
-                        double totalScore = 0;
-                        int numericScoreCount = 0;
-                        for (StudentEvaluationScore score : eval.getScores()) {
-                            if (score.getNumericScore() != null) {
-                                totalScore += score.getNumericScore();
-                                numericScoreCount++;
-                            }
-                        }
-                        if (numericScoreCount > 0) {
-                            double average = totalScore / numericScoreCount;
-                            scoreValue = String.format("%.2f", average);
-                        } else {
-                            scoreValue = "Answered";
-                        }
-                    } else if (eval.getStatus() == StudentEvaluation.EvaluationStatus.SUBMITTED) {
-                        scoreValue = "Answered";
-                    } else {
-                        scoreValue = "In Progress";
+            for (Team team : classTeams) {
+                // Add advisers from this team
+                if (team.getAdvisers() != null) {
+                    for (User adviser : team.getAdvisers()) {
+                        adviserMap.put(adviser.getId().toString(), adviser);
                     }
                 }
-                row.put(questionnaire.getTitle(), scoreValue);
+                
+                // Add students from this team
+                if (team.getTeamStudents() != null) {
+                    for (TeamStudent ts : team.getTeamStudents()) {
+                        if (ts.getStudent() != null) {
+                            studentMap.put(ts.getStudent().getId().toString(), ts.getStudent());
+                        }
+                    }
+                }
             }
-
-            rows.add(row);
+            
+            // Create rows for all adviser-student pairs in this class
+            for (User adviser : adviserMap.values()) {
+                for (Student student : studentMap.values()) {
+                    String key = adviser.getId() + "-" + student.getId();
+                    java.util.List<StudentEvaluation> evals = evalLookup.getOrDefault(key, new ArrayList<>());
+                    
+                    Map<String, String> row = new LinkedHashMap<>();
+                    
+                    // Get team for this student and find member position
+                    Team studentTeam = null;
+                    String memberNumber = "";
+                    for (Team team : classTeams) {
+                        if (team.getTeamStudents() != null) {
+                            for (TeamStudent ts : team.getTeamStudents()) {
+                                if (ts.getStudent() != null && ts.getStudent().getId().equals(student.getId())) {
+                                    studentTeam = team;
+                                    memberNumber = ts.getPosition() == null ? "" : String.valueOf(ts.getPosition());
+                                    break;
+                                }
+                            }
+                        }
+                        if (studentTeam != null) break;
+                    }
+                    
+                    row.put("CLASS", schoolClass.getName());
+                    row.put("TEAMCODE", studentTeam != null && studentTeam.getName() != null ? studentTeam.getName() : "");
+                    row.put("MEMBER#", memberNumber);
+                    row.put("STUDENTID", student.getStudentId() == null ? "" : student.getStudentId());
+                    row.put("LASTNAME", student.getLastName() == null ? "" : student.getLastName());
+                    row.put("FIRSTNAME", student.getFirstName() == null ? "" : student.getFirstName());
+                    row.put("EMAIL", student.getEmail() == null ? "" : student.getEmail());
+                    row.put("ADVISOREMAIL", adviser.getEmail() == null ? "" : adviser.getEmail());
+                    
+                    // Create map of questionnaire scores for this adviser-student pair
+                    java.util.Map<Long, StudentEvaluation> questionnaireEvals = new java.util.HashMap<>();
+                    for (StudentEvaluation eval : evals) {
+                        if (eval.getQuestionnaire() != null) {
+                            questionnaireEvals.put(eval.getQuestionnaire().getId(), eval);
+                        }
+                    }
+                    
+                    // Add score columns for each questionnaire
+                    for (Questionnaire questionnaire : questionnaireMap.values()) {
+                        String scoreValue = "";
+                        StudentEvaluation eval = questionnaireEvals.get(questionnaire.getId());
+                        
+                        if (eval != null) {
+                            if (eval.getScores() != null && !eval.getScores().isEmpty()) {
+                                double totalScore = 0;
+                                int numericScoreCount = 0;
+                                for (StudentEvaluationScore score : eval.getScores()) {
+                                    if (score.getNumericScore() != null) {
+                                        totalScore += score.getNumericScore();
+                                        numericScoreCount++;
+                                    }
+                                }
+                                if (numericScoreCount > 0) {
+                                    double average = totalScore / numericScoreCount;
+                                    scoreValue = String.format("%.2f", average);
+                                } else {
+                                    scoreValue = "Answered";
+                                }
+                            } else if (eval.getStatus() == StudentEvaluation.EvaluationStatus.SUBMITTED) {
+                                scoreValue = "Answered";
+                            } else {
+                                scoreValue = "In Progress";
+                            }
+                        }
+                        row.put(questionnaire.getTitle(), scoreValue);
+                    }
+                    
+                    rows.add(row);
+                }
+            }
         }
 
+        // Sort by CLASS, TEAMCODE, then MEMBER# (numerically)
         rows.sort((r1, r2) -> {
+            String class1 = r1.getOrDefault("CLASS", "");
+            String class2 = r2.getOrDefault("CLASS", "");
+            int classCompare = class1.compareToIgnoreCase(class2);
+            if (classCompare != 0) return classCompare;
+            
             String team1 = r1.getOrDefault("TEAMCODE", "");
             String team2 = r2.getOrDefault("TEAMCODE", "");
             int teamCompare = team1.compareToIgnoreCase(team2);
             if (teamCompare != 0) return teamCompare;
             
-            String name1 = r1.getOrDefault("STUDENTNAME", "");
-            String name2 = r2.getOrDefault("STUDENTNAME", "");
-            return name1.compareToIgnoreCase(name2);
+            String member1 = r1.getOrDefault("MEMBER#", "0");
+            String member2 = r2.getOrDefault("MEMBER#", "0");
+            try {
+                int mem1 = member1.isEmpty() ? 0 : Integer.parseInt(member1);
+                int mem2 = member2.isEmpty() ? 0 : Integer.parseInt(member2);
+                return Integer.compare(mem1, mem2);
+            } catch (NumberFormatException e) {
+                return member1.compareTo(member2);
+            }
         });
 
         return rows;
