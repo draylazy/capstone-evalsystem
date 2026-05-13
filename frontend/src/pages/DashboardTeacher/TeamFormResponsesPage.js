@@ -126,11 +126,17 @@ const TeamFormResponsesPage = () => {
                         marginBottom: 8,
                       }}
                     >
-                      <span style={{ fontSize: 13, color: "var(--dtm-muted)" }}>
-                        {response.studentName}
-                        {response.evaluatorLabel ? ` · ${response.evaluatorLabel}` : ""}
+                      <span className="response-meta-left">
+                        <span className="response-student-name">
+                          {response.studentName}
+                        </span>
+                        {response.evaluatorLabel && (
+                          <span className="response-evaluator-label">
+                            {response.evaluatorLabel}
+                          </span>
+                        )}
                       </span>
-                      <span style={{ fontSize: 12, color: "var(--dtm-muted)" }}>
+                      <span className="response-meta-time">
                         {response.submittedAt
                           ? new Date(response.submittedAt).toLocaleDateString()
                           : ""}

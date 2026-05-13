@@ -4423,6 +4423,36 @@
 .perf-student-num { font-size: 12px; color: var(--dtm-muted); }
 .perf-student-right { display: flex; align-items: center; gap: 8px; flex-shrink: 0; }
 
+.response-meta-left {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
+.response-student-name {
+  display: inline-flex;
+  align-items: center;
+  padding: 4px 10px;
+  border-radius: 999px;
+  font-size: 13px;
+  font-weight: 700;
+  color: var(--dtm-text);
+  background: rgba(242, 201, 76, 0.16);
+  border: 1px solid rgba(242, 201, 76, 0.22);
+}
+
+.response-evaluator-label {
+  font-size: 12px;
+  color: rgba(255, 255, 255, 0.7);
+}
+
+.response-meta-time {
+  font-size: 12px;
+  color: rgba(255, 255, 255, 0.65);
+}
+
+
 .perf-peer-chip {
   font-size: 10px;
   font-weight: 700;
