@@ -112,12 +112,6 @@ const Adviser = () => {
                         >
                           Team Evaluations
                         </button>
-                        <button
-                          className="btn-secondary adviser-open-btn"
-                          onClick={() => navigate(`/adviser/student-evaluations/${team.id}`)}
-                        >
-                          Student Evaluations
-                        </button>
                       </div>
                     </td>
                   </tr>
