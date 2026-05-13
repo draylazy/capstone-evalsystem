@@ -96,18 +96,41 @@ public class UserManagementService {
         private int updated;
         private int skipped;
         private List<String> errors;
+        public List<Student> addedStudents;
+        public List<Map<String, Object>> updatedStudents; // Contains before/after info
 
         public UploadResult(int added, int updated, int skipped, List<String> errors) {
             this.added = added;
             this.updated = updated;
             this.skipped = skipped;
             this.errors = errors;
+            this.addedStudents = new ArrayList<>();
+            this.updatedStudents = new ArrayList<>();
         }
 
         public int getAdded() { return added; }
         public int getUpdated() { return updated; }
         public int getSkipped() { return skipped; }
         public List<String> getErrors() { return errors; }
+        public List<Student> getAddedStudents() { return addedStudents; }
+        public List<Map<String, Object>> getUpdatedStudents() { return updatedStudents; }
+        
+        public void setAdded(int added) { this.added = added; }
+        public void setUpdated(int updated) { this.updated = updated; }
+        public void setSkipped(int skipped) { this.skipped = skipped; }
+        public void setErrors(List<String> errors) { this.errors = errors; }
+        public void setAddedStudents(List<Student> addedStudents) { this.addedStudents = addedStudents; }
+        public void setUpdatedStudents(List<Map<String, Object>> updatedStudents) { this.updatedStudents = updatedStudents; }
+        
+        public void addStudent(Student student) {
+            if (addedStudents == null) addedStudents = new ArrayList<>();
+            addedStudents.add(student);
+        }
+        
+        public void addUpdatedStudent(Map<String, Object> changes) {
+            if (updatedStudents == null) updatedStudents = new ArrayList<>();
+            updatedStudents.add(changes);
+        }
     }
 
     public List<User> getAllUsers() {
@@ -838,10 +861,11 @@ public class UserManagementService {
 
         int added = 0, updated = 0, skipped = 0;
         List<String> errors = new ArrayList<>();
+        UploadResult result = new UploadResult(0, 0, 0, errors);
 
         if (rows.isEmpty()) {
             errors.add("File is empty");
-            return new UploadResult(added, updated, skipped, errors);
+            return result;
         }
 
         // ── Get the logged-in teacher upfront ──
@@ -867,7 +891,7 @@ public class UserManagementService {
         if (classIdx == -1 || teamIdx == -1 || studentIdIdx == -1 || lastNameIdx == -1 ||
                 firstNameIdx == -1 || emailIdx == -1 || adviserEmailIdx == -1) {
             errors.add("Header row must contain CLASS, TEAMCODE, STUDENTID, LASTNAME, FIRSTNAME, EMAIL, and ADVISOREMAIL columns");
-            return new UploadResult(0, 0, 0, errors);
+            return result;
         }
 
         for (int i = 1; i < rows.size(); i++) {
@@ -914,13 +938,21 @@ public class UserManagementService {
                 }
 
                 User studentUser;
+                boolean isNewUser = false;
                 if (userRepository.existsByEmail(email)) {
                     studentUser = userRepository.findByEmail(email).get();
+                    String oldFirstName = studentUser.getFirstName() == null ? "" : studentUser.getFirstName().trim();
+                    String oldLastName = studentUser.getLastName() == null ? "" : studentUser.getLastName().trim();
+                    
+                    // Only count as updated if name actually changed
+                    if (!firstName.equals(oldFirstName) || !lastName.equals(oldLastName)) {
+                        updated++;
+                    }
+                    
                     studentUser.setFirstName(firstName);
                     studentUser.setLastName(lastName);
                     studentUser.setRole(User.UserRole.STUDENT);
                     userRepository.save(studentUser);
-                    updated++;
                 } else {
                     studentUser = new User();
                     studentUser.setEmail(email);
@@ -929,12 +961,16 @@ public class UserManagementService {
                     studentUser.setRole(User.UserRole.STUDENT);
                     studentUser.setIsActive(true);
                     userRepository.save(studentUser);
+                    isNewUser = true;
                     added++;
                 }
 
                 Student student = null;
                 Optional<Student> existingByStudentId = studentRepository.findByStudentId(studentId);
-                if (existingByStudentId.isPresent()) {
+                boolean foundByStudentId = existingByStudentId.isPresent();
+                boolean foundByEmail = false;
+
+                if (foundByStudentId) {
                     student = existingByStudentId.get();
                 } else {
                     List<Student> existingByEmail = studentRepository.findAll().stream()
@@ -942,6 +978,7 @@ public class UserManagementService {
                             .toList();
                     if (!existingByEmail.isEmpty()) {
                         student = existingByEmail.get(0);
+                        foundByEmail = true;
                         for (int j = 1; j < existingByEmail.size(); j++) {
                             studentRepository.delete(existingByEmail.get(j));
                         }
@@ -959,19 +996,61 @@ public class UserManagementService {
                     continue;
                 }
 
-                if (student != null) {
-                    student.setStudentId(studentId);
-                    student.setFirstName(firstName);
-                    student.setLastName(lastName);
-                    student.setEmail(email);
+                if (foundByStudentId) {
+                    // Student with this ID already exists - check if data actually changed
+                    String oldStudentId = student.getStudentId() == null ? "" : student.getStudentId().trim();
+                    String oldFirstName = student.getFirstName() == null ? "" : student.getFirstName().trim();
+                    String oldLastName = student.getLastName() == null ? "" : student.getLastName().trim();
+                    String oldEmail = student.getEmail() == null ? "" : student.getEmail().trim().toLowerCase();
+                    
+                    String newStudentIdNorm = studentId.trim();
+                    String newFirstNameNorm = firstName.trim();
+                    String newLastNameNorm = lastName.trim();
+                    String newEmailNorm = email.trim().toLowerCase();
+                    
+                    boolean dataChanged = !newStudentIdNorm.equals(oldStudentId) || 
+                                         !newFirstNameNorm.equals(oldFirstName) || 
+                                         !newLastNameNorm.equals(oldLastName) || 
+                                         !newEmailNorm.equals(oldEmail);
+                    
+                    if (dataChanged) {
+                        // Track as updated only if something actually changed
+                        java.util.Map<String, Object> changes = new java.util.LinkedHashMap<>();
+                        changes.put("studentId", oldStudentId);
+                        changes.put("firstName", oldFirstName);
+                        changes.put("lastName", oldLastName);
+                        changes.put("email", oldEmail);
+                        changes.put("newStudentId", newStudentIdNorm);
+                        changes.put("newFirstName", newFirstNameNorm);
+                        changes.put("newLastName", newLastNameNorm);
+                        changes.put("newEmail", newEmailNorm);
+                        
+                        result.addUpdatedStudent(changes);
+                        updated++;
+                    }
+                    
+                    // Update the student record
+                    student.setStudentId(newStudentIdNorm);
+                    student.setFirstName(newFirstNameNorm);
+                    student.setLastName(newLastNameNorm);
+                    student.setEmail(newEmailNorm);
+                    student.setCreatedBy(teacher.getId());
+                } else if (foundByEmail) {
+                    // Found by email only - just update without tracking as "updated"
+                    student.setStudentId(studentId.trim());
+                    student.setFirstName(firstName.trim());
+                    student.setLastName(lastName.trim());
+                    student.setEmail(email.trim().toLowerCase());
                     student.setCreatedBy(teacher.getId());
                 } else {
+                    // Brand new student - create and track as added
                     student = new Student();
                     student.setStudentId(studentId);
                     student.setFirstName(firstName);
                     student.setLastName(lastName);
                     student.setEmail(email);
                     student.setCreatedBy(teacher.getId());
+                    result.addStudent(student);
                 }
                 studentRepository.save(student);
 
@@ -979,7 +1058,71 @@ public class UserManagementService {
                 student.getClasses().add(schoolClass);
                 studentRepository.save(student);
 
-                teamStudentRepository.deleteByStudentIdAndTeamId(student.getId(), team.getId());
+                // Check if TeamStudent already exists to track position changes
+                java.util.Optional<TeamStudent> existingTeamStudent = teamStudentRepository.findByStudentIdAndTeamId(student.getId(), team.getId());
+                Integer oldPosition = null;
+                String oldClass = "";
+                String oldTeamCode = "";
+                
+                // Get old class and team if student was previously in a different team
+                if (!existingTeamStudent.isPresent()) {
+                    // Student not in this team - check if in another team
+                    java.util.List<TeamStudent> otherTeams = teamStudentRepository.findByStudentId(student.getId());
+                    if (!otherTeams.isEmpty()) {
+                        TeamStudent prevTeamStudent = otherTeams.get(0);
+                        oldPosition = prevTeamStudent.getPosition();
+                        if (prevTeamStudent.getTeam() != null) {
+                            oldTeamCode = prevTeamStudent.getTeam().getName() == null ? "" : prevTeamStudent.getTeam().getName();
+                            if (prevTeamStudent.getTeam().getSchoolClass() != null) {
+                                oldClass = prevTeamStudent.getTeam().getSchoolClass().getName() == null ? "" : prevTeamStudent.getTeam().getSchoolClass().getName();
+                            }
+                        }
+                    }
+                } else {
+                    oldPosition = existingTeamStudent.get().getPosition();
+                    if (existingTeamStudent.get().getTeam() != null) {
+                        oldTeamCode = existingTeamStudent.get().getTeam().getName() == null ? "" : existingTeamStudent.get().getTeam().getName();
+                        if (existingTeamStudent.get().getTeam().getSchoolClass() != null) {
+                            oldClass = existingTeamStudent.get().getTeam().getSchoolClass().getName() == null ? "" : existingTeamStudent.get().getTeam().getSchoolClass().getName();
+                        }
+                    }
+                }
+                
+                if (existingTeamStudent.isPresent()) {
+                    teamStudentRepository.deleteByStudentIdAndTeamId(student.getId(), team.getId());
+                }
+
+                // Check if class, team, or position changed and track as update
+                boolean classChanged = foundByStudentId && !className.equals(oldClass);
+                boolean teamChanged = foundByStudentId && !teamCode.equals(oldTeamCode);
+                boolean positionChanged = foundByStudentId && oldPosition != null && !java.util.Objects.equals(oldPosition, position);
+                
+                if (classChanged || teamChanged || positionChanged) {
+                    java.util.Map<String, Object> changes = new java.util.LinkedHashMap<>();
+                    changes.put("studentId", student.getStudentId());
+                    changes.put("firstName", student.getFirstName());
+                    changes.put("lastName", student.getLastName());
+                    changes.put("email", student.getEmail());
+                    
+                    if (classChanged || teamChanged) {
+                        changes.put("classPrevious", oldClass.isEmpty() ? "N/A" : oldClass);
+                        changes.put("teamPrevious", oldTeamCode.isEmpty() ? "N/A" : oldTeamCode);
+                        changes.put("classNew", className);
+                        changes.put("teamNew", teamCode);
+                    }
+                    if (positionChanged) {
+                        changes.put("memberPrevious", oldPosition == null ? "N/A" : String.valueOf(oldPosition));
+                        changes.put("memberNew", position == null ? "N/A" : String.valueOf(position));
+                    }
+                    
+                    changes.put("newStudentId", student.getStudentId());
+                    changes.put("newFirstName", student.getFirstName());
+                    changes.put("newLastName", student.getLastName());
+                    changes.put("newEmail", student.getEmail());
+                    
+                    result.addUpdatedStudent(changes);
+                    updated++;
+                }
 
                 TeamStudent teamStudent = new TeamStudent();
                 teamStudent.setStudent(student);
@@ -993,7 +1136,11 @@ public class UserManagementService {
             }
         }
 
-        return new UploadResult(added, updated, skipped, errors);
+        result.setAdded(added);
+        result.setUpdated(updated);
+        result.setSkipped(skipped);
+        result.setErrors(errors);
+        return result;
     }
 
     /**

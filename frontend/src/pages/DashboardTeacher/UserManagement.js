@@ -22,6 +22,10 @@ function UserManagement() {
   const [filterRole, setFilterRole] = useState('ALL');
   const [pushing, setPushing] = useState(false);
   const [pushError, setPushError] = useState('');
+  const [showImportResultModal, setShowImportResultModal] = useState(false);
+  const [importResults, setImportResults] = useState([]);
+  const [importUpdatedStudents, setImportUpdatedStudents] = useState([]);
+  const [importSummary, setImportSummary] = useState('');
 
   useEffect(() => {
     fetchUsers();
@@ -50,7 +54,17 @@ function UserManagement() {
       const res = importType === 'STUDENT' 
         ? await userManagementAPI.uploadStudentSheet(formData)
         : await userManagementAPI.uploadAdviserSheet(formData);
-      toast.success(res.message || `${importType === 'STUDENT' ? 'Student' : 'Adviser'} import successful`);
+      
+      // Extract data from nested result object
+      const result = res.result || {};
+      const addedStudents = result.addedStudents || [];
+      const updatedStudents = result.updatedStudents || [];
+      const summary = res.message || `Added: ${result.added}, Updated: ${result.updated}, Skipped: ${result.skipped}`;
+      
+      setImportResults(addedStudents);
+      setImportUpdatedStudents(updatedStudents);
+      setImportSummary(summary);
+      setShowImportResultModal(true);
       setShowImportModal(false);
       setUploadFile(null);
       setImportType('STUDENT');
@@ -474,6 +488,121 @@ function UserManagement() {
                 style={{ padding: '10px 20px' }}
               >
                 Cancel
+              </button>
+            </div>
+          </div>
+        </div>
+      ), document.body)}
+
+      {showImportResultModal && createPortal((
+        <div className="modal-overlay" onClick={() => setShowImportResultModal(false)}>
+          <div className="modal-content" onClick={(e) => e.stopPropagation()} style={{maxWidth: '700px'}}>
+            <h2 style={{ color: '#f5b24a', marginBottom: '20px' }}>
+              ✓ Import Successful
+            </h2>
+            
+            <p style={{ color: '#a09890', marginBottom: '20px', fontSize: '14px' }}>
+              {importSummary}
+            </p>
+
+            {importResults && Array.isArray(importResults) && importResults.length > 0 && (
+              <div style={{ marginBottom: '20px', maxHeight: '400px', overflowY: 'auto' }}>
+                <h3 style={{ color: '#f5f0eb', marginBottom: '12px', fontSize: '14px', fontWeight: '600' }}>
+                  New {importType === 'STUDENT' ? 'Students' : 'Advisers'} Added:
+                </h3>
+                <div style={{
+                  backgroundColor: 'rgba(255, 255, 255, 0.05)',
+                  borderRadius: '8px',
+                  padding: '12px',
+                  border: '1px solid rgba(255, 255, 255, 0.1)'
+                }}>
+                  {importResults.map((item, idx) => (
+                    <div 
+                      key={idx} 
+                      style={{
+                        paddingBottom: '12px',
+                        marginBottom: idx < importResults.length - 1 ? '12px' : '0',
+                        borderBottom: idx < importResults.length - 1 ? '1px solid rgba(255, 255, 255, 0.1)' : 'none',
+                        fontSize: '13px',
+                        color: '#f5f0eb'
+                      }}
+                    >
+                      {importType === 'STUDENT' ? (
+                        <>
+                          <div style={{fontWeight: '600', marginBottom: '4px'}}>{item.firstName || ''} {item.lastName || ''}</div>
+                          <div style={{ color: '#a09890', fontSize: '12px' }}>
+                            ID: {item.studentId || 'N/A'} | Email: {item.email || 'N/A'}
+                          </div>
+                        </>
+                      ) : (
+                        <>
+                          <div style={{fontWeight: '600', marginBottom: '4px'}}>{item.firstName || ''} {item.lastName || ''}</div>
+                          <div style={{ color: '#a09890', fontSize: '12px' }}>
+                            Email: {item.email || 'N/A'}
+                          </div>
+                        </>
+                      )}
+                    </div>
+                  ))}
+                </div>
+              </div>
+            )}
+
+            {importUpdatedStudents && Array.isArray(importUpdatedStudents) && importUpdatedStudents.length > 0 && (
+              <div style={{ marginBottom: '20px', maxHeight: '400px', overflowY: 'auto' }}>
+                <h3 style={{ color: '#f5f0eb', marginBottom: '12px', fontSize: '14px', fontWeight: '600' }}>
+                  {importType === 'STUDENT' ? 'Students' : 'Advisers'} Updated:
+                </h3>
+                <div style={{
+                  backgroundColor: 'rgba(255, 255, 255, 0.05)',
+                  borderRadius: '8px',
+                  padding: '12px',
+                  border: '1px solid rgba(255, 255, 255, 0.1)'
+                }}>
+                  {importUpdatedStudents.map((change, idx) => {
+                    const previousInfo = [
+                      `ID ${change.studentId}`,
+                      `${change.firstName} ${change.lastName}`,
+                      change.classPrevious && `Class: ${change.classPrevious}`,
+                      change.teamPrevious && `Team: ${change.teamPrevious}`,
+                      change.memberPrevious && `Member#: ${change.memberPrevious}`
+                    ].filter(Boolean).join(' | ');
+                    
+                    const updatedInfo = [
+                      `ID ${change.newStudentId}`,
+                      `${change.newFirstName} ${change.newLastName}`,
+                      change.classNew && `Class: ${change.classNew}`,
+                      change.teamNew && `Team: ${change.teamNew}`,
+                      change.memberNew && `Member#: ${change.memberNew}`
+                    ].filter(Boolean).join(' | ');
+                    
+                    return (
+                      <div 
+                        key={idx} 
+                        style={{
+                          paddingBottom: '12px',
+                          marginBottom: idx < importUpdatedStudents.length - 1 ? '12px' : '0',
+                          borderBottom: idx < importUpdatedStudents.length - 1 ? '1px solid rgba(255, 255, 255, 0.1)' : 'none',
+                          fontSize: '13px',
+                          color: '#a09890'
+                        }}
+                      >
+                        <div>Previous: {previousInfo}</div>
+                        <div style={{marginTop: '4px'}}>Updated: {updatedInfo}</div>
+                      </div>
+                    );
+                  })}
+                </div>
+              </div>
+            )}
+
+            <div style={{ display: 'flex', gap: '8px', justifyContent: 'flex-end' }}>
+              <button
+                className="btn-secondary"
+                onClick={() => setShowImportResultModal(false)}
+                style={{ padding: '10px 20px' }}
+              >
+                Close
               </button>
             </div>
           </div>
