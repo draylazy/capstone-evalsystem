@@ -28,6 +28,15 @@ const TeamFormResponsesPage = () => {
           questionnaireId
         );
         setData(result);
+
+        const expandedMap = (result?.students || []).reduce(
+          (acc, student) => ({
+            ...acc,
+            [student.studentId]: true,
+          }),
+          {}
+        );
+        setExpandedStudents(expandedMap);
       } catch (e) {
         setError(e.message);
       } finally {

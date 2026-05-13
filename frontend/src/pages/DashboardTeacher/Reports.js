@@ -1,6 +1,6 @@
 import React, { useEffect, useMemo, useRef, useState } from "react";
 import { useNavigate, useLocation } from "react-router-dom";
-import { CheckCircle2, Clock3 } from "lucide-react";
+import { CheckCircle2, Clock3, ChevronRight } from "lucide-react";
 import TeacherSidebar from "../../components/Sidebar/TeacherSidebar";
 import { teacherReportAPI } from "../../services/api";
 import { useToast } from "../../contexts/ToastContext";
@@ -305,12 +305,14 @@ const Reports = () => {
             {loading ? (
               <p>Loading teams...</p>
             ) : (
-              <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(280px, 1fr))', gap: '20px', marginTop: '20px' }}>
+              <div className="perf-team-grid" style={{ marginTop: '20px' }}>
                 {Array.from(new Set([
                   ...evaluations.map(e => e.teamName),
                   ...studentEvaluations.map(e => e.teamName)
                 ])).filter(Boolean).length === 0 ? (
-                  <p className="pending">No teams have data for this questionnaire yet.</p>
+                  <div className="perf-empty-state" style={{ padding: '30px' }}>
+                    <p className="pending">No teams have data for this questionnaire yet.</p>
+                  </div>
                 ) : (
                   Array.from(new Set([
                     ...evaluations.map(e => e.teamName),
@@ -320,37 +322,45 @@ const Reports = () => {
                     const studentCount = studentEvaluations.filter(e => e.teamName === teamName && e.status === 'SUBMITTED').length;
                     const totalCount = studentEvaluations.filter(e => e.teamName === teamName).length;
                     const adviserSubmitted = adviserCount > 0;
+                    const badgeClass = selectedQuestionnaire.target === 'ADVISER'
+                      ? adviserSubmitted ? 'perf-badge--mid' : 'perf-badge--low'
+                      : studentCount === totalCount && totalCount > 0 ? 'perf-badge--mid' : 'perf-badge--low';
+                    const badgeText = selectedQuestionnaire.target === 'ADVISER'
+                      ? adviserSubmitted ? 'Submitted' : 'Pending'
+                      : `${studentCount}/${totalCount} Submitted`;
 
                     return (
-                      <div
+                      <button
                         key={teamName}
-                        className="evaluation-response-item"
-                        style={{ cursor: 'pointer', background: 'rgba(255,255,255,0.05)', padding: '24px', transition: 'transform 0.2s' }}
+                        type="button"
+                        className="perf-team-card"
                         onClick={() => setSelectedTeamName(teamName)}
-                        onMouseEnter={(e) => e.currentTarget.style.transform = 'translateY(-4px)'}
-                        onMouseLeave={(e) => e.currentTarget.style.transform = 'translateY(0)'}
                       >
-                        <h3 style={{ margin: '0 0 12px 0', color: 'var(--dtm-gold)' }}>{teamName}</h3>
-                        <div style={{ fontSize: '0.85rem', color: 'var(--dtm-muted)' }}>
-                          {selectedQuestionnaire.target === 'ADVISER' ? (
-                            <p className={`report-team-status ${adviserSubmitted ? 'is-submitted' : 'is-pending'}`}>
-                              <span className="report-team-status-label">Adviser Eval</span>
-                              <span className="report-team-status-value">
-                                {adviserSubmitted ? <CheckCircle2 size={14} aria-hidden="true" /> : <Clock3 size={14} aria-hidden="true" />}
-                                {adviserSubmitted ? 'Submitted' : 'Pending'}
-                              </span>
-                            </p>
-                          ) : (
-                            <p className="report-team-status">
-                              <span className="report-team-status-label">Student Evals</span>
-                              <span className="report-team-status-value">{studentCount}/{totalCount} Submitted</span>
-                            </p>
-                          )}
+                        <div className="perf-team-card-top">
+                          <span className="perf-team-name">{teamName}</span>
+                          <span className={`perf-badge ${badgeClass}`}>
+                            {badgeText}
+                          </span>
                         </div>
-                        <button className="btn btn-assign" style={{ marginTop: '16px', width: '100%', fontSize: '0.85rem' }}>
-                          View Team Details
-                        </button>
-                      </div>
+                        <span className="perf-team-class" style={{ WebkitLineClamp: 2 }}>
+                          {selectedQuestionnaire.target === 'ADVISER'
+                            ? 'Adviser evaluation report'
+                            : 'Student peer evaluation report'}
+                        </span>
+                        <div className="perf-team-meta">
+                          <span className="perf-team-meta-item">
+                            {selectedQuestionnaire.target === 'ADVISER' ? 'Adviser submissions' : 'Peer submissions'}
+                          </span>
+                          <span className="perf-team-meta-item">
+                            {selectedQuestionnaire.target === 'ADVISER'
+                              ? `${adviserCount} submitted`
+                              : `${studentCount}/${totalCount}`}
+                          </span>
+                        </div>
+                        <div className="perf-team-card-arrow">
+                          <ChevronRight size={16} />
+                        </div>
+                      </button>
                     );
                   })
                 )}

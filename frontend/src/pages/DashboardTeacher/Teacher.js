@@ -174,7 +174,6 @@ const Teacher = () => {
 
         <section className="teacher-hero">
           <div>
-            <p className="teacher-hero-kicker">Academic Control Center</p>
             <h2 className="teacher-hero-title">Welcome, {teacherName}</h2>
             <p className="teacher-hero-text">
               Track class setup, manage team readiness, and monitor questionnaire coverage from one focused view.
