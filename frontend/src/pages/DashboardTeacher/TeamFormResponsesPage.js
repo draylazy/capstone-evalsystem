@@ -2,8 +2,6 @@ import React, { useEffect, useState } from "react";
 import { useParams, useNavigate } from "react-router-dom";
 import {
   ChevronLeft,
-  ChevronDown,
-  ChevronUp,
   UserCircle2,
 } from "lucide-react";
 import TeacherSidebar from "../../components/Sidebar/TeacherSidebar";
@@ -15,9 +13,9 @@ const TeamFormResponsesPage = () => {
   const navigate = useNavigate();
 
   const [data, setData] = useState(null);
+  const [questionGroups, setQuestionGroups] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
-  const [expandedStudents, setExpandedStudents] = useState({});
 
   useEffect(() => {
     const load = async () => {
@@ -28,15 +26,7 @@ const TeamFormResponsesPage = () => {
           questionnaireId
         );
         setData(result);
-
-        const expandedMap = (result?.students || []).reduce(
-          (acc, student) => ({
-            ...acc,
-            [student.studentId]: true,
-          }),
-          {}
-        );
-        setExpandedStudents(expandedMap);
+        setQuestionGroups(buildQuestionGroups(result?.students || []));
       } catch (e) {
         setError(e.message);
       } finally {
@@ -46,125 +36,128 @@ const TeamFormResponsesPage = () => {
     load();
   }, [teamId, questionnaireId]);
 
-  const toggleStudent = (studentId) => {
-    setExpandedStudents((prev) => ({
-      ...prev,
-      [studentId]: !prev[studentId],
-    }));
+  const buildQuestionGroups = (students) => {
+    const groups = [];
+    const indexMap = new Map();
+
+    students.forEach((student) => {
+      (student.evaluations || []).forEach((evaluation) => {
+        const evaluatorLabel = evaluation.adviserName
+          ? `Adviser: ${evaluation.adviserName}`
+          : evaluation.evaluatorName
+          ? `Evaluator: ${evaluation.evaluatorName}`
+          : "Submitted evaluation";
+
+        (evaluation.scores || []).forEach((score) => {
+          const questionKey = `${score.sectionTitle || ""}|||${score.questionText}`;
+          if (!indexMap.has(questionKey)) {
+            const group = {
+              questionText: score.questionText,
+              sectionTitle: score.sectionTitle,
+              responses: [],
+            };
+            indexMap.set(questionKey, group);
+            groups.push(group);
+          }
+
+          indexMap.get(questionKey).responses.push({
+            studentName: student.studentName,
+            evaluatorLabel,
+            numericScore: score.numericScore,
+            maxScore: score.maxScore,
+            textResponse: score.textResponse,
+            submittedAt: evaluation.submittedAt,
+          });
+        });
+      });
+    });
+
+    return groups;
   };
 
-  const renderEvaluations = (evaluations) => {
-    if (!evaluations?.length) {
+  const renderQuestionGroups = () => {
+    if (!questionGroups?.length) {
       return (
-        <p style={{ color: "var(--dtm-muted)", fontSize: 13, margin: 0 }}>
-          No responses submitted for this questionnaire.
-        </p>
+        <div className="section">
+          <div className="perf-empty-state">
+            <UserCircle2 size={40} className="perf-empty-icon" />
+            <p>No responses submitted for this questionnaire.</p>
+          </div>
+        </div>
       );
     }
 
-    return evaluations.map((ev, idx) => {
-      const scores = ev.scores || [];
-      return (
-        <div
-          key={idx}
-          style={
-            idx < evaluations.length - 1
-              ? { marginBottom: 20, paddingBottom: 20, borderBottom: "1px solid rgba(255,255,255,0.06)" }
-              : {}
-          }
-        >
-          {/* Evaluation meta row */}
-          <div
-            style={{
-              display: "flex",
-              justifyContent: "space-between",
-              alignItems: "center",
-              marginBottom: 10,
-              flexWrap: "wrap",
-              gap: 8,
-            }}
-          >
-            <span style={{ fontSize: 12, color: "var(--dtm-muted)" }}>
-              {ev.adviserName
-                ? `Evaluated by Adviser: ${ev.adviserName}`
-                : ev.evaluatorName
-                ? `Evaluator: ${ev.evaluatorName}`
-                : "Submitted evaluation"}
-              {ev.submittedAt
-                ? ` · ${new Date(ev.submittedAt).toLocaleDateString()}`
-                : ""}
-            </span>
-            {ev.scoresSummary?.totalScore !== null &&
-              ev.scoresSummary?.totalScore !== undefined && (
-                <span className="evaluation-modal-count">
-                  {ev.scoresSummary.totalScore}
-                  {ev.scoresSummary.maxPossible
-                    ? ` / ${ev.scoresSummary.maxPossible}`
-                    : ""}
-                  {ev.scoresSummary.percentage !== null
-                    ? ` (${Number(ev.scoresSummary.percentage).toFixed(1)}%)`
-                    : ""}
+    return (
+      <div style={{ display: "grid", gap: 12 }}>
+        {questionGroups.map((group, idx) => (
+          <div key={`${group.questionText}-${idx}`} className="section">
+            {group.sectionTitle && (
+              <div style={{ marginBottom: 10 }}>
+                <span className="evaluation-response-section">
+                  {group.sectionTitle}
                 </span>
-              )}
-          </div>
+              </div>
+            )}
 
-          {/* Q&A rows */}
-          {scores.map((score, si) => {
-            const prevSection =
-              si > 0 ? scores[si - 1].sectionTitle : null;
-            const showSection =
-              score.sectionTitle && score.sectionTitle !== prevSection;
-
-            return (
-              <div key={si}>
-                {showSection && (
+            <div className="qa-question-row" style={{ padding: "16px", background: "rgba(255,255,255,0.02)", borderRadius: 12 }}>
+              <div className="qa-question-top" style={{ marginBottom: 12 }}>
+                <span className="qa-question-num">Q{idx + 1}</span>
+                <span className="qa-question-text">
+                  {group.questionText}
+                </span>
+              </div>
+              <div style={{ display: "grid", gap: 12 }}>
+                {group.responses.map((response, rIdx) => (
                   <div
-                    style={{ marginTop: si > 0 ? 14 : 0, marginBottom: 6 }}
+                    key={`${response.studentName}-${rIdx}`}
+                    style={{
+                      padding: 12,
+                      borderRadius: 10,
+                      background: "rgba(255,255,255,0.02)",
+                      border: "1px solid rgba(255,255,255,0.06)",
+                    }}
                   >
-                    <span className="evaluation-response-section">
-                      {score.sectionTitle}
-                    </span>
-                  </div>
-                )}
-                <div
-                  className="qa-question-row"
-                  style={{
-                    padding: "10px 0",
-                    borderBottom:
-                      si < scores.length - 1
-                        ? "1px solid rgba(255,255,255,0.05)"
-                        : "none",
-                  }}
-                >
-                  <div className="qa-question-top">
-                    <span className="qa-question-num">Q{si + 1}</span>
-                    <span className="qa-question-text">
-                      {score.questionText}
-                    </span>
-                  </div>
-                  <div
-                    className={`qa-answer-block${
-                      score.numericScore === null &&
-                      score.numericScore === undefined &&
-                      !score.textResponse
+                    <div
+                      style={{
+                        display: "flex",
+                        justifyContent: "space-between",
+                        flexWrap: "wrap",
+                        gap: 8,
+                        marginBottom: 8,
+                      }}
+                    >
+                      <span style={{ fontSize: 13, color: "var(--dtm-muted)" }}>
+                        {response.studentName}
+                        {response.evaluatorLabel ? ` · ${response.evaluatorLabel}` : ""}
+                      </span>
+                      <span style={{ fontSize: 12, color: "var(--dtm-muted)" }}>
+                        {response.submittedAt
+                          ? new Date(response.submittedAt).toLocaleDateString()
+                          : ""}
+                      </span>
+                    </div>
+                    <div className={`qa-answer-block${
+                      response.numericScore === null &&
+                      response.numericScore === undefined &&
+                      !response.textResponse
                         ? " is-empty"
                         : ""
-                    }`}
-                  >
-                    {score.numericScore !== null &&
-                    score.numericScore !== undefined
-                      ? `${score.numericScore}${
-                          score.maxScore ? ` / ${score.maxScore}` : ""
-                        }`
-                      : score.textResponse || "Not answered"}
+                    }`}>
+                      {response.numericScore !== null &&
+                      response.numericScore !== undefined
+                        ? `${response.numericScore}${
+                            response.maxScore ? ` / ${response.maxScore}` : ""
+                          }`
+                        : response.textResponse || "Not answered"}
+                    </div>
                   </div>
-                </div>
+                ))}
               </div>
-            );
-          })}
-        </div>
-      );
-    });
+            </div>
+          </div>
+        ))}
+      </div>
+    );
   };
 
   return (
@@ -201,118 +194,8 @@ const TeamFormResponsesPage = () => {
           <div className="section">
             <p style={{ color: "var(--dtm-muted)" }}>Loading responses…</p>
           </div>
-        ) : !data?.students?.length ? (
-          <div className="section">
-            <div className="perf-empty-state">
-              <UserCircle2 size={40} className="perf-empty-icon" />
-              <p>No student data found.</p>
-            </div>
-          </div>
         ) : (
-          <div style={{ display: "grid", gap: 12 }}>
-            {data.students.map((student) => {
-              const isExpanded = expandedStudents[student.studentId];
-              const hasEvals = student.evaluations?.length > 0;
-              const initials = student.studentName
-                ?.split(" ")
-                .map((n) => n[0])
-                .join("")
-                .slice(0, 2)
-                .toUpperCase();
-
-              return (
-                <div
-                  key={student.studentId}
-                  className="section"
-                  style={{ padding: 0, overflow: "hidden" }}
-                >
-                  {/* Collapsible header */}
-                  <button
-                    type="button"
-                    onClick={() => toggleStudent(student.studentId)}
-                    style={{
-                      width: "100%",
-                      display: "flex",
-                      alignItems: "center",
-                      justifyContent: "space-between",
-                      padding: "16px 20px",
-                      background: "transparent",
-                      border: "none",
-                      cursor: "pointer",
-                      color: "var(--dtm-text)",
-                      textAlign: "left",
-                    }}
-                  >
-                    <div
-                      style={{
-                        display: "flex",
-                        alignItems: "center",
-                        gap: 12,
-                      }}
-                    >
-                      <div
-                        style={{
-                          width: 38,
-                          height: 38,
-                          borderRadius: "50%",
-                          background: "rgba(138,21,31,0.5)",
-                          border: "1px solid rgba(242,201,76,0.3)",
-                          display: "flex",
-                          alignItems: "center",
-                          justifyContent: "center",
-                          fontWeight: 700,
-                          fontSize: 13,
-                          color: "var(--dtm-gold)",
-                          flexShrink: 0,
-                        }}
-                      >
-                        {initials}
-                      </div>
-                      <div>
-                        <div style={{ fontWeight: 700, fontSize: 15 }}>
-                          {student.studentName}
-                        </div>
-                        <div
-                          style={{ fontSize: 12, color: "var(--dtm-muted)" }}
-                        >
-                          {hasEvals
-                            ? `${student.evaluations.length} response${
-                                student.evaluations.length !== 1 ? "s" : ""
-                              }`
-                            : "No responses"}
-                        </div>
-                      </div>
-                    </div>
-                    {isExpanded ? (
-                      <ChevronUp
-                        size={16}
-                        style={{ color: "var(--dtm-muted)", flexShrink: 0 }}
-                      />
-                    ) : (
-                      <ChevronDown
-                        size={16}
-                        style={{ color: "var(--dtm-muted)", flexShrink: 0 }}
-                      />
-                    )}
-                  </button>
-
-                  {/* Expanded content */}
-                  {isExpanded && (
-                    <div
-                      style={{
-                        padding: "0 20px 20px",
-                        borderTop: "1px solid rgba(255,255,255,0.08)",
-                      }}
-                    >
-                      <div style={{ paddingTop: 16 }}>
-                        {renderEvaluations(student.evaluations)}
-                      </div>
-                    </div>
-                  )}
-                </div>
-              );
-            })}
-          </div>
+          <div>{renderQuestionGroups()}</div>
         )}
       </div>
     </div>
