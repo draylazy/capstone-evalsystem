@@ -68,8 +68,8 @@ const StudentDashboard = () => {
         counts.MISSED++;
         return;
       }
-      const isComplete = q.peerTasks?.every(t => t.status === 'SUBMITTED');
-      const isStarted = q.peerTasks?.some(t => t.status === 'SUBMITTED');
+      const isComplete = q.peerTasks?.every(t => t.status === 'SUBMITTED') && q.progress?.totalMembers > 0;
+      const isStarted = (q.progress?.answeredCount || 0) > 0;
       if (isComplete) counts.SUBMITTED++;
       else if (isStarted) counts.IN_PROGRESS++;
       else counts.READY++;
@@ -88,8 +88,8 @@ const StudentDashboard = () => {
         return true;
       }
 
-      const isComplete = q.peerTasks?.every(t => t.status === 'SUBMITTED');
-      const isStarted = q.peerTasks?.some(t => t.status === 'SUBMITTED');
+      const isComplete = q.peerTasks?.every(t => t.status === 'SUBMITTED') && q.progress?.totalMembers > 0;
+      const isStarted = (q.progress?.answeredCount || 0) > 0;
       const status = isComplete ? 'SUBMITTED' : (isStarted ? 'IN_PROGRESS' : 'READY');
       
       if (statusFilter !== 'ALL' && status !== statusFilter) return false;
@@ -180,11 +180,12 @@ const StudentDashboard = () => {
               <tbody>
                 {paginatedData.map((q, idx) => {
                   const isMissed = Boolean(q.isMissed);
-                  const completed = q.peerTasks?.filter(t => t.status === 'SUBMITTED').length || 0;
-                  const total = q.peerTasks?.length || 0;
-                  const isComplete = completed === total && total > 0;
-                  const isStarted = completed > 0;
-                  const progressPercent = total > 0 ? Math.round((completed / total) * 100) : 0;
+                  const answeredCount = q.progress?.answeredCount || 0;
+                  const totalMembers = q.progress?.totalMembers || 0;
+                  
+                  const isComplete = q.peerTasks?.every(t => t.status === 'SUBMITTED') && totalMembers > 0;
+                  const isStarted = answeredCount > 0;
+                  const progressPercent = totalMembers > 0 ? Math.round((answeredCount / totalMembers) * 100) : 0;
 
                   return (
                     <tr key={q.id}>
@@ -208,7 +209,7 @@ const StudentDashboard = () => {
                             <div className="adviser-progress-fill" style={{ width: `${progressPercent}%` }}></div>
                           </div>
                           <span className="adviser-progress-text">
-                            {progressPercent}% ({completed}/{total})
+                            {progressPercent}% ({answeredCount}/{totalMembers})
                           </span>
                         </div>
                       </td>

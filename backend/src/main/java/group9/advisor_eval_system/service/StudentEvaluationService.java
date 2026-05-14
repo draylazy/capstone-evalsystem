@@ -398,4 +398,33 @@ public class StudentEvaluationService {
         }
         return "Not Started";
     }
+
+    public Map<String, Long> getEvaluationProgress(Long studentId, Long questionnaireId) {
+        Questionnaire questionnaire = questionnaireRepository.findById(questionnaireId).orElse(null);
+        if (questionnaire == null) return Map.of("answeredCount", 0L, "totalMembers", 0L);
+
+        // Count total unique questions in the questionnaire
+        long questionsPerMember = questionnaire.getItems() != null ? questionnaire.getItems().size() : 0;
+        
+        // Count total members to evaluate
+        Student student = studentRepository.findById(studentId).orElse(null);
+        List<Student> members = new ArrayList<>();
+        if (student != null && student.getTeamStudents() != null && !student.getTeamStudents().isEmpty()) {
+            members = student.getTeamStudents().get(0).getTeam().getMembers();
+        } else if (student != null) {
+            members.add(student); // Self only
+        }
+
+        long totalMembers = members.size();
+        long totalExpectedAnswers = totalMembers * questionsPerMember;
+
+        // Count actual answers saved by the student for this questionnaire across all members
+        // We need a query for this in StudentEvaluationScoreRepository or similar
+        long answeredQuestions = studentEvaluationScoreRepository.countByStudentIdAndQuestionnaireId(studentId, questionnaireId);
+
+        return Map.of(
+            "answeredCount", answeredQuestions,
+            "totalMembers", totalExpectedAnswers
+        );
+    }
 }

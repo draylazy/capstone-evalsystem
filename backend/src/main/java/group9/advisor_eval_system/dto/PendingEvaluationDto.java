@@ -11,10 +11,13 @@ public class PendingEvaluationDto {
     private Long evaluationId;
     private Long adviserId;
     private String adviserName;
+    private Long studentId;
+    private String studentName;
     private Long classId;
     private String className;
     private Long teamId;
     private String teamName;
     private Long questionnaireId;
     private String questionnaireName;
+    private String type; // "ADVISER" or "STUDENT"
 }

@@ -1,5 +1,5 @@
 import React, { useEffect, useMemo, useState } from "react";
-import { UserCheck, GraduationCap } from "lucide-react";
+import { UserCheck, GraduationCap, Bell } from "lucide-react";
 import { createPortal } from "react-dom";
 import { useNavigate } from "react-router-dom";
 import TeacherSidebar from "../../components/Sidebar/TeacherSidebar";
@@ -22,7 +22,8 @@ const Teacher = () => {
   const [selectedClass, setSelectedClass] = useState(null);
   const [showTeamMembersModal, setShowTeamMembersModal] = useState(false);
   const [selectedTeam, setSelectedTeam] = useState(null);
-  const [pendingEvaluations, setPendingEvaluations] = useState([]);
+  const [adviserPending, setAdviserPending] = useState([]);
+  const [studentPending, setStudentPending] = useState([]);
   const [pendingCount, setPendingCount] = useState(0);
   const [showPendingModal, setShowPendingModal] = useState(false);
   const [activityLogs, setActivityLogs] = useState([]);
@@ -85,12 +86,14 @@ const Teacher = () => {
         // Load pending evaluations
         try {
           const pendingData = await teacherReportAPI.getPendingEvaluations();
-          setPendingEvaluations(pendingData.pending || []);
+          setAdviserPending(pendingData.adviserPending || []);
+          setStudentPending(pendingData.studentPending || []);
           setPendingCount(pendingData.total || 0);
         } catch (err) {
           console.error("Error fetching pending evaluations:", err);
           setPendingCount(0);
-          setPendingEvaluations([]);
+          setAdviserPending([]);
+          setStudentPending([]);
         }
 
         // Load Activity Logs
@@ -204,6 +207,14 @@ const Teacher = () => {
             </p>
           </div>
           <div className="teacher-hero-actions">
+            <button 
+              className="pending-badge-btn" 
+              onClick={() => setShowPendingModal(true)}
+              title="View Pending Evaluations"
+            >
+              <Bell size={18} />
+              <span>{pendingCount} Pending Evaluations</span>
+            </button>
           </div>
         </section>
 
@@ -471,7 +482,8 @@ const Teacher = () => {
         <PendingEvaluationsModal 
           isOpen={showPendingModal} 
           onClose={() => setShowPendingModal(false)} 
-          pendingEvaluations={pendingEvaluations}
+          adviserPending={adviserPending}
+          studentPending={studentPending}
         />,
         document.body
       )}

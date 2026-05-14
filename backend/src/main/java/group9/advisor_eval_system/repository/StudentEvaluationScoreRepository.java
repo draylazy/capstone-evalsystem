@@ -18,4 +18,9 @@ public interface StudentEvaluationScoreRepository extends JpaRepository<StudentE
         WHERE s.questionnaireItem.questionnaire.id = :questionnaireId
     """)
     List<StudentEvaluationScore> findByQuestionnaireId(@Param("questionnaireId") Long questionnaireId);
+
+    @Query("SELECT COUNT(s) FROM StudentEvaluationScore s " +
+           "WHERE s.studentEvaluation.student.id = :studentId " +
+           "AND s.studentEvaluation.questionnaire.id = :questionnaireId")
+    long countByStudentIdAndQuestionnaireId(@Param("studentId") Long studentId, @Param("questionnaireId") Long questionnaireId);
 }
