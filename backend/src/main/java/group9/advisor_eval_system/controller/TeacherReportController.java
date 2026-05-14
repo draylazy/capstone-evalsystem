@@ -11,6 +11,7 @@ import group9.advisor_eval_system.entity.User;
 import group9.advisor_eval_system.entity.StudentEvaluation;
 import group9.advisor_eval_system.repository.EvaluationRepository;
 import group9.advisor_eval_system.repository.QuestionnaireRepository;
+import group9.advisor_eval_system.repository.StudentRepository;
 import group9.advisor_eval_system.repository.StudentEvaluationRepository;
 import group9.advisor_eval_system.repository.TeamRepository;
 import group9.advisor_eval_system.repository.UserRepository;
@@ -24,10 +25,6 @@ import org.springframework.web.bind.annotation.*;
 import jakarta.servlet.http.HttpServletRequest;
 import java.util.*;
 import java.util.stream.Collectors;
-import java.util.HashMap;
-import java.util.List;
-import java.util.Map;
-import java.util.stream.Collectors;
 
 @Slf4j
 @RestController
@@ -40,6 +37,7 @@ public class TeacherReportController {
     private final StudentEvaluationRepository studentEvaluationRepository;
     private final UserRepository userRepository;
     private final TeamRepository teamRepository;
+    private final StudentRepository studentRepository;
     private final JwtUtil jwtUtil;
 
     private Long getTeacherId(HttpServletRequest request) {
@@ -311,30 +309,18 @@ public class TeacherReportController {
     public ResponseEntity<?> getPendingEvaluations(HttpServletRequest request) {
         try {
             Long teacherId = getTeacherId(request);
-            User teacher = userRepository.findById(teacherId)
-                    .orElseThrow(() -> new RuntimeException("Teacher not found"));
 
-            if (teacher.getRole() != User.UserRole.TEACHER) {
-                return ResponseEntity.status(HttpStatus.FORBIDDEN)
-                        .body(Map.of("error", "Only teachers can access this"));
-            }
-
-            // Get all pending evaluations (including not-yet-started) for accurate count
+            // --- 1. Adviser Pending Evaluations ---
             List<Object[]> allPendingCombinations = evaluationRepository.findAllPendingEvaluationCombinationsByTeacherId(teacherId);
-            Long totalPendingCount = (long) allPendingCombinations.size();
-
-            // Get detailed evaluation records that have been started
             List<Evaluation> startedEvaluations = evaluationRepository.findPendingEvaluationsByTeacherId(teacherId);
             
-            // Create a map of started evaluations for quick lookup
             Map<String, Evaluation> startedEvalMap = startedEvaluations.stream()
                     .collect(Collectors.toMap(
                             e -> e.getAdviser().getId() + "-" + e.getTeam().getId() + "-" + e.getQuestionnaire().getId(),
                             e -> e
                     ));
 
-            // Convert all pending combinations to DTOs (including not-started ones)
-            List<PendingEvaluationDto> response = allPendingCombinations.stream()
+            List<PendingEvaluationDto> adviserPending = allPendingCombinations.stream()
                     .map(combo -> {
                         Long adviserId = ((Number) combo[0]).longValue();
                         Long teamId = ((Number) combo[1]).longValue();
@@ -342,49 +328,108 @@ public class TeacherReportController {
                         String key = adviserId + "-" + teamId + "-" + questionnaireId;
                         
                         Evaluation eval = startedEvalMap.get(key);
-                        
-                        // Get adviser, team, questionnaire details from the started evaluation if available
-                        User adviser;
-                        Team team;
-                        Questionnaire questionnaire;
-                        Long evaluationId = null;
+                        PendingEvaluationDto dto = new PendingEvaluationDto();
+                        dto.setType("ADVISER");
                         
                         if (eval != null) {
-                            adviser = eval.getAdviser();
-                            team = eval.getTeam();
-                            questionnaire = eval.getQuestionnaire();
-                            evaluationId = eval.getId();
+                            dto.setEvaluationId(eval.getId());
+                            dto.setAdviserId(eval.getAdviser().getId());
+                            dto.setAdviserName(eval.getAdviser().getFirstName() + " " + eval.getAdviser().getLastName());
+                            dto.setTeamId(eval.getTeam().getId());
+                            dto.setTeamName(eval.getTeam().getName());
+                            dto.setClassId(eval.getTeam().getSchoolClass().getId());
+                            dto.setClassName(eval.getTeam().getSchoolClass().getName() + (eval.getTeam().getSchoolClass().getSection() != null ? " " + eval.getTeam().getSchoolClass().getSection() : ""));
+                            dto.setQuestionnaireId(eval.getQuestionnaire().getId());
+                            dto.setQuestionnaireName(eval.getQuestionnaire().getTitle());
                         } else {
-                            // For not-started evaluations, fetch the objects
-                            adviser = userRepository.findById(adviserId).orElse(null);
-                            team = teamRepository.findById(teamId).orElse(null);
-                            questionnaire = questionnaireRepository.findById(questionnaireId).orElse(null);
+                            userRepository.findById(adviserId).ifPresent(a -> {
+                                dto.setAdviserId(a.getId());
+                                dto.setAdviserName(a.getFirstName() + " " + a.getLastName());
+                            });
+                            teamRepository.findById(teamId).ifPresent(t -> {
+                                dto.setTeamId(t.getId());
+                                dto.setTeamName(t.getName());
+                                dto.setClassId(t.getSchoolClass().getId());
+                                dto.setClassName(t.getSchoolClass().getName() + (t.getSchoolClass().getSection() != null ? " " + t.getSchoolClass().getSection() : ""));
+                            });
+                            questionnaireRepository.findById(questionnaireId).ifPresent(q -> {
+                                dto.setQuestionnaireId(q.getId());
+                                dto.setQuestionnaireName(q.getTitle());
+                            });
                         }
-                        
-                        if (adviser == null || team == null || questionnaire == null) {
-                            return null;
-                        }
-                        
-                        return new PendingEvaluationDto(
-                                evaluationId,
-                                adviser.getId(),
-                                (adviser.getFirstName() != null ? adviser.getFirstName() : "") + " " +
-                                (adviser.getLastName() != null ? adviser.getLastName() : ""),
-                                team.getSchoolClass().getId(),
-                                team.getSchoolClass().getName(),
-                                team.getId(),
-                                team.getName(),
-                                questionnaire.getId(),
-                                questionnaire.getTitle()
-                        );
-                    })
-                    .filter(dto -> dto != null)
-                    .collect(Collectors.toList());
+                        return dto;
+                    }).collect(Collectors.toList());
 
-            Map<String, Object> result = Map.of(
-                    "total", totalPendingCount,
-                    "pending", response
-            );
+            // --- 2. Student Pending Evaluations (Peer/Self) ---
+            List<Object[]> studentPendingCombinations = studentEvaluationRepository.findAllPendingEvaluationCombinationsByTeacherId(teacherId);
+            
+            List<PendingEvaluationDto> studentPendingList = studentPendingCombinations.stream()
+                    .map(combo -> {
+                        Long studentId = ((Number) combo[0]).longValue();
+                        Long teamId = ((Number) combo[1]).longValue();
+                        Long questionnaireId = ((Number) combo[2]).longValue();
+                        
+                        PendingEvaluationDto dto = new PendingEvaluationDto();
+                        dto.setType("STUDENT");
+                        dto.setStudentId(studentId);
+                        
+                        studentRepository.findById(studentId).ifPresent(s -> {
+                            dto.setStudentName(s.getLastName() + ", " + s.getFirstName());
+                        });
+                        teamRepository.findById(teamId).ifPresent(t -> {
+                            dto.setTeamId(t.getId());
+                            dto.setTeamName(t.getName());
+                            dto.setClassId(t.getSchoolClass().getId());
+                            dto.setClassName(t.getSchoolClass().getName() + (t.getSchoolClass().getSection() != null ? " " + t.getSchoolClass().getSection() : ""));
+                        });
+                        questionnaireRepository.findById(questionnaireId).ifPresent(q -> {
+                            dto.setQuestionnaireId(q.getId());
+                            dto.setQuestionnaireName(q.getTitle());
+                        });
+                        
+                        return dto;
+                    }).collect(Collectors.toList());
+
+            // --- 3. Adviser Pending Evaluations (Individual Student Evaluations) ---
+            List<Object[]> adviserStudentCombinations = studentEvaluationRepository.findAllPendingAdviserStudentCombinationsByTeacherId(teacherId);
+            
+            List<PendingEvaluationDto> adviserStudentPending = adviserStudentCombinations.stream()
+                    .map(combo -> {
+                        Long adviserId = ((Number) combo[0]).longValue();
+                        Long teamId = ((Number) combo[1]).longValue();
+                        Long questionnaireId = ((Number) combo[2]).longValue();
+                        
+                        PendingEvaluationDto dto = new PendingEvaluationDto();
+                        dto.setType("ADVISER");
+                        dto.setAdviserId(adviserId);
+                        
+                        userRepository.findById(adviserId).ifPresent(a -> {
+                            dto.setAdviserName(a.getFirstName() + " " + a.getLastName());
+                        });
+                        teamRepository.findById(teamId).ifPresent(t -> {
+                            dto.setTeamId(t.getId());
+                            dto.setTeamName(t.getName());
+                            dto.setClassId(t.getSchoolClass().getId());
+                            dto.setClassName(t.getSchoolClass().getName() + (t.getSchoolClass().getSection() != null ? " " + t.getSchoolClass().getSection() : ""));
+                        });
+                        questionnaireRepository.findById(questionnaireId).ifPresent(q -> {
+                            dto.setQuestionnaireId(q.getId());
+                            dto.setQuestionnaireName(q.getTitle());
+                        });
+                        
+                        return dto;
+                    }).collect(Collectors.toList());
+
+            // Combine adviser-team and adviser-student pending lists
+            List<PendingEvaluationDto> allAdviserPending = new ArrayList<>(adviserPending);
+            allAdviserPending.addAll(adviserStudentPending);
+
+            Map<String, Object> result = new HashMap<>();
+            result.put("adviserPending", allAdviserPending);
+            result.put("studentPending", studentPendingList);
+            result.put("totalAdviserPending", allAdviserPending.size());
+            result.put("totalStudentPending", studentPendingList.size());
+            result.put("total", allAdviserPending.size() + studentPendingList.size());
 
             return ResponseEntity.ok(result);
         } catch (Exception e) {

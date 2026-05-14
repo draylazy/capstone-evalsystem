@@ -148,6 +148,43 @@
   gap: 10px;
 }
 
+.header-title-group {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.pending-tabs {
+  display: flex;
+  background: rgba(0, 0, 0, 0.2);
+  padding: 4px;
+  border-radius: 8px;
+  width: fit-content;
+}
+
+.tab-btn {
+  padding: 6px 12px;
+  border: none;
+  background: none;
+  color: rgba(255, 255, 255, 0.6);
+  font-size: 13px;
+  font-weight: 600;
+  cursor: pointer;
+  border-radius: 6px;
+  transition: all 0.2s;
+}
+
+.tab-btn.active {
+  background: #f2c94c;
+  color: #3b252b;
+  box-shadow: 0 2px 8px rgba(242, 201, 76, 0.3);
+}
+
+.tab-btn:hover:not(.active) {
+  background: rgba(255, 255, 255, 0.05);
+  color: #fff;
+}
+
 .btn-secondary {
   padding: 10px 20px;
   background: rgba(255, 255, 255, 0.1);

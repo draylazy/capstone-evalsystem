@@ -141,6 +141,7 @@ public class StudentDashboardController {
 
                 map.put("isMissed", isMissed);
                 map.put("peerTasks", peerTasks);
+                map.put("progress", studentEvaluationService.getEvaluationProgress(student.getId(), q.getId()));
                 return map;
             }).collect(Collectors.toList());
 

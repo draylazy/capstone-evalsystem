@@ -141,4 +141,60 @@ public interface StudentEvaluationRepository extends JpaRepository<StudentEvalua
                 "AND e.status = 'SUBMITTED' " +
                 "ORDER BY e.submittedAt DESC")
         List<StudentEvaluation> findRecentSubmittedByTeacherId(@Param("teacherId") Long teacherId);
+
+        @Query(value = 
+                "SELECT DISTINCT s.id as student_id, t.id as team_id, q.id as questionnaire_id " +
+                "FROM students s " +
+                "JOIN student_teams ts ON s.id = ts.student_id " +
+                "JOIN teams t ON ts.team_id = t.id " +
+                "JOIN classes c ON t.class_id = c.id " +
+                "JOIN class_questionnaires cq ON c.id = cq.class_id " +
+                "JOIN questionnaires q ON cq.questionnaire_id = q.id " +
+                "WHERE c.teacher_id = :teacherId " +
+                "AND q.target = 'STUDENT' " +
+                "AND q.is_active = true " +
+                "AND EXISTS (" +
+                "  SELECT 1 FROM student_teams ts2 " +
+                "  WHERE ts2.team_id = t.id " +
+                "  AND NOT EXISTS (" +
+                "    SELECT 1 FROM student_evaluations se " +
+                "    WHERE se.student_id = s.id " +
+                "    AND se.questionnaire_id = q.id " +
+                "    AND se.evaluatee_id = ts2.student_id " +
+                "    AND se.status = 'SUBMITTED'" +
+                "  )" +
+                ")", 
+                nativeQuery = true)
+        List<Object[]> findAllPendingEvaluationCombinationsByTeacherId(@Param("teacherId") Long teacherId);
+
+        @Query(value = 
+                "SELECT DISTINCT a.id as adviser_id, t.id as team_id, q.id as questionnaire_id " +
+                "FROM teams t " +
+                "JOIN team_advisers ta ON t.id = ta.team_id " +
+                "JOIN users a ON ta.adviser_id = a.id " +
+                "JOIN classes c ON t.class_id = c.id " +
+                "JOIN class_questionnaires cq ON c.id = cq.class_id " +
+                "JOIN questionnaires q ON cq.questionnaire_id = q.id " +
+                "WHERE c.teacher_id = :teacherId " +
+                "AND q.target = 'ADVISER_STUDENT' " +
+                "AND q.is_active = true " +
+                "AND EXISTS (" +
+                "  SELECT 1 FROM student_teams st " +
+                "  WHERE st.team_id = t.id " +
+                "  AND NOT EXISTS (" +
+                "    SELECT 1 FROM student_evaluations se " +
+                "    WHERE se.adviser_id = a.id " +
+                "    AND se.team_id = t.id " +
+                "    AND se.questionnaire_id = q.id " +
+                "    AND se.evaluatee_id = st.student_id " +
+                "    AND se.status = 'SUBMITTED'" +
+                "  )" +
+                ")", 
+                nativeQuery = true)
+        List<Object[]> findAllPendingAdviserStudentCombinationsByTeacherId(@Param("teacherId") Long teacherId);
+
+        @Query("SELECT COUNT(e) FROM StudentEvaluation e WHERE e.student.id = :studentId " +
+                "AND e.questionnaire.id = :questionnaireId " +
+                "AND (e.status = 'SUBMITTED' OR EXISTS (SELECT 1 FROM StudentEvaluationScore s WHERE s.studentEvaluation = e))")
+        long countAnsweredByStudentAndQuestionnaire(@Param("studentId") Long studentId, @Param("questionnaireId") Long questionnaireId);
 }
