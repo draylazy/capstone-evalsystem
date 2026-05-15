@@ -8,7 +8,7 @@ import './Login.css';
 
 import logo from '../../components/Logo/LOGO test.png';
 
-const API_BASE_URL = 'http://localhost:8080';
+const API_BASE_URL = process.env.REACT_APP_API_BASE_URL || 'http://localhost:8080';
 
 function Login() {
   const navigate = useNavigate();
@@ -115,7 +115,6 @@ function Login() {
     }
   };
 
-  // Spotlight effect — track mouse on the card
   const cardRef = useRef(null);
   const handleCardMouse = useCallback((e) => {
     const card = cardRef.current;

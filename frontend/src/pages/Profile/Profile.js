@@ -6,25 +6,6 @@ import AdviserSidebar from '../../components/Sidebar/AdviserSidebar';
 import './Profile.css';
 
 const API_BASE_URL = (process.env.REACT_APP_API_BASE_URL || 'http://localhost:8080/api').replace(/\/api\/?$/, '');
-const LOCAL_API_BASE_URL = 'http://localhost:8080';
-
-const fetchWithLocalFallback = async (path, options = {}) => {
-  try {
-    return await fetch(`${API_BASE_URL}${path}`, options);
-  } catch (error) {
-    if (API_BASE_URL === LOCAL_API_BASE_URL) {
-      throw error;
-    }
-    return fetch(`${LOCAL_API_BASE_URL}${path}`, options);
-  }
-};
-
-const AI_PROVIDERS = [
-  { value: 'gemini',    label: 'Google Gemini',       hint: 'Get your key at aistudio.google.com' },
-  { value: 'openai',   label: 'OpenAI (ChatGPT)',     hint: 'Get your key at platform.openai.com/api-keys' },
-  { value: 'anthropic', label: 'Anthropic (Claude)', hint: 'Get your key at console.anthropic.com' },
-  { value: 'groq',     label: 'Groq',                hint: 'Get your key at console.groq.com/keys' },
-];
 
 const Profile = () => {
   const toast = useToast();
@@ -225,6 +206,13 @@ const Profile = () => {
   if (loading) {
     return <div className="profile-container">Loading...</div>;
   }
+
+  const AI_PROVIDERS = [
+    { value: 'gemini',    label: 'Google Gemini',       hint: 'Get your key at aistudio.google.com' },
+    { value: 'openai',   label: 'OpenAI (ChatGPT)',     hint: 'Get your key at platform.openai.com/api-keys' },
+    { value: 'anthropic', label: 'Anthropic (Claude)', hint: 'Get your key at console.anthropic.com' },
+    { value: 'groq',     label: 'Groq',                hint: 'Get your key at console.groq.com/keys' },
+  ];
 
   const selectedProvider = AI_PROVIDERS.find(p => p.value === aiProvider) || AI_PROVIDERS[0];
 
