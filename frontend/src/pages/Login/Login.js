@@ -8,7 +8,7 @@ import './Login.css';
 
 import logo from '../../components/Logo/LOGO test.png';
 
-const API_BASE_URL = process.env.REACT_APP_API_BASE_URL || 'http://localhost:8080';
+const API_BASE_URL = process.env.REACT_APP_API_BASE_URL || 'http://localhost:8080/api';
 
 function Login() {
   const navigate = useNavigate();
@@ -50,7 +50,7 @@ function Login() {
       try {
         toast.info('Completing sign in...');
 
-        const response = await fetch(`${API_BASE_URL}/api/auth/google/callback`, {
+        const response = await fetch(`${API_BASE_URL}/auth/google/callback`, {
           method: 'POST',
           headers: {
             'Content-Type': 'application/json',
@@ -87,7 +87,7 @@ function Login() {
       oauthHandledRef.current = false;
 
       // Get authorization URL
-      const response = await fetch(`${API_BASE_URL}/api/auth/google/authorization-url`, {
+      const response = await fetch(`${API_BASE_URL}/auth/google/authorization-url`, {
         method: 'GET',
       });
 
