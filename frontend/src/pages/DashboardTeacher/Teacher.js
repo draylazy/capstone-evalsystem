@@ -191,6 +191,18 @@ const Teacher = () => {
 
   const teacherName = [currentUser?.firstName, currentUser?.lastName].filter(Boolean).join(" ") || "Teacher";
 
+  if (loading) {
+    return (
+      <div className="teacher-container">
+        <TeacherSidebar />
+        <div className="teacher-content" style={{ display: 'flex', flexDirection: 'column', justifyContent: 'center', alignItems: 'center', height: '100vh' }}>
+          <div className="spinner" style={{ marginBottom: '16px' }}></div>
+          <p style={{ color: 'rgba(255,255,255,0.7)', fontSize: '1.1rem' }}>Loading dashboard data...</p>
+        </div>
+      </div>
+    );
+  }
+
   return (
     <div className="teacher-container">
       <TeacherSidebar />

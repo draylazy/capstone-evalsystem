@@ -26,9 +26,15 @@ const GoogleCallback = () => {
         }, window.location.origin);
         window.close();
       } else {
-        // If not in popup, redirect to profile page
-        // The parent page should handle the callback
-        navigate('/profile');
+        // If not in popup (e.g. mobile redirect), we need to route based on auth status
+        const userStr = localStorage.getItem('user');
+        if (userStr) {
+          // If already logged in, they are linking their account
+          navigate(`/profile?code=${code}`);
+        } else {
+          // If not logged in, they are trying to log in
+          navigate(`/login?code=${code}`);
+        }
       }
     }
   }, [searchParams, navigate]);

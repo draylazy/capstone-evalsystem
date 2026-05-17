@@ -1,5 +1,5 @@
 import React, { useCallback, useEffect, useRef, useState } from 'react';
-import { useNavigate } from 'react-router-dom';
+import { useNavigate, useSearchParams } from 'react-router-dom';
 import { useToast } from '../../contexts/ToastContext';
 import Aurora from '../../components/Aurora/Aurora';
 import BlurText from '../../components/BlurText/BlurText';
@@ -12,12 +12,44 @@ const API_BASE_URL = process.env.REACT_APP_API_BASE_URL || 'http://localhost:808
 
 function Login() {
   const navigate = useNavigate();
+  const [searchParams] = useSearchParams();
   const toast = useToast();
   const oauthHandledRef = useRef(false);
   const [error, setError] = useState('');
   const [loading, setLoading] = useState(false);
 
   useEffect(() => {
+    // Check if we have a code in URL (from mobile redirect fallback)
+    const code = searchParams.get('code');
+    if (code && !oauthHandledRef.current) {
+      oauthHandledRef.current = true;
+      setLoading(true);
+      setError('');
+      toast.info('Completing sign in...');
+
+      fetch(`${API_BASE_URL}/auth/google/callback`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ code }),
+      })
+      .then(async (response) => {
+        if (!response.ok) {
+          const errData = await response.json().catch(() => ({ message: 'Login failed' }));
+          throw new Error(errData.message || 'Login failed');
+        }
+        const data = await response.json();
+        localStorage.setItem('user', JSON.stringify(data));
+        toast.success('Login successful!');
+        redirectByRole(data.role);
+      })
+      .catch((err) => {
+        toast.error('Google login failed: ' + (err.message || 'Unknown error'));
+        setError(err.message || 'Google login failed');
+        oauthHandledRef.current = false;
+        setLoading(false);
+      });
+    }
+
     // Listen for OAuth callback
     window.addEventListener('message', handleOAuthCallback);
 
@@ -25,7 +57,7 @@ function Login() {
       window.removeEventListener('message', handleOAuthCallback);
     };
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, []);
+  }, [searchParams]);
 
   const redirectByRole = (role) => {
     if (role === 'TEACHER') navigate('/teacher/dashboard');
@@ -97,17 +129,28 @@ function Login() {
 
       const data = await response.json();
 
+      const isMobile = /iPhone|iPad|iPod|Android/i.test(navigator.userAgent);
+      if (isMobile) {
+        window.location.href = data.authUrl;
+        return;
+      }
+
       // Open Google OAuth in a popup
       const width = 500;
       const height = 600;
       const left = window.screenX + (window.outerWidth - width) / 2;
       const top = window.screenY + (window.outerHeight - height) / 2;
 
-      window.open(
+      const popup = window.open(
         data.authUrl,
         'Google OAuth',
         `width=${width},height=${height},left=${left},top=${top}`
       );
+
+      if (!popup || popup.closed || typeof popup.closed === 'undefined') {
+        // Fallback to redirect if popup is blocked
+        window.location.href = data.authUrl;
+      }
     } catch (err) {
       toast.error('Failed to initiate Google login');
       setError(err.message || 'Failed to initiate Google login');
