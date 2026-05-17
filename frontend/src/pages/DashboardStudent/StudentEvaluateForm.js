@@ -8,7 +8,7 @@ import "./StudentResponsive.css";
 import ConfirmModal from "../../components/ConfirmModal/ConfirmModal";
 import ExitConfirmModal from "../../components/ConfirmModal/ExitConfirmModal";
 
-const API_BASE_URL = "http://localhost:8080";
+const API_BASE_URL = (process.env.REACT_APP_API_BASE_URL || 'http://localhost:8080/api').replace(/\/api\/?$/, '');
 
 const StudentEvaluateForm = () => {
   const { questionnaireId } = useParams();
