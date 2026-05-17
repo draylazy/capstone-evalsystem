@@ -3,81 +3,93 @@
   justify-content: center;
   padding: 40px 20px;
   min-height: 100vh;
-  background-color: var(--bg-primary);
-  color: var(--text-primary);
+  background-color: #f8f9fa;
+  color: #333333;
+  font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
 }
 
 .privacy-policy-content {
   max-width: 800px;
   width: 100%;
-  background-color: var(--bg-secondary);
-  padding: 40px;
+  background-color: #ffffff;
+  padding: 40px 50px;
   border-radius: 12px;
-  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
-  border: 1px solid var(--border-color);
+  box-shadow: 0 4px 20px rgba(0, 0, 0, 0.08);
+  border: 1px solid #eaeaea;
 }
 
 .privacy-policy-content .back-btn {
   background: none;
   border: none;
-  color: var(--dtm-gold);
+  color: #8a151f; /* Brand dark red */
   cursor: pointer;
   font-size: 14px;
   padding: 0;
-  margin-bottom: 20px;
+  margin-bottom: 24px;
   display: flex;
   align-items: center;
   font-weight: 600;
+  transition: color 0.2s;
 }
 
 .privacy-policy-content .back-btn:hover {
   text-decoration: underline;
+  color: #6c0f17;
 }
 
 .privacy-policy-content h1 {
   font-size: 32px;
-  margin-bottom: 5px;
-  color: var(--dtm-gold);
+  margin-bottom: 8px;
+  color: #222222;
+  font-weight: 800;
 }
 
 .privacy-policy-content .last-updated {
   font-size: 14px;
-  color: var(--dtm-muted);
-  margin-bottom: 30px;
+  color: #666666;
+  margin-bottom: 32px;
   font-style: italic;
 }
 
 .privacy-policy-content section {
-  margin-bottom: 25px;
+  margin-bottom: 28px;
 }
 
 .privacy-policy-content h2 {
   font-size: 20px;
-  color: var(--dtm-text);
+  color: #8a151f; /* Brand dark red for headings */
   margin-bottom: 12px;
-  border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+  border-bottom: 1px solid #f0f0f0;
   padding-bottom: 8px;
+  font-weight: 700;
 }
 
 .privacy-policy-content p {
   font-size: 15px;
   line-height: 1.6;
-  color: rgba(255, 255, 255, 0.85);
-  margin-bottom: 12px;
+  color: #444444;
+  margin-bottom: 14px;
 }
 
 .privacy-policy-content ul {
-  padding-left: 20px;
-  margin-bottom: 15px;
+  padding-left: 24px;
+  margin-bottom: 16px;
 }
 
 .privacy-policy-content li {
   font-size: 15px;
   line-height: 1.6;
-  color: rgba(255, 255, 255, 0.85);
+  color: #444444;
   margin-bottom: 8px;
 }
 
 .privacy-policy-content strong {
-  color: var(--dtm-text);
+  color: #111111;
+  font-weight: 600;
+}
+
+@media (max-width: 600px) {
+  .privacy-policy-content {
+    padding: 30px 20px;
+  }
 }
