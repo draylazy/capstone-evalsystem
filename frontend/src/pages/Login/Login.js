@@ -1,5 +1,5 @@
 import React, { useCallback, useEffect, useRef, useState } from 'react';
-import { useNavigate, useSearchParams } from 'react-router-dom';
+import { useNavigate, useSearchParams, Link } from 'react-router-dom';
 import { useToast } from '../../contexts/ToastContext';
 import Aurora from '../../components/Aurora/Aurora';
 import BlurText from '../../components/BlurText/BlurText';
@@ -200,6 +200,12 @@ function Login() {
             </svg>
             {loading ? 'Signing in...' : 'Sign in with Google'}
           </button>
+        </div>
+        
+        <div style={{ marginTop: '20px', textAlign: 'center' }}>
+          <Link to="/privacy-policy" style={{ color: 'var(--dtm-muted)', fontSize: '12px', textDecoration: 'underline' }}>
+            Privacy Policy
+          </Link>
         </div>
       </div>
     </div>

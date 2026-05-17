@@ -34,6 +34,7 @@ import MyTeam from './pages/DashboardStudent/MyTeam';
 // Profile
 import Profile from './pages/Profile/Profile';
 import GoogleCallback from './pages/Profile/GoogleCallback';
+import PrivacyPolicy from './pages/PrivacyPolicy/PrivacyPolicy';
 import InactivityTimeout from './components/InactivityTimeout';
 
 function App() {
@@ -45,6 +46,7 @@ function App() {
         {/* Public */}
         <Route path="/" element={<Navigate to="/login" />} />
         <Route path="/login" element={<Login />} />
+        <Route path="/privacy-policy" element={<PrivacyPolicy />} />
         <Route path="/register" element={<Navigate to="/login" replace />} />
 
         {/* Teacher */}
