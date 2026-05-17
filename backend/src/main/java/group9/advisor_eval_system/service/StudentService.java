@@ -75,7 +75,7 @@ public class StudentService {
             List<Long> newClassIds = new ArrayList<>();
             
             if (!studentDetails.getClasses().isEmpty()) {
-                List<SchoolClass> classes = new ArrayList<>();
+                java.util.Set<SchoolClass> classes = new java.util.HashSet<>();
                 for (SchoolClass cls : studentDetails.getClasses()) {
                     if (cls.getId() != null) {
                         SchoolClass schoolClass = schoolClassRepository.findById(cls.getId())
@@ -87,7 +87,7 @@ public class StudentService {
                 student.setClasses(classes);
             } else {
                 // Explicitly clear classes if empty array is sent
-                student.setClasses(new ArrayList<>());
+                student.setClasses(new java.util.HashSet<>());
             }
             
             // Find removed classes

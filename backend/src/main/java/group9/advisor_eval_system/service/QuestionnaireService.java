@@ -353,7 +353,7 @@ public class QuestionnaireService {
         }
 
         // Get all teams the adviser is assigned to
-        List<Team> adviserTeams = adviser.getAdvisedTeams();
+        java.util.Set<Team> adviserTeams = adviser.getAdvisedTeams();
 
         if (adviserTeams == null || adviserTeams.isEmpty()) {
             return new ArrayList<>();

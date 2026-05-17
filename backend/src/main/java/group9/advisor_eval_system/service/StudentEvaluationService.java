@@ -37,7 +37,7 @@ public class StudentEvaluationService {
         Student student = studentRepository.findById(studentId)
                 .orElseThrow(() -> new RuntimeException("Student not found"));
 
-        List<SchoolClass> classes = student.getClasses();
+        java.util.Set<SchoolClass> classes = student.getClasses();
         if (classes == null || classes.isEmpty()) {
             return Collections.emptyList();
         }

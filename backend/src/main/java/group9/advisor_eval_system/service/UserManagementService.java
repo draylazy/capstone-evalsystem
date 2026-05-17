@@ -160,7 +160,7 @@ public class UserManagementService {
 
             String className = "";
             if (student.getClasses() != null && !student.getClasses().isEmpty()) {
-                className = student.getClasses().get(0).getName() == null ? "" : student.getClasses().get(0).getName();
+                className = student.getClasses().iterator().next().getName() == null ? "" : student.getClasses().iterator().next().getName();
             }
 
             String teamCode = "";
@@ -174,7 +174,7 @@ public class UserManagementService {
                     studentTeam = membership.getTeam();
                     teamCode = studentTeam.getName() == null ? "" : studentTeam.getName();
                     if (studentTeam.getAdvisers() != null && !studentTeam.getAdvisers().isEmpty()) {
-                        User adviser = studentTeam.getAdvisers().get(0);
+                        User adviser = studentTeam.getAdvisers().iterator().next();
                         adviserEmail = adviser.getEmail() == null ? "" : adviser.getEmail();
                     }
                 }
@@ -267,7 +267,7 @@ public class UserManagementService {
             Map<String, String> row = new LinkedHashMap<>();
             String className = "";
             if (student.getClasses() != null && !student.getClasses().isEmpty()) {
-                className = student.getClasses().get(0).getName() == null ? "" : student.getClasses().get(0).getName();
+                className = student.getClasses().iterator().next().getName() == null ? "" : student.getClasses().iterator().next().getName();
             }
 
             String teamCode = "";
@@ -281,7 +281,7 @@ public class UserManagementService {
                     Team studentTeam = membership.getTeam();
                     teamCode = studentTeam.getName() == null ? "" : studentTeam.getName();
                     if (studentTeam.getAdvisers() != null && !studentTeam.getAdvisers().isEmpty()) {
-                        User adviser = studentTeam.getAdvisers().get(0);
+                        User adviser = studentTeam.getAdvisers().iterator().next();
                         adviserEmail = adviser.getEmail() == null ? "" : adviser.getEmail();
                     }
                 }

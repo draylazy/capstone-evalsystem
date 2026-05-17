@@ -58,7 +58,7 @@ public class TeamService {
         
         // Clear members and advisers - they should be empty on creation
         team.setMembers(new ArrayList<>());
-        team.setAdvisers(new ArrayList<>());
+        team.setAdvisers(new java.util.HashSet<>());
         
         // Save the team first
         Team savedTeam = teamRepository.save(team);
@@ -112,7 +112,7 @@ public class TeamService {
         
         // Handle advisers update - ManyToMany relationship
         if (teamDetails.getAdvisers() != null) {
-            List<User> advisers = new ArrayList<>();
+            java.util.Set<User> advisers = new java.util.HashSet<>();
             for (User adviser : teamDetails.getAdvisers()) {
                 if (adviser.getId() != null) {
                     User user = userRepository.findById(adviser.getId())

@@ -13,6 +13,8 @@ import org.hibernate.annotations.UpdateTimestamp;
 import java.time.LocalDateTime;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Set;
+import java.util.HashSet;
 
 @Entity
 @Table(name = "classes")
@@ -85,7 +87,7 @@ public class SchoolClass {
     @JsonIgnore
     @lombok.ToString.Exclude
     @lombok.EqualsAndHashCode.Exclude
-    private List<Student> students = new ArrayList<>();
+    private Set<Student> students = new HashSet<>();
     
     @OneToMany(mappedBy = "schoolClass", cascade = CascadeType.ALL, orphanRemoval = true)
     @JsonIgnore

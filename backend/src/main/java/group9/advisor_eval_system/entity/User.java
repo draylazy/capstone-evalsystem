@@ -12,6 +12,8 @@ import org.hibernate.annotations.UpdateTimestamp;
 import java.time.LocalDateTime;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Set;
+import java.util.HashSet;
 
 @Entity
 @Table(name = "users")
@@ -93,7 +95,7 @@ public class User {
     @JsonIgnore
     @lombok.ToString.Exclude
     @lombok.EqualsAndHashCode.Exclude
-    private List<Team> advisedTeams = new ArrayList<>();
+    private Set<Team> advisedTeams = new HashSet<>();
 
     public enum UserRole {
         TEACHER,

@@ -14,6 +14,8 @@ import org.hibernate.annotations.UpdateTimestamp;
 import java.time.LocalDateTime;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Set;
+import java.util.HashSet;
 import java.util.stream.Collectors;
 
 @Entity
@@ -114,9 +116,9 @@ public class Team {
                         user.setId(id);
                         return user;
                     })
-                    .collect(Collectors.toList());
+                    .collect(Collectors.toSet());
         } else {
-            this.advisers = new ArrayList<>();
+            this.advisers = new HashSet<>();
         }
     }
     
@@ -174,7 +176,7 @@ public class Team {
     @JsonIgnore
     @lombok.ToString.Exclude
     @lombok.EqualsAndHashCode.Exclude
-    private List<User> advisers = new ArrayList<>();
+    private Set<User> advisers = new HashSet<>();
     
     @OneToMany(mappedBy = "team", cascade = CascadeType.ALL)
     @JsonIgnore
@@ -191,5 +193,5 @@ public class Team {
     @JsonIgnore
     @lombok.ToString.Exclude
     @lombok.EqualsAndHashCode.Exclude
-    private List<Questionnaire> questionnaires = new ArrayList<>();
+    private Set<Questionnaire> questionnaires = new HashSet<>();
 }

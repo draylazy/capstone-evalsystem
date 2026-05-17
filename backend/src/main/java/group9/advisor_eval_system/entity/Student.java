@@ -5,6 +5,8 @@ import com.fasterxml.jackson.annotation.JsonProperty;
 import jakarta.persistence.*;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Set;
+import java.util.HashSet;
 import java.util.stream.Collectors;
 import jakarta.validation.constraints.NotBlank;
 import lombok.AllArgsConstructor;
@@ -69,9 +71,9 @@ public class Student {
                         tempClass.setId(id);
                         return tempClass;
                     })
-                    .collect(Collectors.toList());
+                    .collect(Collectors.toSet());
         } else {
-            this.classes = new ArrayList<>();
+            this.classes = new HashSet<>();
         }
     }
     
@@ -85,7 +87,7 @@ public class Student {
     @JsonIgnore
     @lombok.ToString.Exclude
     @lombok.EqualsAndHashCode.Exclude
-    private List<SchoolClass> classes = new ArrayList<>();
+    private Set<SchoolClass> classes = new HashSet<>();
     
     @OneToMany(mappedBy = "student", fetch = FetchType.LAZY, cascade = CascadeType.ALL)
     @JsonIgnore
