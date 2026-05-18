@@ -134,11 +134,8 @@ const IndividualEvaluationGrid = ({
 
           <div style={{
             display: 'grid',
-            gridTemplateColumns: 'repeat(auto-fit, minmax(300px, 1fr))',
-            gap: '16px',
-            maxHeight: 'calc(100vh - 300px)',
-            overflowY: 'auto',
-            paddingRight: '10px'
+            gridTemplateColumns: '1fr',
+            gap: '16px'
           }}>
             {sortedMembers.map((member) => (
               <div
