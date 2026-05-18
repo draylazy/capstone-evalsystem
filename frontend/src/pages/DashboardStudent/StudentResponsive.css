@@ -166,17 +166,79 @@
 
 .eval-progress-track {
   width: 100%;
-  height: 6px;
+  height: 8px;
   border-radius: 999px;
-  background: rgba(255, 255, 255, 0.08);
+  background: rgba(255, 255, 255, 0.1);
+  overflow: hidden;
+  box-sizing: border-box;
+}
+
+.eval-progress-track--segmented {
+  display: flex;
+  flex-direction: row;
+  gap: 0;
+  padding: 0;
+  background: rgba(255, 255, 255, 0.1);
+  border-radius: 999px;
   overflow: hidden;
 }
 
-.eval-progress-fill {
+.eval-progress-segment {
+  flex: 1 1 0;
+  min-width: 0;
   height: 100%;
-  border-radius: 999px;
+  position: relative;
+  overflow: hidden;
+  background: transparent;
+}
+
+.eval-progress-segment + .eval-progress-segment {
+  box-shadow: inset 1px 0 0 rgba(0, 0, 0, 0.35);
+}
+
+.eval-progress-segment--single {
+  width: 100%;
+  flex: 1 1 100%;
+}
+
+.eval-progress-segment-fill {
+  display: block;
+  height: 100%;
+  min-height: 100%;
+  width: 0;
+  max-width: 100%;
   background: linear-gradient(90deg, #d4a843, #f2c94c);
   transition: width 0.35s ease;
+  border-radius: 0;
+}
+
+.eval-progress-segment:first-child .eval-progress-segment-fill {
+  border-top-left-radius: 999px;
+  border-bottom-left-radius: 999px;
+}
+
+.eval-progress-segment:last-child .eval-progress-segment-fill {
+  border-top-right-radius: 999px;
+  border-bottom-right-radius: 999px;
+}
+
+.eval-progress-segment--single .eval-progress-segment-fill {
+  border-radius: 999px;
+}
+
+.eval-progress-segment.is-current .eval-progress-segment-fill {
+  box-shadow: 0 0 10px rgba(242, 201, 76, 0.45);
+}
+
+.eval-progress-segment.is-complete .eval-progress-segment-fill {
+  background: linear-gradient(90deg, #c9a227, #f2c94c);
+}
+
+.eval-progress-meta {
+  margin: 8px 0 0;
+  font-size: 0.75rem;
+  line-height: 1.4;
+  color: var(--dtm-muted);
 }
 
 .eval-question-title {
@@ -1037,12 +1099,18 @@
   border-radius: 999px;
   background: rgba(255, 255, 255, 0.12);
   overflow: hidden;
+  box-sizing: border-box;
+  position: relative;
 }
 
 .adviser-progress-fill {
+  display: block;
   height: 100%;
+  min-height: 100%;
+  max-width: 100%;
   border-radius: 999px;
-  background: linear-gradient(135deg, #f2c94c, #d4a843);
+  background: linear-gradient(90deg, #d4a843, #f2c94c);
+  transition: width 0.35s ease;
 }
 
 .adviser-progress-text {
