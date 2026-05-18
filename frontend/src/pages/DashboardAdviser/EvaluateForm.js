@@ -54,11 +54,17 @@ const EvaluateForm = () => {
     if (evaluation.questionnaire.sections) {
       evaluation.questionnaire.sections.forEach(section => {
         if (section.items) {
-          items.push(...section.items.map(item => ({ ...item, sectionTitle: section.sectionTitle })));
+          items.push(...section.items.map(item => ({ ...item, sectionTitle: section.sectionTitle, sectionId: section.id, sectionIndex: evaluation.questionnaire.sections.indexOf(section) })));
         }
       });
     }
-    return items.sort((a, b) => (a.orderIndex || 0) - (b.orderIndex || 0));
+    // Sort by section first, then by item order within section
+    return items.sort((a, b) => {
+      if (a.sectionIndex !== b.sectionIndex) {
+        return (a.sectionIndex || 0) - (b.sectionIndex || 0);
+      }
+      return (a.orderIndex || 0) - (b.orderIndex || 0);
+    });
   }, [evaluation]);
 
   const isMixedQuestionnaire = sections.some(s => s.evaluateIndividuals);
@@ -71,6 +77,8 @@ const EvaluateForm = () => {
     console.log('Items:', currentSection.items);
     console.log('Team Members:', teamMembers);
   }
+
+  const currentItem = !isMixedQuestionnaire ? allItems[currentQuestionIndex] : null;
 
   useEffect(() => {
     const load = async () => {
@@ -121,7 +129,6 @@ const EvaluateForm = () => {
     load();
   }, [teamId, questionnaireId]);
 
-  const currentItem = !isMixedQuestionnaire ? allItems[0] : null;
   const isSubmitted = evaluation?.status === 'SUBMITTED' || evaluation?.status === 'REVIEWED';
 
   const handleChange = (itemId, value) => {
