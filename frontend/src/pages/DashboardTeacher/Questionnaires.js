@@ -204,10 +204,12 @@ const Questionnaires = () => {
   return (
     <div className="teacher-container">
       <TeacherSidebar />
-      <div className="teacher-content">
-        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '20px' }}>
-          <h1>Questionnaires</h1>
-          <button className="btn" onClick={() => navigate('/teacher/questionnaires/create')}>
+      <div className="teacher-content questionnaires-page">
+        <div className="questionnaires-page-header">
+          <div className="questionnaires-page-title-row">
+            <h1>Questionnaires</h1>
+          </div>
+          <button type="button" className="btn questionnaires-create-btn" onClick={() => navigate('/teacher/questionnaires/create')}>
             + Create New Questionnaire
           </button>
         </div>
@@ -225,7 +227,7 @@ const Questionnaires = () => {
           </div>
         )}
 
-        <div className="section">
+        <div className="section questionnaires-section">
           <h2>Your Questionnaires</h2>
           {loading ? (
             <p>Loading questionnaires...</p>
@@ -233,12 +235,13 @@ const Questionnaires = () => {
             <p>No questionnaires created yet. Click "Create New Questionnaire" to get started.</p>
           ) : (
             <>
-            <table className="class-table">
+            <div className="questionnaires-list-wrap">
+            <table className="class-table questionnaire-list-table">
               <thead>
                 <tr>
                   <th>Title</th>
                   <th>Target</th>
-                  <th>Created Date</th>
+                  <th>Created</th>
                   <th>Deadline</th>
                   <th>Status</th>
                   <th>Actions</th>
@@ -246,25 +249,20 @@ const Questionnaires = () => {
               </thead>
               <tbody>
                 {paginatedData.map((q) => (
-                  <tr key={q.id}>
-                    <td>{q.title}</td>
-                    <td>
-                      <span style={{
-                        padding: '3px 10px',
-                        borderRadius: '12px',
-                        fontSize: '11px',
-                        fontWeight: '700',
-                        background: q.target === 'ADVISER' ? '#cce5ff' : '#fff3cd',
-                        color: q.target === 'ADVISER' ? '#004085' : '#856404',
-                      }}>
-                        {q.target === 'ADVISER' ? 'Adviser' : 'Student'}
+                  <tr key={q.id} className="questionnaire-list-row">
+                    <td data-label="Title" className="q-cell-title">
+                      <span className="q-card-title">{q.title}</span>
+                    </td>
+                    <td data-label="Target" className="q-cell-target">
+                      <span className={`q-target-badge q-target-badge--${(q.target || "ADVISER").toLowerCase()}`}>
+                        {q.target === "ADVISER" ? "Adviser" : "Student"}
                       </span>
                     </td>
-                    <td>{formatDate(q.createdAt)}</td>
-                    <td style={{ whiteSpace: 'nowrap', color: q.deadlineAt ? 'inherit' : 'var(--dtm-muted)' }}>
+                    <td data-label="Created">{formatDate(q.createdAt)}</td>
+                    <td data-label="Deadline" className={!q.deadlineAt ? "q-cell-muted" : ""}>
                       {formatDeadline(q.deadlineAt)}
                     </td>
-                    <td>
+                    <td data-label="Status" className="q-cell-status">
                       <button
                         type="button"
                         className={`status-badge status-toggle ${q.isActive ? 'status-active' : 'status-inactive'}`}
@@ -274,21 +272,24 @@ const Questionnaires = () => {
                         {q.isActive ? 'Active' : 'Inactive'}
                       </button>
                     </td>
-                    <td>
-                      <div className="action-buttons">
+                    <td data-label="Actions" className="q-cell-actions">
+                      <div className="action-buttons questionnaire-action-buttons">
                         <button
+                          type="button"
                           className="btn btn-sm"
                           onClick={() => openDetailsModal(q.id)}
                         >
-                          View Details
+                          View details
                         </button>
                         <button
+                          type="button"
                           className="btn btn-sm"
                           onClick={() => handleDuplicateQuestionnaire(q)}
                         >
                           Duplicate
                         </button>
                         <button
+                          type="button"
                           className="btn btn-sm btn-danger"
                           onClick={() => handleDeleteQuestionnaire(q.id)}
                           title="Delete"
@@ -301,6 +302,7 @@ const Questionnaires = () => {
                 ))}
               </tbody>
             </table>
+            </div>
             <Pagination currentPage={currentPage} totalPages={totalPages} onPageChange={goToPage} />
             </>
           )}
