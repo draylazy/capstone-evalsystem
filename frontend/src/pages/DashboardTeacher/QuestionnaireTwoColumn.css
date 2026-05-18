@@ -535,28 +535,45 @@
   pointer-events: none;
 }
 
-/* SCROLLBAR STYLING FOR PREVIEW/FORM PANELS */
-.questionnaire-preview-panel::-webkit-scrollbar,
-.questionnaire-creation-panel::-webkit-scrollbar {
-  width: 8px;
+/* Scrollbars on create page panels only (edit modal uses one outer scroll) */
+.create-questionnaire-page .questionnaire-preview-panel,
+.create-questionnaire-page .questionnaire-creation-panel {
+  scrollbar-width: thin;
+  scrollbar-color: rgba(242, 201, 76, 0.45) rgba(255, 255, 255, 0.06);
 }
 
-.questionnaire-preview-panel::-webkit-scrollbar-track,
-.questionnaire-creation-panel::-webkit-scrollbar-track {
-  background: rgba(255, 255, 255, 0.05);
-  border-radius: 10px;
+.create-questionnaire-page .questionnaire-preview-panel::-webkit-scrollbar,
+.create-questionnaire-page .questionnaire-creation-panel::-webkit-scrollbar {
+  width: 10px;
 }
 
-.questionnaire-preview-panel::-webkit-scrollbar-thumb,
-.questionnaire-creation-panel::-webkit-scrollbar-thumb {
-  background: #f2c94c;
-  border-radius: 10px;
-  border: 2px solid rgba(255, 255, 255, 0.05);
+.create-questionnaire-page .questionnaire-preview-panel::-webkit-scrollbar-track,
+.create-questionnaire-page .questionnaire-creation-panel::-webkit-scrollbar-track {
+  background: rgba(255, 255, 255, 0.06);
+  border-radius: 999px;
 }
 
-.questionnaire-preview-panel::-webkit-scrollbar-thumb:hover,
-.questionnaire-creation-panel::-webkit-scrollbar-thumb:hover {
-  background: #ffdb70;
+.create-questionnaire-page .questionnaire-preview-panel::-webkit-scrollbar-thumb,
+.create-questionnaire-page .questionnaire-creation-panel::-webkit-scrollbar-thumb {
+  background: rgba(242, 201, 76, 0.45);
+  border-radius: 999px;
+  border: 2px solid transparent;
+  background-clip: padding-box;
+}
+
+.create-questionnaire-page .questionnaire-preview-panel::-webkit-scrollbar-thumb:hover,
+.create-questionnaire-page .questionnaire-creation-panel::-webkit-scrollbar-thumb:hover {
+  background: rgba(242, 201, 76, 0.65);
+  background-clip: padding-box;
+}
+
+/* Standalone create route: single scroll when panels are stacked */
+@media (max-width: 1400px) {
+  .create-questionnaire-page .questionnaire-preview-panel,
+  .create-questionnaire-page .questionnaire-creation-panel {
+    max-height: none;
+    overflow: visible;
+  }
 }
 
 /* RESPONSIVE DESIGN */
@@ -613,5 +630,153 @@
   .section-tab {
     padding: 5px 8px;
     font-size: 10px;
+  }
+}
+
+/* ==========================================
+   EDIT MODAL (QuestionnaireDetailModal)
+   Single scroll — no nested gold scrollbars
+========================================== */
+.modal-content.questionnaire-detail-modal--editing {
+  overflow: hidden !important;
+}
+
+.questionnaire-detail-modal--editing .qdetail-edit-scroll {
+  flex: 1 1 auto;
+  min-height: 0;
+  overflow-x: hidden;
+  overflow-y: auto;
+  overscroll-behavior: contain;
+  padding: 12px 16px 16px;
+  scrollbar-width: thin;
+  scrollbar-color: rgba(255, 255, 255, 0.18) transparent;
+}
+
+.questionnaire-detail-modal--editing .qdetail-edit-scroll::-webkit-scrollbar {
+  width: 6px;
+}
+
+.questionnaire-detail-modal--editing .qdetail-edit-scroll::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+.questionnaire-detail-modal--editing .qdetail-edit-scroll::-webkit-scrollbar-thumb {
+  background: rgba(255, 255, 255, 0.18);
+  border-radius: 999px;
+}
+
+.questionnaire-detail-modal--editing .qdetail-edit-scroll::-webkit-scrollbar-thumb:hover {
+  background: rgba(255, 255, 255, 0.28);
+}
+
+.questionnaire-detail-modal--editing .questionnaire-two-column-container {
+  min-height: 0 !important;
+  padding: 14px;
+  gap: 14px;
+  align-items: start;
+}
+
+.questionnaire-detail-modal--editing .questionnaire-preview-panel,
+.questionnaire-detail-modal--editing .questionnaire-creation-panel {
+  max-height: none !important;
+  overflow: visible !important;
+  overflow-y: visible !important;
+  height: auto;
+}
+
+.questionnaire-detail-modal--editing .qdetail-edit-q-summary {
+  padding: 10px 12px;
+  margin-bottom: 10px;
+  border-radius: 8px;
+  background: rgba(242, 201, 76, 0.08);
+  border: 1px solid rgba(242, 201, 76, 0.2);
+}
+
+.questionnaire-detail-modal--editing .qdetail-edit-q-summary-label {
+  display: block;
+  font-size: 0.65rem;
+  font-weight: 700;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--dtm-muted);
+  margin-bottom: 4px;
+}
+
+.questionnaire-detail-modal--editing .qdetail-edit-q-summary-title {
+  display: block;
+  font-size: 0.95rem;
+  font-weight: 600;
+  color: var(--dtm-text);
+  word-break: break-word;
+}
+
+.questionnaire-detail-modal--editing .qdetail-edit-q-summary-meta {
+  display: inline-block;
+  margin-top: 6px;
+  font-size: 0.7rem;
+  font-weight: 600;
+  color: var(--dtm-gold);
+  padding: 2px 8px;
+  border-radius: 999px;
+  background: rgba(242, 201, 76, 0.12);
+}
+
+.questionnaire-detail-modal--editing .qdetail-edit-panel-heading {
+  margin: 0 0 10px;
+  font-size: 0.72rem;
+  font-weight: 700;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--dtm-gold);
+}
+
+.questionnaire-detail-modal--editing .qdetail-edit-question-card {
+  background: rgba(255, 255, 255, 0.04);
+  border-left: 3px solid var(--dtm-gold);
+  border-radius: 6px;
+  padding: 10px;
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  gap: 8px;
+}
+
+.questionnaire-detail-modal--editing .qdetail-title-row {
+  display: grid;
+  grid-template-columns: 1fr minmax(160px, 200px);
+  gap: 12px;
+  align-items: start;
+}
+
+.questionnaire-detail-modal--editing .qdetail-add-question-row {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  align-items: center;
+}
+
+.questionnaire-detail-modal--editing .qdetail-add-question-row input[type="text"] {
+  flex: 1 1 180px;
+  min-width: 0;
+}
+
+.questionnaire-detail-modal--editing .creation-form .form-group label {
+  font-size: 0.68rem;
+}
+
+.questionnaire-detail-modal--editing .creation-form .form-group input,
+.questionnaire-detail-modal--editing .creation-form .form-group select,
+.questionnaire-detail-modal--editing .creation-form .form-group textarea {
+  font-size: 0.82rem;
+  padding: 9px 11px;
+}
+
+@media (max-width: 900px) {
+  .questionnaire-detail-modal--editing .questionnaire-two-column-container {
+    grid-template-columns: 1fr;
+  }
+
+  .questionnaire-detail-modal--editing .qdetail-title-row {
+    grid-template-columns: 1fr;
   }
 }
