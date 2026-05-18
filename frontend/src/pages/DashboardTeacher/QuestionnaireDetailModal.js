@@ -1,4 +1,5 @@
 import React, { useState, useEffect } from "react";
+import { createPortal } from "react-dom";
 import { questionnaireAPI } from "../../services/api";
 import { useToast } from "../../contexts/ToastContext";
 import "./Teacher.css";
@@ -45,6 +46,15 @@ const QuestionnaireDetailModal = ({ isOpen, onClose, questionnaireId, onUpdate }
       setShowConfirmClose(false);
     }
   }, [isOpen, questionnaireId]);
+
+  useEffect(() => {
+    if (!isOpen) return undefined;
+    const prevOverflow = document.body.style.overflow;
+    document.body.style.overflow = "hidden";
+    return () => {
+      document.body.style.overflow = prevOverflow;
+    };
+  }, [isOpen]);
 
   const fetchQuestionnaireDetails = async () => {
     try {
@@ -253,8 +263,13 @@ const QuestionnaireDetailModal = ({ isOpen, onClose, questionnaireId, onUpdate }
 
   if (!isOpen) return null;
 
-  return (
-    <div className="modal-overlay" onClick={handleRequestClose}>
+  const overlayClass = `qdetail-modal-overlay${
+    isEditing ? " qdetail-modal-overlay--edit" : ""
+  }`;
+
+  return createPortal(
+    <>
+    <div className={overlayClass} onClick={handleRequestClose}>
       <div
         className={`modal-content questionnaire-detail-modal${isEditing ? " questionnaire-detail-modal--editing" : ""}`}
         onClick={(e) => e.stopPropagation()}
@@ -381,16 +396,26 @@ const QuestionnaireDetailModal = ({ isOpen, onClose, questionnaireId, onUpdate }
               </div>
             ) : (
               /* EDIT MODE */
-              <div className="edit-mode-container" style={{ display: 'flex', flexDirection: 'column', height: '100%' }}>
-                <form onSubmit={handleSaveChanges} style={{ display: 'flex', flexDirection: 'column', flex: 1 }}>
-                  <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(350px, 1fr))', gap: '24px' }}>
+              <div className="qdetail-edit-view">
+                <form onSubmit={handleSaveChanges} className="qdetail-edit-form">
+                  <div className="qdetail-edit-scroll"><div className="questionnaire-two-column-container">
                     {/* LEFT COLUMN - SECTION EDITOR & QUESTIONS */}
-                    <div className="questionnaire-preview-panel" style={{ display: 'flex', flexDirection: 'column' }}>
+                    <div className="questionnaire-preview-panel">
                       {formData.sections[activeSectionIndex] && (
                         <>
+                          <div className="qdetail-edit-q-summary">
+                            <span className="qdetail-edit-q-summary-label">Questionnaire</span>
+                            <strong className="qdetail-edit-q-summary-title">
+                              {formData.title?.trim() || "Untitled"}
+                            </strong>
+                            <span className="qdetail-edit-q-summary-meta">
+                              {formData.target === "STUDENT" ? "Peer-to-Peer" : "Team"}
+                            </span>
+                          </div>
+                          <h3 className="qdetail-edit-panel-heading">Page &amp; questions</h3>
                           <div className="section-editor">
                             <div className="form-group" style={{ marginBottom: '8px' }}>
-                              <label style={{ fontSize: '11px', fontWeight: '600', color: 'var(--dtm-gold)', margin: 0 }}>Section Title</label>
+                              <label style={{ fontSize: '11px', fontWeight: '600', color: 'var(--dtm-gold)', margin: 0 }}>Page title</label>
                               <input
                                 type="text"
                                 value={formData.sections[activeSectionIndex].sectionTitle}
@@ -500,18 +525,9 @@ const QuestionnaireDetailModal = ({ isOpen, onClose, questionnaireId, onUpdate }
                             </h4>
 
                             {formData.sections[activeSectionIndex].items && formData.sections[activeSectionIndex].items.length > 0 ? (
-                              <div style={{ display: 'flex', flexDirection: 'column', gap: '8px', maxHeight: '400px', overflowY: 'auto' }}>
+                              <div className="qdetail-edit-questions-list">
                                 {formData.sections[activeSectionIndex].items.map((q, qIdx) => (
-                                  <div key={qIdx} style={{
-                                    background: 'rgba(255, 255, 255, 0.04)',
-                                    borderLeft: '3px solid var(--dtm-gold)',
-                                    borderRadius: '4px',
-                                    padding: '8px',
-                                    display: 'flex',
-                                    justifyContent: 'space-between',
-                                    alignItems: 'flex-start',
-                                    gap: '8px'
-                                  }}>
+                                  <div key={qIdx} className="qdetail-edit-question-card">
                                     <div style={{ flex: 1, minWidth: 0 }}>
                                       <p style={{ margin: '0 0 4px 0', fontSize: '11px', fontWeight: '500', color: 'var(--dtm-text)', wordBreak: 'break-word' }}>
                                         Q{qIdx + 1}: {q.questionText}
@@ -556,9 +572,10 @@ const QuestionnaireDetailModal = ({ isOpen, onClose, questionnaireId, onUpdate }
                     </div>
 
                     {/* RIGHT COLUMN - CREATION FORM */}
-                    <div className="questionnaire-creation-panel" style={{ display: 'flex', flexDirection: 'column' }}>
-                      <div style={{ display: 'flex', gap: '10px', alignItems: 'flex-start', marginBottom: '0px', position: 'relative' }}>
-                        <div className="form-group" style={{ flex: 1 }}>
+                    <div className="questionnaire-creation-panel creation-form">
+                      <h3 className="qdetail-edit-panel-heading">Questionnaire details</h3>
+                      <div className="qdetail-title-row">
+                        <div className="form-group" style={{ marginBottom: 0 }}>
                           <label>Title *</label>
                           <input
                             type="text"
@@ -569,7 +586,7 @@ const QuestionnaireDetailModal = ({ isOpen, onClose, questionnaireId, onUpdate }
                             style={{ fontSize: '11px' }}
                           />
                         </div>
-                        <div className="form-group" style={{ minWidth: '200px' }}>
+                        <div className="form-group" style={{ marginBottom: 0 }}>
                           <label>Questionnaire For</label>
                           <CustomSelect
                             value={formData.target}
@@ -626,15 +643,13 @@ const QuestionnaireDetailModal = ({ isOpen, onClose, questionnaireId, onUpdate }
                         <div className="add-question-box">
                           <div className="form-group">
                             <label>Question Text *</label>
-                            <div style={{ display: 'flex', gap: '8px', alignItems: 'center', justifyContent: 'space-between', flexWrap: 'wrap' }}>
-                              <div style={{ display: 'flex', gap: '8px', alignItems: 'center', flex: 1, minWidth: '250px', flexWrap: 'wrap' }}>
-                                <input
-                                  type="text"
-                                  value={newQuestion.questionText}
-                                  onChange={(e) => setNewQuestion({ ...newQuestion, questionText: e.target.value })}
-                                  placeholder="Ask your question..."
-                                  style={{ fontSize: '11px', flex: 1, minWidth: '200px' }}
-                                />
+                            <div className="qdetail-add-question-row">
+                              <input
+                                type="text"
+                                value={newQuestion.questionText}
+                                onChange={(e) => setNewQuestion({ ...newQuestion, questionText: e.target.value })}
+                                placeholder="Ask your question..."
+                              />
                                 <CustomSelect
                                   value={newQuestion.questionType}
                                   onChange={(qType) => {
@@ -655,9 +670,6 @@ const QuestionnaireDetailModal = ({ isOpen, onClose, questionnaireId, onUpdate }
                                   ]}
                                   style={{ width: '135px', flexShrink: 0 }}
                                 />
-                              </div>
-
-                              <div style={{ display: 'flex', gap: '8px', alignItems: 'center' }}>
                                 <button
                                   type="button"
                                   onClick={handleAddQuestion}
@@ -720,7 +732,6 @@ const QuestionnaireDetailModal = ({ isOpen, onClose, questionnaireId, onUpdate }
                                     <rect x="3" y="14" width="16" height="8" rx="1"></rect>
                                   </svg>
                                 </button>
-                              </div>
                             </div>
 
                             {/* Description field for Peer-to-Peer Questionnaires */}
@@ -880,12 +891,10 @@ const QuestionnaireDetailModal = ({ isOpen, onClose, questionnaireId, onUpdate }
                         </div>
                       </div>
                     </div>
-                  </div>
-
-                  <div className="modal-actions" style={{ display: 'flex', justifyContent: 'flex-end', gap: '10px', borderTop: '1px solid rgba(255,255,255,0.1)', paddingTop: '15px', marginTop: 'auto' }}>
+                  </div></div><footer className="qdetail-edit-footer">
                     <button type="submit" className="btn btn-primary" disabled={loading}>Save Changes</button>
                     <button type="button" className="btn btn-secondary" onClick={() => setIsEditing(false)}>Cancel</button>
-                  </div>
+                  </footer>
                 </form>
               </div>
             )}
@@ -906,6 +915,8 @@ const QuestionnaireDetailModal = ({ isOpen, onClose, questionnaireId, onUpdate }
         isDanger={true}
       />
     </div>
+    </>,
+    document.body
   );
 };
 
