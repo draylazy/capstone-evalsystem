@@ -10,6 +10,8 @@ import ExitConfirmModal from "../../components/ConfirmModal/ExitConfirmModal";
 
 const API_BASE_URL = (process.env.REACT_APP_API_BASE_URL || 'http://localhost:8080/api').replace(/\/api\/?$/, '');
 
+const isAnswerFilled = (value) => value !== undefined && value !== null && value !== "";
+
 const StudentEvaluateForm = () => {
   const { questionnaireId } = useParams();
   const navigate = useNavigate();
@@ -116,6 +118,34 @@ const StudentEvaluateForm = () => {
   }, [questionnaire]);
 
   const currentPage = pages[currentPageIndex];
+
+  const { sectionProgress, overallPercent, overallAnswered, overallTotal } = useMemo(() => {
+    if (!pages.length || !members.length) {
+      return { sectionProgress: [], overallPercent: 0, overallAnswered: 0, overallTotal: 0 };
+    }
+
+    const sectionProgress = pages.map((page) => {
+      let total = 0;
+      let filled = 0;
+      for (const item of page.items) {
+        for (const member of members) {
+          if (item.required === false) continue;
+          total += 1;
+          const val = answers[member.evaluationId]?.[item.id];
+          if (isAnswerFilled(val)) filled += 1;
+        }
+      }
+      const percent = total === 0 ? 100 : Math.round((filled / total) * 100);
+      return { total, filled, percent };
+    });
+
+    const overallTotal = sectionProgress.reduce((sum, s) => sum + s.total, 0);
+    const overallAnswered = sectionProgress.reduce((sum, s) => sum + s.filled, 0);
+    const overallPercent =
+      overallTotal === 0 ? 0 : Math.round((overallAnswered / overallTotal) * 100);
+
+    return { sectionProgress, overallPercent, overallAnswered, overallTotal };
+  }, [pages, members, answers]);
 
   const handleScoreChange = (evaluationId, itemId, val) => {
     if (isSubmitted) return;
@@ -267,15 +297,51 @@ const StudentEvaluateForm = () => {
               <div className="eval-progress-header">
                 <span className="eval-progress-label">Progress</span>
                 <span className="eval-progress-count">
-                  {currentPageIndex + 1} of {pages.length}
+                  {pages.length > 1
+                    ? `Section ${currentPageIndex + 1} of ${pages.length}`
+                    : "Completion"}
+                  {" · "}
+                  {overallPercent}%
                 </span>
               </div>
-              <div className="eval-progress-track">
-                <div
-                  className="eval-progress-fill"
-                  style={{ width: `${((currentPageIndex + 1) / pages.length) * 100}%` }}
-                />
+              <div
+                className={`eval-progress-track${pages.length > 1 ? " eval-progress-track--segmented" : ""}`}
+                role="progressbar"
+                aria-valuenow={overallPercent}
+                aria-valuemin={0}
+                aria-valuemax={100}
+                aria-label={`Evaluation ${overallPercent}% complete`}
+              >
+                {pages.length > 1 ? (
+                  pages.map((page, idx) => {
+                    const { percent } = sectionProgress[idx] || { percent: 0 };
+                    const isCurrent = idx === currentPageIndex;
+                    const isComplete = percent >= 100;
+                    return (
+                      <div
+                        key={page.id}
+                        className={`eval-progress-segment${isCurrent ? " is-current" : ""}${isComplete ? " is-complete" : ""}`}
+                        title={`${page.title}: ${percent}%`}
+                      >
+                        <div className="eval-progress-segment-fill"
+                          style={{ width: `${Math.min(100, percent)}%` }}
+                        />
+                      </div>
+                    );
+                  })
+                ) : (
+                  <div className="eval-progress-segment eval-progress-segment--single">
+                    <div
+                      className="eval-progress-segment-fill"
+                      style={{ width: `${overallPercent}%` }}
+                    />
+                  </div>
+                )}
               </div>
+              <p className="eval-progress-meta">
+                {overallAnswered} of {overallTotal} required responses
+                {pages.length > 1 ? ` · ${currentPage?.title || ""}` : ""}
+              </p>
             </div>
           </aside>
 

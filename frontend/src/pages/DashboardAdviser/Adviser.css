@@ -320,9 +320,13 @@
   }
 
   .adviser-progress-fill {
+    display: block;
     height: 100%;
+    min-height: 100%;
+    max-width: 100%;
     border-radius: 999px;
-    background: linear-gradient(135deg, #f2c94c, #d4a843);
+    background: linear-gradient(90deg, #d4a843, #f2c94c);
+    transition: width 0.35s ease;
   }
 
   .adviser-progress-text {
