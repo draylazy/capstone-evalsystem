@@ -205,6 +205,16 @@ const QuestionnaireDetailModal = ({ isOpen, onClose, questionnaireId, onUpdate }
     });
   };
 
+  const formatQuestionType = (type) => {
+    const labels = {
+      NUMERIC_SCALE: "Numeric scale",
+      RATING: "Rating",
+      TEXT: "Text response",
+      MULTIPLE_CHOICE: "Multiple choice",
+    };
+    return labels[type] || type?.replace(/_/g, " ").toLowerCase().replace(/^\w/, (c) => c.toUpperCase()) || "—";
+  };
+
   const checkIsDirty = () => {
     if (!isEditing || !initialFormData) return false;
 
@@ -245,123 +255,129 @@ const QuestionnaireDetailModal = ({ isOpen, onClose, questionnaireId, onUpdate }
 
   return (
     <div className="modal-overlay" onClick={handleRequestClose}>
-      <div className="modal-content questionnaire-detail-modal" onClick={(e) => e.stopPropagation()} style={{ width: '95%', maxWidth: '1250px', maxHeight: '90vh', overflowY: 'auto' }}>
-        <div className="modal-header" style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '20px', borderBottom: '1px solid rgba(255,255,255,0.1)', paddingBottom: '15px' }}>
-          <h2 style={{ margin: 0, color: 'var(--dtm-gold)' }}>
+      <div
+        className={`modal-content questionnaire-detail-modal${isEditing ? " questionnaire-detail-modal--editing" : ""}`}
+        onClick={(e) => e.stopPropagation()}
+      >
+        <div className="qdetail-modal-header">
+          <h2 className="qdetail-modal-title">
             {isEditing ? "Edit Questionnaire" : "Questionnaire Details"}
           </h2>
-          <button className="close-btn" onClick={handleRequestClose} style={{ background: 'none', border: 'none', color: 'var(--dtm-muted)', fontSize: '24px', cursor: 'pointer' }}>&times;</button>
+          <button type="button" className="qdetail-close-btn" onClick={handleRequestClose} aria-label="Close">
+            &times;
+          </button>
         </div>
 
         {loading || !questionnaire ? (
-          <div style={{ textAlign: 'center', padding: '40px' }}>
-            {loading ? 'Loading details...' : 'Failed to load details. Please try again.'}
+          <div className="qdetail-loading">
+            {loading ? "Loading details..." : "Failed to load details. Please try again."}
           </div>
         ) : (
           <>
             {!isEditing ? (
-              /* VIEW MODE */
-              <div className="view-mode-container">
-                <div className="detail-grid" style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(250px, 1fr))', gap: '20px', marginBottom: '30px' }}>
-                  <div className="detail-item">
-                    <label style={{ display: 'block', fontSize: '12px', color: 'var(--dtm-muted)', textTransform: 'uppercase', marginBottom: '5px' }}>Title</label>
-                    <div style={{ fontSize: '18px', fontWeight: '600' }}>{questionnaire.title}</div>
+              <div className="qdetail-view">
+                <div className="qdetail-body">
+                <div className="qdetail-meta-grid">
+                  <div className="qdetail-meta-card qdetail-meta-card--wide">
+                    <span className="qdetail-meta-label">Title</span>
+                    <p className="qdetail-meta-value qdetail-meta-value--title">{questionnaire.title}</p>
                   </div>
-                  <div className="detail-item">
-                    <label style={{ display: 'block', fontSize: '12px', color: 'var(--dtm-muted)', textTransform: 'uppercase', marginBottom: '5px' }}>Target</label>
-                    <div>
-                      <span style={{
-                        padding: '4px 12px',
-                        borderRadius: '12px',
-                        fontSize: '12px',
-                        fontWeight: '700',
-                        background: questionnaire.target === 'ADVISER' ? '#cce5ff' : '#fff3cd',
-                        color: questionnaire.target === 'ADVISER' ? '#004085' : '#856404',
-                      }}>
-                        {questionnaire.target === 'ADVISER' ? 'Adviser' : 'Student'}
+                  <div className="qdetail-meta-card">
+                    <span className="qdetail-meta-label">Target</span>
+                    <p className="qdetail-meta-value">
+                      <span className={`qdetail-target-badge qdetail-target-badge--${(questionnaire.target || "ADVISER").toLowerCase()}`}>
+                        {questionnaire.target === "ADVISER" ? "Adviser" : "Student"}
                       </span>
-                    </div>
+                    </p>
                   </div>
-                  <div className="detail-item" style={{ gridColumn: 'span 2' }}>
-                    <label style={{ display: 'block', fontSize: '12px', color: 'var(--dtm-muted)', textTransform: 'uppercase', marginBottom: '5px' }}>Description</label>
-                    <div style={{ lineHeight: '1.5', opacity: 0.9 }}>{questionnaire.description || "No description provided."}</div>
+                  <div className="qdetail-meta-card">
+                    <span className="qdetail-meta-label">Questions</span>
+                    <p className="qdetail-meta-value">{questionnaire.questionCount}</p>
                   </div>
-                  <div className="detail-item">
-                    <label style={{ display: 'block', fontSize: '12px', color: 'var(--dtm-muted)', textTransform: 'uppercase', marginBottom: '5px' }}>Question Count</label>
-                    <div style={{ fontSize: '16px' }}>{questionnaire.questionCount} questions</div>
+                  <div className="qdetail-meta-card">
+                    <span className="qdetail-meta-label">Status</span>
+                    <p className="qdetail-meta-value">
+                      <span className={`status-badge ${questionnaire.isActive ? "status-active" : "status-inactive"}`}>
+                        {questionnaire.isActive ? "Active" : "Inactive"}
+                      </span>
+                    </p>
                   </div>
-                  <div className="detail-item">
-                    <label style={{ display: 'block', fontSize: '12px', color: 'var(--dtm-muted)', textTransform: 'uppercase', marginBottom: '5px' }}>Assigned Classes</label>
-                    <div style={{ fontSize: '14px' }}>
-                      {questionnaire.assignedClassNames && questionnaire.assignedClassNames.length > 0
-                        ? questionnaire.assignedClassNames.join(', ')
-                        : 'Not assigned to any classes'}
-                    </div>
+                  <div className="qdetail-meta-card qdetail-meta-card--wide">
+                    <span className="qdetail-meta-label">Description</span>
+                    <p className="qdetail-meta-value">{questionnaire.description || "No description provided."}</p>
                   </div>
-                  <div className="detail-item">
-                    <label style={{ display: 'block', fontSize: '12px', color: 'var(--dtm-muted)', textTransform: 'uppercase', marginBottom: '5px' }}>Created Date</label>
-                    <div style={{ fontSize: '14px' }}>{formatDate(questionnaire.createdAt)}</div>
+                  <div className="qdetail-meta-card qdetail-meta-card--wide">
+                    <span className="qdetail-meta-label">Assigned classes</span>
+                    <p className="qdetail-meta-value">
+                      {questionnaire.assignedClassNames?.length > 0
+                        ? questionnaire.assignedClassNames.join(", ")
+                        : "Not assigned to any classes"}
+                    </p>
                   </div>
-                  <div className="detail-item">
-                    <label style={{ display: 'block', fontSize: '12px', color: 'var(--dtm-muted)', textTransform: 'uppercase', marginBottom: '5px' }}>Deadline</label>
-                    <div style={{ fontSize: '14px', color: questionnaire.deadlineAt ? 'inherit' : 'var(--dtm-muted)' }}>
+                  <div className="qdetail-meta-card">
+                    <span className="qdetail-meta-label">Created</span>
+                    <p className="qdetail-meta-value">{formatDate(questionnaire.createdAt)}</p>
+                  </div>
+                  <div className="qdetail-meta-card">
+                    <span className="qdetail-meta-label">Deadline</span>
+                    <p className={`qdetail-meta-value ${!questionnaire.deadlineAt ? "qdetail-meta-value--muted" : ""}`}>
                       {formatDeadline(questionnaire.deadlineAt)}
-                    </div>
-                  </div>
-                  <div className="detail-item">
-                    <label style={{ display: 'block', fontSize: '12px', color: 'var(--dtm-muted)', textTransform: 'uppercase', marginBottom: '5px' }}>Status</label>
-                    <div>
-                      <span className={`status-badge ${questionnaire.isActive ? 'status-active' : 'status-inactive'}`}>
-                        {questionnaire.isActive ? 'Active' : 'Inactive'}
-                      </span>
-                    </div>
+                    </p>
                   </div>
                 </div>
 
-                <div className="view-questions-section" style={{ borderTop: '1px solid rgba(255,255,255,0.1)', paddingTop: '20px', marginBottom: '20px' }}>
-                  <h3 style={{ fontSize: '16px', color: 'var(--dtm-gold)', marginBottom: '15px' }}>Questions</h3>
-                  <div style={{ display: 'flex', flexDirection: 'column', gap: '15px' }}>
+                <section className="qdetail-questions">
+                  <h3 className="qdetail-questions-title">Questions</h3>
+                  <div className="qdetail-questions-list">
                     {formData.sections.map((section, sIdx) => (
-                      <div key={sIdx} className="view-section" style={{ marginBottom: '10px' }}>
+                      <div key={sIdx} className="qdetail-section-block">
                         {formData.sections.length > 1 && (
-                          <h4 style={{ fontSize: '14px', color: 'var(--dtm-gold)', borderBottom: '1px solid rgba(242, 201, 76, 0.2)', paddingBottom: '5px', marginBottom: '10px' }}>
-                            {section.sectionTitle}
-                          </h4>
+                          <h4 className="qdetail-section-name">{section.sectionTitle}</h4>
                         )}
-                        <div style={{ display: 'flex', flexDirection: 'column', gap: '10px' }}>
+                        <div className="qdetail-section-items">
                           {section.items?.map((q, qIdx) => (
-                            <div key={qIdx} style={{ background: 'rgba(255,255,255,0.03)', padding: '10px', borderRadius: '6px', border: '1px solid rgba(255,255,255,0.05)' }}>
-                              <div style={{ fontSize: '13px', fontWeight: '500' }}>{qIdx + 1}. {q.questionText}</div>
-                              <div style={{ fontSize: '11px', color: 'var(--dtm-muted)', marginTop: '4px' }}>
-                                Type: {q.questionType} 
-                                {(q.questionType === 'NUMERIC_SCALE' || q.questionType === 'RATING') && ` | Range: ${q.minScore} - ${q.maxScore}`}
-                                {` | ${q.required === false ? 'Optional' : 'Required'}`}
-                              </div>
-                            </div>
+                            <article key={qIdx} className="qdetail-question-card">
+                              <p className="qdetail-question-text">
+                                <span className="qdetail-question-num">{qIdx + 1}.</span> {q.questionText}
+                              </p>
+                              <p className="qdetail-question-meta">
+                                <span>{formatQuestionType(q.questionType)}</span>
+                                {(q.questionType === "NUMERIC_SCALE" || q.questionType === "RATING") && (
+                                  <span> · Range {q.minScore}–{q.maxScore}</span>
+                                )}
+                                <span> · {q.required === false ? "Optional" : "Required"}</span>
+                              </p>
+                            </article>
                           ))}
                         </div>
                       </div>
                     ))}
                   </div>
+                </section>
                 </div>
 
-                <div className="modal-actions" style={{ display: 'flex', justifyContent: 'flex-end', gap: '10px', borderTop: '1px solid rgba(255,255,255,0.1)', paddingTop: '20px' }}>
-                  <button 
-                    className="btn btn-secondary" 
+                <footer className="qdetail-footer">
+                  <button
+                    type="button"
+                    className="btn btn-secondary"
                     onClick={() => {
-                      if (questionnaire.target === 'STUDENT' && questionnaire.isActive) {
+                      if (questionnaire.target === "STUDENT" && questionnaire.isActive) {
                         toast.error("Active peer-to-peer questionnaires cannot be edited. Please deactivate it first.");
                         return;
                       }
                       setIsEditing(true);
                     }}
-                    title={questionnaire.target === 'STUDENT' && questionnaire.isActive ? "Deactivate to edit" : ""}
+                    title={questionnaire.target === "STUDENT" && questionnaire.isActive ? "Deactivate to edit" : ""}
                   >
-                    Edit Details & Questions
+                    Edit details
                   </button>
-                  <button className="btn btn-primary" onClick={() => window.open(questionnaire.googleFormUrl, '_blank')}>View Form</button>
-                  <button className="btn btn-secondary" onClick={handleRequestClose}>Close</button>
-                </div>
+                  <button type="button" className="btn btn-primary" onClick={() => window.open(questionnaire.googleFormUrl, "_blank")}>
+                    View form
+                  </button>
+                  <button type="button" className="btn btn-secondary" onClick={handleRequestClose}>
+                    Close
+                  </button>
+                </footer>
               </div>
             ) : (
               /* EDIT MODE */

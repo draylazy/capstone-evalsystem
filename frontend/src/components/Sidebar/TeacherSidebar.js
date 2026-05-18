@@ -1,7 +1,7 @@
 import React, { useState, useEffect, useRef } from "react";
 import { useLocation, useNavigate } from "react-router-dom";
 import { authAPI } from "../../services/api";
-import { LayoutDashboard, GraduationCap, UserCheck, ClipboardList, BarChart2, TrendingUp, Users } from "lucide-react";
+import { LayoutDashboard, GraduationCap, UserCheck, ClipboardList, BarChart2, TrendingUp, Users, Menu, X } from "lucide-react";
 import "./Sidebar.css";
 import logo from '../Logo/LOGO test.png';
 
@@ -9,6 +9,7 @@ const TeacherSidebar = () => {
   const navigate = useNavigate();
   const location = useLocation();
   const [showProfileMenu, setShowProfileMenu] = useState(false);
+  const [isOpen, setIsOpen] = useState(false);
   const [user, setUser] = useState(null);
   const menuRef = useRef(null);
 
@@ -35,6 +36,8 @@ const TeacherSidebar = () => {
   };
 
   const handleNavigate = (path) => {
+    setIsOpen(false);
+    setShowProfileMenu(false);
     navigate(path);
   };
 
@@ -56,7 +59,22 @@ const TeacherSidebar = () => {
   ];
 
   return (
-    <div className="sidebar sidebar--teacher">
+    <>
+      <button
+        type="button"
+        className="mobile-menu-btn mobile-menu-btn--teacher"
+        onClick={() => setIsOpen(!isOpen)}
+        aria-label={isOpen ? "Close menu" : "Open menu"}
+        aria-expanded={isOpen}
+      >
+        {isOpen ? <X size={18} /> : <Menu size={18} />}
+      </button>
+
+      {isOpen && (
+        <div className="sidebar-overlay sidebar-overlay--teacher" onClick={() => setIsOpen(false)} aria-hidden="true" />
+      )}
+
+      <div className={`sidebar sidebar--teacher ${isOpen ? "is-open" : ""}`}>
       <div className="sidebar-header" style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', padding: '20px 0', borderBottom: '1px solid rgba(255,255,255,0.08)' }}>
         <img src={logo} alt="Logo" style={{ width: '50px', height: '50px', marginBottom: '8px', objectFit: 'contain' }} />
         <h2 style={{ fontSize: '1.1rem', margin: 0, color: 'var(--dtm-gold)' }}>Teacher Panel</h2>
@@ -84,7 +102,7 @@ const TeacherSidebar = () => {
             <div className="profile-dropdown-header">
               <span className="dropdown-email">{user?.email}</span>
             </div>
-            <div className="profile-dropdown-item" onClick={() => { handleNavigate('/profile'); setShowProfileMenu(false); }}>
+            <div className="profile-dropdown-item" onClick={() => handleNavigate("/profile")}>
               Profile
             </div>
             <div className="profile-dropdown-item profile-dropdown-logout" onClick={handleLogout}>
@@ -94,6 +112,7 @@ const TeacherSidebar = () => {
         )}
       </div>
     </div>
+    </>
   );
 };
 

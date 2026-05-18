@@ -67,17 +67,19 @@ const StudentSidebar = ({ onBeforeNavigate }) => {
 
   const isEvaluatePage = location.pathname.includes('/student/evaluate');
 
+  if (isEvaluatePage) {
+    return null;
+  }
+
   return (
     <>
-      {!isEvaluatePage && (
-        <button 
-          className="mobile-menu-btn" 
-          onClick={() => setIsOpen(!isOpen)}
-          aria-label="Toggle Menu"
-        >
-          {isOpen ? <X size={18} /> : <Menu size={18} />}
-        </button>
-      )}
+      <button
+        className="mobile-menu-btn"
+        onClick={() => setIsOpen(!isOpen)}
+        aria-label="Toggle Menu"
+      >
+        {isOpen ? <X size={18} /> : <Menu size={18} />}
+      </button>
 
       {isOpen && (
         <div className="sidebar-overlay" onClick={() => setIsOpen(false)} />

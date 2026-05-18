@@ -1080,8 +1080,14 @@
   display: flex;
   justify-content: center;
   align-items: center;
-  z-index: 1000;
+  z-index: 1300;
   box-sizing: border-box;
+}
+
+body:has(.modal-overlay) .ai-fab,
+body:has(.modal-overlay) .mobile-menu-btn {
+  visibility: hidden;
+  pointer-events: none;
 }
 
 @media (max-width: 1024px) {
@@ -1368,7 +1374,7 @@
   font-size: 14px;
   font-weight: 700;
   box-shadow: 0 12px 28px rgba(0, 0, 0, 0.45);
-  z-index: 1002;
+  z-index: 900;
   cursor: pointer;
   transition: transform 0.25s ease, box-shadow 0.25s ease;
 }
@@ -1828,11 +1834,16 @@
 /* Tablets / narrow laptops */
 @media (max-width: 1024px) {
   .teacher-content {
+    flex: 1 1 100%;
+    width: 100%;
+    min-width: 0;
+    max-width: 100%;
     margin-left: 0;
-    padding: 24px 20px;
+    margin-right: 0;
+    padding: 56px 16px 24px;
   }
 
-  .sidebar {
+  .sidebar:not(.sidebar--teacher):not(.sidebar--student) {
     display: none;
   }
 
@@ -1972,8 +1983,8 @@
   }
 
   .ai-fab {
-    right: 16px;
-    bottom: 16px;
+    right: max(16px, env(safe-area-inset-right, 16px));
+    bottom: max(72px, calc(16px + env(safe-area-inset-bottom, 0px)));
     width: 52px;
     height: 52px;
   }
@@ -2094,11 +2105,809 @@
 }
 
 /* Questionnaire Detail Modal Specifics */
-.questionnaire-detail-modal {
-  background: linear-gradient(160deg, rgba(58, 36, 42, 0.95), rgba(43, 24, 29, 0.95));
-  border: 1px solid rgba(242, 201, 76, 0.2);
-  box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.5);
+.modal-content.questionnaire-detail-modal:not(.questionnaire-detail-modal--editing) {
+  background: linear-gradient(160deg, rgba(58, 36, 42, 0.98), rgba(43, 24, 29, 0.98));
+  border: 1px solid rgba(242, 201, 76, 0.25);
+  box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.55);
   backdrop-filter: blur(20px);
+  width: min(92vw, 720px) !important;
+  max-width: 720px !important;
+  height: min(88vh, 680px) !important;
+  max-height: 88vh !important;
+  padding: 0 !important;
+  overflow: hidden !important;
+  display: flex;
+  flex-direction: column;
+  box-sizing: border-box;
+}
+
+.modal-content.questionnaire-detail-modal:not(.questionnaire-detail-modal--editing) > .qdetail-view {
+  flex: 1 1 auto;
+  min-height: 0;
+}
+
+.questionnaire-detail-modal {
+  background: linear-gradient(160deg, rgba(58, 36, 42, 0.98), rgba(43, 24, 29, 0.98));
+  border: 1px solid rgba(242, 201, 76, 0.25);
+  box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.55);
+  backdrop-filter: blur(20px);
+  padding: 0 !important;
+  display: flex;
+  flex-direction: column;
+  box-sizing: border-box;
+}
+
+.questionnaire-detail-modal--editing {
+  width: min(98vw, 1250px) !important;
+  max-width: 1250px !important;
+  max-height: 92vh;
+  overflow-y: auto;
+  padding: 24px !important;
+}
+
+.questionnaire-detail-modal .qdetail-modal-header {
+  flex-shrink: 0;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
+  padding: 20px 24px 16px;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+  background: rgba(0, 0, 0, 0.15);
+}
+
+.questionnaire-detail-modal .qdetail-modal-title {
+  margin: 0;
+  font-size: 1.25rem;
+  font-weight: 600;
+  color: var(--dtm-gold);
+}
+
+.questionnaire-detail-modal .qdetail-close-btn {
+  flex-shrink: 0;
+  width: 36px;
+  height: 36px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border: none;
+  border-radius: 8px;
+  background: rgba(255, 255, 255, 0.06);
+  color: var(--dtm-muted);
+  font-size: 1.5rem;
+  line-height: 1;
+  cursor: pointer;
+  transition: background 0.15s ease, color 0.15s ease;
+}
+
+.questionnaire-detail-modal .qdetail-close-btn:hover {
+  background: rgba(255, 255, 255, 0.12);
+  color: var(--dtm-text);
+}
+
+.questionnaire-detail-modal .qdetail-loading {
+  padding: 48px 24px;
+  text-align: center;
+  color: var(--dtm-muted);
+}
+
+.questionnaire-detail-modal .qdetail-view {
+  flex: 1 1 auto;
+  min-height: 0;
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+}
+
+.questionnaire-detail-modal .qdetail-body {
+  flex: 1 1 auto;
+  min-height: 0;
+  overflow-x: hidden;
+  overflow-y: auto;
+  overscroll-behavior: contain;
+  -webkit-overflow-scrolling: touch;
+}
+
+.questionnaire-detail-modal .qdetail-body::-webkit-scrollbar {
+  width: 8px;
+}
+
+.questionnaire-detail-modal .qdetail-body::-webkit-scrollbar-track {
+  background: rgba(255, 255, 255, 0.04);
+  border-radius: 4px;
+}
+
+.questionnaire-detail-modal .qdetail-body::-webkit-scrollbar-thumb {
+  background: rgba(242, 201, 76, 0.5);
+  border-radius: 4px;
+}
+
+.questionnaire-detail-modal .qdetail-body::-webkit-scrollbar-thumb:hover {
+  background: rgba(242, 201, 76, 0.75);
+}
+
+.questionnaire-detail-modal .qdetail-meta-grid {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 10px;
+  padding: 16px 20px 12px;
+  box-sizing: border-box;
+}
+
+.questionnaire-detail-modal .qdetail-meta-card {
+  margin: 0;
+  padding: 10px 12px;
+  border-radius: 8px;
+  background: rgba(255, 255, 255, 0.04);
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  box-sizing: border-box;
+  min-width: 0;
+}
+
+.questionnaire-detail-modal .qdetail-meta-card--wide {
+  grid-column: 1 / -1;
+}
+
+.questionnaire-detail-modal .qdetail-meta-label {
+  display: block;
+  margin-bottom: 4px;
+  font-size: 0.65rem;
+  font-weight: 600;
+  letter-spacing: 0.05em;
+  text-transform: uppercase;
+  color: var(--dtm-muted);
+}
+
+.questionnaire-detail-modal .qdetail-meta-value {
+  margin: 0;
+  font-size: 0.85rem;
+  line-height: 1.35;
+  color: var(--dtm-text);
+  word-break: break-word;
+}
+
+.questionnaire-detail-modal .qdetail-meta-value--title {
+  font-size: 1rem;
+  font-weight: 600;
+  color: var(--dtm-gold);
+}
+
+.questionnaire-detail-modal .qdetail-meta-value--muted {
+  color: var(--dtm-muted);
+  font-style: italic;
+}
+
+.questionnaire-detail-modal .qdetail-target-badge {
+  display: inline-block;
+  padding: 4px 12px;
+  border-radius: 999px;
+  font-size: 0.75rem;
+  font-weight: 700;
+}
+
+.questionnaire-detail-modal .qdetail-target-badge--adviser {
+  background: rgba(100, 180, 255, 0.2);
+  color: #9ecfff;
+  border: 1px solid rgba(100, 180, 255, 0.35);
+}
+
+.questionnaire-detail-modal .qdetail-target-badge--student {
+  background: rgba(242, 201, 76, 0.15);
+  color: var(--dtm-gold);
+  border: 1px solid rgba(242, 201, 76, 0.35);
+}
+
+.questionnaire-detail-modal .qdetail-questions {
+  border-top: 1px solid rgba(255, 255, 255, 0.1);
+  margin: 0;
+  padding: 0 20px 16px;
+  box-sizing: border-box;
+}
+
+.questionnaire-detail-modal .qdetail-questions-title {
+  margin: 0;
+  padding: 14px 0 10px;
+  font-size: 0.9rem;
+  font-weight: 600;
+  color: var(--dtm-gold);
+}
+
+.questionnaire-detail-modal .qdetail-questions-list {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.questionnaire-detail-modal .qdetail-section-name {
+  margin: 0 0 10px;
+  padding-bottom: 8px;
+  font-size: 0.85rem;
+  font-weight: 600;
+  color: var(--dtm-gold);
+  border-bottom: 1px solid rgba(242, 201, 76, 0.2);
+}
+
+.questionnaire-detail-modal .qdetail-section-items {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.questionnaire-detail-modal .qdetail-question-card {
+  margin: 0;
+  padding: 14px 18px;
+  border-radius: 10px;
+  background: rgba(255, 255, 255, 0.04);
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  box-sizing: border-box;
+}
+
+.questionnaire-detail-modal .qdetail-question-text {
+  margin: 0 0 8px;
+  font-size: 0.9rem;
+  font-weight: 500;
+  line-height: 1.45;
+  color: var(--dtm-text);
+}
+
+.questionnaire-detail-modal .qdetail-question-num {
+  color: var(--dtm-gold);
+  font-weight: 700;
+  margin-right: 4px;
+}
+
+.questionnaire-detail-modal .qdetail-question-meta {
+  margin: 0;
+  font-size: 0.8rem;
+  line-height: 1.4;
+  color: var(--dtm-muted);
+}
+
+.questionnaire-detail-modal .qdetail-footer {
+  flex: 0 0 auto;
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: flex-end;
+  gap: 8px;
+  padding: 12px 20px 16px;
+  border-top: 1px solid rgba(255, 255, 255, 0.1);
+  background: rgba(0, 0, 0, 0.18);
+}
+
+.questionnaire-detail-modal .qdetail-modal-header {
+  flex: 0 0 auto;
+}
+
+@media (max-width: 640px) {
+  .modal-content.questionnaire-detail-modal:not(.questionnaire-detail-modal--editing) {
+    width: 100% !important;
+    max-width: 100% !important;
+    height: 100dvh !important;
+    max-height: 100dvh !important;
+    border-radius: 0;
+  }
+
+  .questionnaire-detail-modal .qdetail-footer {
+    padding-bottom: max(20px, env(safe-area-inset-bottom, 20px));
+  }
+
+  .questionnaire-detail-modal .qdetail-meta-grid {
+    grid-template-columns: 1fr;
+    padding: 14px 16px 10px;
+  }
+
+  .questionnaire-detail-modal .qdetail-questions {
+    padding: 0 16px 14px;
+  }
+
+  .questionnaire-detail-modal .qdetail-modal-header,
+  .questionnaire-detail-modal .qdetail-footer {
+    padding-left: 16px;
+    padding-right: 16px;
+  }
+
+  .questionnaire-detail-modal .qdetail-footer {
+    flex-direction: column;
+  }
+
+  .questionnaire-detail-modal .qdetail-footer .btn {
+    width: 100%;
+  }
+}
+
+/* =============================================
+     QUESTIONNAIRES LIST PAGE (mobile-friendly)
+  ============================================= */
+
+.questionnaires-page .questionnaires-page-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
+  flex-wrap: wrap;
+  margin-bottom: 20px;
+}
+
+.questionnaires-page .questionnaires-page-title-row {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  flex: 1 1 auto;
+  min-width: 0;
+}
+
+.questionnaires-page .questionnaires-page-header h1 {
+  margin: 0;
+  text-align: left;
+  flex: 1 1 auto;
+  min-width: 0;
+}
+
+.questionnaires-page .questionnaires-create-btn {
+  flex-shrink: 0;
+}
+
+.questionnaires-page.teacher-content {
+  overflow-y: visible;
+  min-height: 0;
+  padding-bottom: calc(32px + env(safe-area-inset-bottom, 0px));
+}
+
+.questionnaires-section {
+  overflow: visible;
+}
+
+.questionnaires-list-wrap {
+  overflow-x: auto;
+  -webkit-overflow-scrolling: touch;
+}
+
+.questionnaire-list-table .q-target-badge {
+  display: inline-flex;
+  align-items: center;
+  padding: 4px 12px;
+  border-radius: 999px;
+  font-size: 0.72rem;
+  font-weight: 700;
+  white-space: nowrap;
+}
+
+.questionnaire-list-table .q-target-badge--adviser {
+  background: rgba(100, 180, 255, 0.2);
+  color: #9ecfff;
+  border: 1px solid rgba(100, 180, 255, 0.35);
+}
+
+.questionnaire-list-table .q-target-badge--student {
+  background: rgba(242, 201, 76, 0.15);
+  color: var(--dtm-gold);
+  border: 1px solid rgba(242, 201, 76, 0.35);
+}
+
+.questionnaire-list-table .q-card-title {
+  font-weight: 600;
+  color: var(--dtm-text);
+}
+
+@media (max-width: 1024px) {
+  .questionnaires-page.teacher-content {
+    width: 100%;
+    max-width: 100%;
+    margin-left: 0 !important;
+    margin-right: 0 !important;
+    padding: 56px 16px 24px !important;
+  }
+
+  .questionnaires-page .questionnaires-page-header {
+    width: 100%;
+    max-width: 100%;
+    margin-left: auto;
+    margin-right: auto;
+    justify-content: center;
+  }
+
+  .questionnaires-page .questionnaires-page-title-row {
+    width: 100%;
+    justify-content: center;
+    padding: 0 44px;
+    box-sizing: border-box;
+  }
+
+  .questionnaires-page .questionnaires-page-title-row h1,
+  .questionnaires-page .questionnaires-page-header h1 {
+    font-size: 1.35rem;
+    line-height: 1.25;
+    text-align: center;
+    width: 100%;
+    flex: none;
+  }
+
+  .teacher-content > h1,
+  .teacher-content > .teacher-page-title {
+    padding-left: 44px;
+    padding-right: 44px;
+    text-align: center;
+    min-height: 40px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    box-sizing: border-box;
+  }
+}
+
+@media (max-width: 768px) {
+  .questionnaires-page .questionnaires-page-header {
+    flex-direction: column;
+    align-items: stretch;
+    gap: 12px;
+  }
+
+  .questionnaires-page .questionnaires-page-title-row {
+    width: 100%;
+    padding: 0 40px;
+  }
+
+  .questionnaires-page .questionnaires-page-header h1 {
+    font-size: 1.25rem;
+    text-align: center;
+  }
+
+  .questionnaires-page .questionnaires-create-btn {
+    width: 100%;
+    min-height: 44px;
+  }
+
+  .questionnaires-page .section,
+  .questionnaires-page .questionnaires-section {
+    width: 100%;
+    max-width: 100%;
+    margin-left: auto;
+    margin-right: auto;
+    padding: 14px;
+    margin-top: 12px;
+  }
+
+  .questionnaires-list-wrap {
+    overflow: visible;
+  }
+
+  .questionnaire-list-table thead {
+    display: none;
+  }
+
+  .questionnaire-list-table,
+  .questionnaire-list-table tbody {
+    display: block;
+    width: 100%;
+  }
+
+  .questionnaire-list-table tbody {
+    display: flex;
+    flex-direction: column;
+    gap: 12px;
+  }
+
+  .questionnaire-list-table tr.questionnaire-list-row {
+    display: block;
+    width: 100%;
+    margin: 0;
+    padding: 0;
+    border-radius: 14px;
+    border: 1px solid rgba(255, 255, 255, 0.1);
+    background: linear-gradient(145deg, rgba(255, 255, 255, 0.06), rgba(255, 255, 255, 0.02));
+    box-shadow: 0 4px 16px rgba(0, 0, 0, 0.2);
+    overflow: hidden;
+  }
+
+  .questionnaire-list-table tr.questionnaire-list-row td {
+    display: grid;
+    grid-template-columns: minmax(88px, 34%) 1fr;
+    align-items: center;
+    gap: 10px 14px;
+    width: 100%;
+    padding: 11px 16px;
+    text-align: left;
+    border-bottom: 1px solid rgba(255, 255, 255, 0.06);
+    background: transparent;
+    min-height: 44px;
+    word-break: break-word;
+  }
+
+  .questionnaire-list-table tr.questionnaire-list-row td::before {
+    content: attr(data-label);
+    font-size: 0.65rem;
+    font-weight: 700;
+    letter-spacing: 0.06em;
+    text-transform: uppercase;
+    color: var(--dtm-muted);
+    text-align: left;
+  }
+
+  .questionnaire-list-table .q-cell-title {
+    display: block;
+    padding: 14px 16px 10px;
+    border-bottom: 1px solid rgba(255, 255, 255, 0.08);
+    background: rgba(0, 0, 0, 0.12);
+  }
+
+  .questionnaire-list-table .q-cell-title::before {
+    display: none;
+  }
+
+  .questionnaire-list-table .q-cell-title .q-card-title {
+    display: block;
+    font-size: 1.05rem;
+    font-weight: 700;
+    color: var(--dtm-gold);
+    line-height: 1.35;
+  }
+
+  .questionnaire-list-table .q-cell-muted {
+    color: var(--dtm-muted);
+    font-style: italic;
+  }
+
+  .questionnaire-list-table .q-cell-status {
+    align-items: center;
+  }
+
+  .questionnaire-list-table .q-cell-status .status-toggle {
+    width: 100%;
+    max-width: 140px;
+    margin-left: auto;
+    justify-self: end;
+  }
+
+  .questionnaire-list-table .q-cell-actions {
+    display: block;
+    padding: 12px 16px 20px;
+    padding-right: max(16px, env(safe-area-inset-right, 16px));
+    border-bottom: none;
+  }
+
+  .questionnaire-list-table .q-cell-actions::before {
+    display: block;
+    margin-bottom: 10px;
+  }
+
+  .questionnaire-list-table .questionnaire-action-buttons {
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+    width: 100%;
+  }
+
+  .questionnaire-list-table .questionnaire-action-buttons .btn {
+    width: 100%;
+    min-height: 44px;
+    font-size: 0.85rem;
+    white-space: normal;
+  }
+
+  /* Students list — mobile cards */
+  .students-list-table thead {
+    display: none;
+  }
+
+  .students-list-table,
+  .students-list-table tbody {
+    display: block;
+    width: 100%;
+  }
+
+  .students-list-table tbody {
+    display: flex;
+    flex-direction: column;
+    gap: 12px;
+  }
+
+  .students-list-table tr.student-list-row {
+    display: block;
+    width: 100%;
+    border-radius: 14px;
+    border: 1px solid rgba(255, 255, 255, 0.1);
+    background: linear-gradient(145deg, rgba(255, 255, 255, 0.06), rgba(255, 255, 255, 0.02));
+    box-shadow: 0 4px 16px rgba(0, 0, 0, 0.2);
+    overflow: hidden;
+  }
+
+  .students-list-table tr.student-list-row td {
+    display: grid;
+    grid-template-columns: minmax(72px, 32%) 1fr;
+    align-items: start;
+    gap: 8px 12px;
+    width: 100%;
+    padding: 11px 16px;
+    text-align: left;
+    border-bottom: 1px solid rgba(255, 255, 255, 0.06);
+    background: transparent;
+    word-break: break-word;
+  }
+
+  .students-list-table tr.student-list-row td::before {
+    content: attr(data-label);
+    font-size: 0.65rem;
+    font-weight: 700;
+    letter-spacing: 0.06em;
+    text-transform: uppercase;
+    color: var(--dtm-muted);
+    text-align: left;
+  }
+
+  .students-list-table .s-cell-header {
+    display: block;
+    padding: 14px 16px 10px;
+    border-bottom: 1px solid rgba(255, 255, 255, 0.08);
+    background: rgba(0, 0, 0, 0.12);
+    grid-template-columns: 1fr;
+  }
+
+  .students-list-table .s-cell-header::before {
+    display: none;
+  }
+
+  .students-list-table .s-card-name {
+    display: block;
+    font-size: 1.05rem;
+    font-weight: 700;
+    color: var(--dtm-gold);
+    line-height: 1.35;
+    margin-bottom: 4px;
+  }
+
+  .students-list-table .s-card-id {
+    display: block;
+    font-size: 0.8rem;
+    color: var(--dtm-muted);
+  }
+
+  .students-list-table .s-cell-desktop-only {
+    display: none !important;
+  }
+
+  .students-list-table .s-cell-email {
+    word-break: break-all;
+    border-bottom: none;
+  }
+
+  .students-list-table .students-empty-cell {
+    display: block;
+    text-align: center;
+    padding: 24px 16px;
+  }
+
+  .students-list-table .students-empty-cell::before {
+    display: none;
+  }
+}
+
+/* =============================================
+     STUDENTS LIST PAGE (mobile-friendly)
+  ============================================= */
+
+.students-list-table .s-cell-header {
+  display: none;
+}
+
+.students-list-table thead th:first-child {
+  display: none;
+}
+
+.students-page .students-page-title-row {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 100%;
+  margin-bottom: 16px;
+}
+
+.students-page .students-page-title-row h1 {
+  margin: 0;
+  text-align: center;
+  width: 100%;
+}
+
+.students-page.teacher-content {
+  overflow-y: visible;
+  min-height: 0;
+  padding-bottom: calc(32px + env(safe-area-inset-bottom, 0px));
+}
+
+.students-page .students-section-title {
+  margin: 0 0 16px;
+  font-size: 1rem;
+  color: var(--dtm-gold);
+}
+
+.students-list-wrap {
+  overflow-x: auto;
+  -webkit-overflow-scrolling: touch;
+}
+
+.students-page .pagination-container,
+.questionnaires-page .pagination-container {
+  width: 100%;
+  margin-left: auto;
+  margin-right: auto;
+  padding-bottom: max(12px, env(safe-area-inset-bottom, 0px));
+}
+
+@media (max-width: 1024px) {
+  .students-page.teacher-content {
+    width: 100%;
+    max-width: 100%;
+    margin-left: 0 !important;
+    margin-right: 0 !important;
+    padding: 56px 16px 24px !important;
+  }
+
+  .students-page .students-page-title-row {
+    padding: 0 44px;
+    box-sizing: border-box;
+  }
+
+  .students-page .students-page-title-row h1 {
+    font-size: 1.35rem;
+    line-height: 1.25;
+  }
+
+  .students-list-wrap {
+    overflow: visible;
+  }
+
+  .students-page .students-section,
+  .students-page .section {
+    width: 100%;
+    max-width: 100%;
+    margin-left: auto;
+    margin-right: auto;
+  }
+}
+
+@media (max-width: 480px) {
+  .students-page.teacher-content {
+    padding: 52px 12px 24px !important;
+  }
+
+  .students-page .students-page-title-row {
+    padding: 0 36px;
+  }
+
+  .students-list-table tr.student-list-row td {
+    grid-template-columns: 1fr;
+    gap: 4px;
+    padding: 10px 14px;
+  }
+
+  .students-list-table tr.student-list-row td::before {
+    margin-bottom: 2px;
+  }
+}
+
+@media (max-width: 480px) {
+  .questionnaires-page.teacher-content {
+    padding: 52px 12px 24px !important;
+  }
+
+  .questionnaires-page .questionnaires-page-title-row {
+    padding: 0 36px;
+  }
+
+  .questionnaire-list-table tr.questionnaire-list-row td {
+    grid-template-columns: 1fr;
+    gap: 4px;
+    padding: 10px 14px;
+  }
+
+  .questionnaire-list-table tr.questionnaire-list-row td::before {
+    margin-bottom: 2px;
+  }
+
+  .questionnaire-list-table .q-cell-status .status-toggle {
+    max-width: none;
+    margin-left: 0;
+    justify-self: stretch;
+  }
 }
 
 .detail-item label {
@@ -3226,7 +4035,7 @@
   display: flex;
   justify-content: center;
   align-items: center;
-  z-index: 1000;
+  z-index: 1300;
 }
 
 .modal-content {
@@ -3485,7 +4294,7 @@
   font-size: 14px;
   font-weight: 700;
   box-shadow: 0 12px 28px rgba(0, 0, 0, 0.45);
-  z-index: 1002;
+  z-index: 900;
   cursor: pointer;
   transition: transform 0.25s ease, box-shadow 0.25s ease;
 }
@@ -3945,11 +4754,16 @@
 /* Tablets / narrow laptops */
 @media (max-width: 1024px) {
   .teacher-content {
+    flex: 1 1 100%;
+    width: 100%;
+    min-width: 0;
+    max-width: 100%;
     margin-left: 0;
-    padding: 24px 20px;
+    margin-right: 0;
+    padding: 56px 16px 24px;
   }
 
-  .sidebar {
+  .sidebar:not(.sidebar--teacher):not(.sidebar--student) {
     display: none;
   }
 
@@ -4091,8 +4905,8 @@
   }
 
   .ai-fab {
-    right: 16px;
-    bottom: 16px;
+    right: max(16px, env(safe-area-inset-right, 16px));
+    bottom: max(72px, calc(16px + env(safe-area-inset-bottom, 0px)));
     width: 52px;
     height: 52px;
   }

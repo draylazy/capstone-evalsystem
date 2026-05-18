@@ -46,23 +46,25 @@ const Students = () => {
   return (
     <div className="teacher-container">
       <TeacherSidebar />
-      <div className="teacher-content">
-        <h1>Students</h1>
+      <div className="teacher-content students-page">
+        <div className="students-page-title-row">
+          <h1>Students</h1>
+        </div>
 
         {error && <div className="error-message">{error}</div>}
 
-        <div className="section">
-          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '20px' }}>
-            <h2>All Students</h2>
-          </div>
+        <div className="section students-section">
+          <h2 className="students-section-title">All Students</h2>
 
           {loading ? (
-            <p>Loading students...</p>
+            <p className="students-empty">Loading students...</p>
           ) : (
             <>
-            <table className="class-table">
+            <div className="students-list-wrap">
+            <table className="class-table students-list-table">
               <thead>
                 <tr>
+                  <th>Student</th>
                   <th>Student ID</th>
                   <th>First Name</th>
                   <th>Last Name</th>
@@ -73,29 +75,46 @@ const Students = () => {
               <tbody>
                 {students.length === 0 ? (
                   <tr>
-                    <td colSpan="5" style={{ textAlign: 'center' }}>No students found</td>
+                    <td colSpan="6" className="students-empty-cell">No students found</td>
                   </tr>
                 ) : (
-                  paginatedData.map((student) => (
-                    <tr key={student.id}>
-                      <td>{student.studentId}</td>
-                      <td>{student.firstName}</td>
-                      <td>{student.lastName}</td>
-                      <td>
-                        {student.classIds && student.classIds.length > 0 
-                          ? student.classIds.map(classId => {
-                              const cls = classes.find(c => c.id === classId);
-                              return cls ? cls.name : '';
-                            }).filter(n => n).join(', ')
-                          : 'N/A'
-                        }
-                      </td>
-                      <td>{student.email || 'N/A'}</td>
-                    </tr>
-                  ))
+                  paginatedData.map((student) => {
+                    const classNames =
+                      student.classIds?.length > 0
+                        ? student.classIds
+                            .map((classId) => classes.find((c) => c.id === classId)?.name)
+                            .filter(Boolean)
+                            .join(", ")
+                        : "N/A";
+
+                    return (
+                      <tr key={student.id} className="student-list-row">
+                        <td className="s-cell-header">
+                          <span className="s-card-name">
+                            {student.firstName} {student.lastName}
+                          </span>
+                          <span className="s-card-id">{student.studentId}</span>
+                        </td>
+                        <td data-label="Student ID" className="s-cell-desktop-only">
+                          {student.studentId}
+                        </td>
+                        <td data-label="First name" className="s-cell-desktop-only">
+                          {student.firstName}
+                        </td>
+                        <td data-label="Last name" className="s-cell-desktop-only">
+                          {student.lastName}
+                        </td>
+                        <td data-label="Class">{classNames}</td>
+                        <td data-label="Email" className="s-cell-email">
+                          {student.email || "N/A"}
+                        </td>
+                      </tr>
+                    );
+                  })
                 )}
               </tbody>
             </table>
+            </div>
             <Pagination currentPage={currentPage} totalPages={totalPages} onPageChange={goToPage} />
             </>
           )}
