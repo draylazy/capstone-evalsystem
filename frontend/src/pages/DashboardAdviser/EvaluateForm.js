@@ -81,11 +81,6 @@ const EvaluateForm = () => {
 
   const currentItem = !isMixedQuestionnaire ? allItems[currentQuestionIndex] : null;
 
-  // Reset item index when changing sections
-  useEffect(() => {
-    setCurrentItemInSectionIndex(0);
-  }, [currentSectionIndex]);
-
   useEffect(() => {
     const load = async () => {
       try {
@@ -526,8 +521,9 @@ const EvaluateForm = () => {
                   if (currentItemInSectionIndex === 0) {
                     // If first item, go to previous section
                     if (currentSectionIndex > 0) {
+                      const prevSectionItems = sections[currentSectionIndex - 1]?.items || [];
                       setCurrentSectionIndex(prev => prev - 1);
-                      setCurrentItemInSectionIndex(sections[currentSectionIndex - 1]?.items?.length - 1 || 0);
+                      setCurrentItemInSectionIndex(Math.max(0, prevSectionItems.length - 1));
                     }
                   } else {
                     // Go to previous item in same section
