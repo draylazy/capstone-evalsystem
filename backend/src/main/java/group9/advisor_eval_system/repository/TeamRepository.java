@@ -15,12 +15,29 @@ public interface TeamRepository extends JpaRepository<Team, Long> {
     List<Team> findBySchoolClassId(Long classId);
     List<Team> findByIsActiveTrue();
 
-    @Query("SELECT t FROM Team t WHERE t.schoolClass.teacher.id = :teacherId")
+    @Query("SELECT DISTINCT t FROM Team t " +
+           "LEFT JOIN FETCH t.schoolClass sc " +
+           "LEFT JOIN FETCH t.advisers " +
+           "LEFT JOIN FETCH t.teamStudents ts " +
+           "LEFT JOIN FETCH ts.student " +
+           "WHERE sc.teacher.id = :teacherId")
     List<Team> findBySchoolClassTeacherId(@Param("teacherId") Long teacherId);
 
-    @Query("SELECT t FROM Team t JOIN t.advisers a WHERE a.id = :adviserId")
+    @Query("SELECT DISTINCT t FROM Team t " +
+           "LEFT JOIN FETCH t.schoolClass sc " +
+           "LEFT JOIN FETCH t.advisers a " +
+           "LEFT JOIN FETCH t.teamStudents ts " +
+           "LEFT JOIN FETCH ts.student " +
+           "WHERE a.id = :adviserId")
     List<Team> findByAdvisersId(@Param("adviserId") Long adviserId);
 
     @Query("SELECT t FROM Team t JOIN FETCH t.schoolClass WHERE t.id IN :ids")
     List<Team> findAllByIdsWithClass(@Param("ids") java.util.Collection<Long> ids);
+
+    @Query("SELECT DISTINCT t FROM Team t " +
+           "LEFT JOIN FETCH t.schoolClass sc " +
+           "LEFT JOIN FETCH t.advisers " +
+           "LEFT JOIN FETCH t.teamStudents ts " +
+           "LEFT JOIN FETCH ts.student")
+    List<Team> findAllWithDetails();
 }

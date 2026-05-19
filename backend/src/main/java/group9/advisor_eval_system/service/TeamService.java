@@ -30,7 +30,7 @@ public class TeamService {
     private UserRepository userRepository;
     
     public List<Team> getAllTeams() {
-        return teamRepository.findAll();
+        return teamRepository.findAllWithDetails();
     }
 
     public List<Team> getTeamsByTeacher(Long teacherId) {

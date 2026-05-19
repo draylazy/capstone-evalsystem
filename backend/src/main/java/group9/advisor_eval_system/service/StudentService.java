@@ -29,7 +29,7 @@ public class StudentService {
     private TeamRepository teamRepository;
     
     public List<Student> getAllStudents() {
-        return studentRepository.findAll();
+        return studentRepository.findAllWithDetails();
     }
     
     public List<Student> getStudentsByTeacher(Long teacherId) {
