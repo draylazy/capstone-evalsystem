@@ -20,4 +20,7 @@ public interface TeamRepository extends JpaRepository<Team, Long> {
 
     @Query("SELECT t FROM Team t JOIN t.advisers a WHERE a.id = :adviserId")
     List<Team> findByAdvisersId(@Param("adviserId") Long adviserId);
+
+    @Query("SELECT t FROM Team t JOIN FETCH t.schoolClass WHERE t.id IN :ids")
+    List<Team> findAllByIdsWithClass(@Param("ids") java.util.Collection<Long> ids);
 }

@@ -12,6 +12,7 @@ import "./Teacher.css";
 const Teacher = () => {
   const navigate = useNavigate();
   const [loading, setLoading] = useState(true);
+  const [loadingStatus, setLoadingStatus] = useState("");
   const [error, setError] = useState(null);
   const [classes, setClasses] = useState([]);
   const [students, setStudents] = useState([]);
@@ -46,6 +47,7 @@ const Teacher = () => {
           return;
         }
 
+        setLoadingStatus("Fetching classes, students, and teams...");
         const [allClasses, allStudents, allTeams] = await Promise.all([
           classAPI.getAllClasses(),
           studentAPI.getAllStudents(),
@@ -68,6 +70,7 @@ const Teacher = () => {
         );
 
         // Load questionnaires for all teacher's classes in parallel
+        setLoadingStatus("Fetching questionnaires for classes...");
         const questionnairesMap = {};
         await Promise.all(
           teacherClasses.map(async (classItem) => {
@@ -86,6 +89,7 @@ const Teacher = () => {
         setQuestionnaires(questionnairesMap);
 
         // Load pending evaluations
+        setLoadingStatus("Loading pending evaluations...");
         try {
           const pendingData = await teacherReportAPI.getPendingEvaluations();
           setAdviserPending(pendingData.adviserPending || []);
@@ -99,6 +103,7 @@ const Teacher = () => {
         }
 
         // Load Activity Logs
+        setLoadingStatus("Fetching recent activity logs...");
         try {
           setLogsLoading(true);
           const logs = await teacherReportAPI.getActivityLogs();
@@ -199,7 +204,7 @@ const Teacher = () => {
         <TeacherSidebar />
         <div className="teacher-content" style={{ display: 'flex', flexDirection: 'column', justifyContent: 'center', alignItems: 'center', height: '100vh' }}>
           <div className="spinner" style={{ marginBottom: '16px' }}></div>
-          <p style={{ color: 'rgba(255,255,255,0.7)', fontSize: '1.1rem' }}>Loading dashboard data...</p>
+          <p style={{ color: 'rgba(255,255,255,0.7)', fontSize: '1.1rem' }}>{loadingStatus || "Loading dashboard data..."}</p>
         </div>
       </div>
     );

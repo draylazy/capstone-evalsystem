@@ -8,6 +8,7 @@ import group9.advisor_eval_system.entity.Evaluation;
 import group9.advisor_eval_system.entity.Questionnaire;
 import group9.advisor_eval_system.entity.Team;
 import group9.advisor_eval_system.entity.User;
+import group9.advisor_eval_system.entity.Student;
 import group9.advisor_eval_system.entity.StudentEvaluation;
 import group9.advisor_eval_system.repository.EvaluationRepository;
 import group9.advisor_eval_system.repository.QuestionnaireRepository;
@@ -311,8 +312,57 @@ public class TeacherReportController {
         try {
             Long teacherId = getTeacherId(request);
 
-            // --- 1. Adviser Pending Evaluations ---
+            // Fetch combinations
             List<Object[]> allPendingCombinations = evaluationRepository.findAllPendingEvaluationCombinationsByTeacherId(teacherId);
+            List<Object[]> studentPendingCombinations = studentEvaluationRepository.findAllPendingEvaluationCombinationsByTeacherId(teacherId);
+            List<Object[]> adviserStudentCombinations = studentEvaluationRepository.findAllPendingAdviserStudentCombinationsByTeacherId(teacherId);
+
+            // Collect all IDs for batch queries
+            Set<Long> adviserIds = new HashSet<>();
+            Set<Long> teamIds = new HashSet<>();
+            Set<Long> studentIds = new HashSet<>();
+            Set<Long> questionnaireIds = new HashSet<>();
+
+            for (Object[] combo : allPendingCombinations) {
+                adviserIds.add(((Number) combo[0]).longValue());
+                teamIds.add(((Number) combo[1]).longValue());
+                questionnaireIds.add(((Number) combo[2]).longValue());
+            }
+
+            for (Object[] combo : studentPendingCombinations) {
+                studentIds.add(((Number) combo[0]).longValue());
+                teamIds.add(((Number) combo[1]).longValue());
+                questionnaireIds.add(((Number) combo[2]).longValue());
+            }
+
+            for (Object[] combo : adviserStudentCombinations) {
+                adviserIds.add(((Number) combo[0]).longValue());
+                teamIds.add(((Number) combo[1]).longValue());
+                questionnaireIds.add(((Number) combo[2]).longValue());
+            }
+
+            // Batch fetch cache maps
+            Map<Long, User> adviserMap = new HashMap<>();
+            if (!adviserIds.isEmpty()) {
+                userRepository.findAllById(adviserIds).forEach(u -> adviserMap.put(u.getId(), u));
+            }
+
+            Map<Long, Student> studentMap = new HashMap<>();
+            if (!studentIds.isEmpty()) {
+                studentRepository.findAllById(studentIds).forEach(s -> studentMap.put(s.getId(), s));
+            }
+
+            Map<Long, Questionnaire> questionnaireMap = new HashMap<>();
+            if (!questionnaireIds.isEmpty()) {
+                questionnaireRepository.findAllById(questionnaireIds).forEach(q -> questionnaireMap.put(q.getId(), q));
+            }
+
+            Map<Long, Team> teamMap = new HashMap<>();
+            if (!teamIds.isEmpty()) {
+                teamRepository.findAllByIdsWithClass(teamIds).forEach(t -> teamMap.put(t.getId(), t));
+            }
+
+            // --- 1. Adviser Pending Evaluations ---
             List<Evaluation> startedEvaluations = evaluationRepository.findPendingEvaluationsByTeacherId(teacherId);
             
             Map<String, Evaluation> startedEvalMap = startedEvaluations.stream()
@@ -343,27 +393,28 @@ public class TeacherReportController {
                             dto.setQuestionnaireId(eval.getQuestionnaire().getId());
                             dto.setQuestionnaireName(eval.getQuestionnaire().getTitle());
                         } else {
-                            userRepository.findById(adviserId).ifPresent(a -> {
+                            User a = adviserMap.get(adviserId);
+                            if (a != null) {
                                 dto.setAdviserId(a.getId());
                                 dto.setAdviserName(a.getFirstName() + " " + a.getLastName());
-                            });
-                            teamRepository.findById(teamId).ifPresent(t -> {
+                            }
+                            Team t = teamMap.get(teamId);
+                            if (t != null) {
                                 dto.setTeamId(t.getId());
                                 dto.setTeamName(t.getName());
                                 dto.setClassId(t.getSchoolClass().getId());
                                 dto.setClassName(t.getSchoolClass().getName() + (t.getSchoolClass().getSection() != null ? " " + t.getSchoolClass().getSection() : ""));
-                            });
-                            questionnaireRepository.findById(questionnaireId).ifPresent(q -> {
+                            }
+                            Questionnaire q = questionnaireMap.get(questionnaireId);
+                            if (q != null) {
                                 dto.setQuestionnaireId(q.getId());
                                 dto.setQuestionnaireName(q.getTitle());
-                            });
+                            }
                         }
                         return dto;
                     }).collect(Collectors.toList());
 
             // --- 2. Student Pending Evaluations (Peer/Self) ---
-            List<Object[]> studentPendingCombinations = studentEvaluationRepository.findAllPendingEvaluationCombinationsByTeacherId(teacherId);
-            
             List<PendingEvaluationDto> studentPendingList = studentPendingCombinations.stream()
                     .map(combo -> {
                         Long studentId = ((Number) combo[0]).longValue();
@@ -374,26 +425,27 @@ public class TeacherReportController {
                         dto.setType("STUDENT");
                         dto.setStudentId(studentId);
                         
-                        studentRepository.findById(studentId).ifPresent(s -> {
+                        Student s = studentMap.get(studentId);
+                        if (s != null) {
                             dto.setStudentName(s.getLastName() + ", " + s.getFirstName());
-                        });
-                        teamRepository.findById(teamId).ifPresent(t -> {
+                        }
+                        Team t = teamMap.get(teamId);
+                        if (t != null) {
                             dto.setTeamId(t.getId());
                             dto.setTeamName(t.getName());
                             dto.setClassId(t.getSchoolClass().getId());
                             dto.setClassName(t.getSchoolClass().getName() + (t.getSchoolClass().getSection() != null ? " " + t.getSchoolClass().getSection() : ""));
-                        });
-                        questionnaireRepository.findById(questionnaireId).ifPresent(q -> {
+                        }
+                        Questionnaire q = questionnaireMap.get(questionnaireId);
+                        if (q != null) {
                             dto.setQuestionnaireId(q.getId());
                             dto.setQuestionnaireName(q.getTitle());
-                        });
+                        }
                         
                         return dto;
                     }).collect(Collectors.toList());
 
             // --- 3. Adviser Pending Evaluations (Individual Student Evaluations) ---
-            List<Object[]> adviserStudentCombinations = studentEvaluationRepository.findAllPendingAdviserStudentCombinationsByTeacherId(teacherId);
-            
             List<PendingEvaluationDto> adviserStudentPending = adviserStudentCombinations.stream()
                     .map(combo -> {
                         Long adviserId = ((Number) combo[0]).longValue();
@@ -404,19 +456,22 @@ public class TeacherReportController {
                         dto.setType("ADVISER");
                         dto.setAdviserId(adviserId);
                         
-                        userRepository.findById(adviserId).ifPresent(a -> {
+                        User a = adviserMap.get(adviserId);
+                        if (a != null) {
                             dto.setAdviserName(a.getFirstName() + " " + a.getLastName());
-                        });
-                        teamRepository.findById(teamId).ifPresent(t -> {
+                        }
+                        Team t = teamMap.get(teamId);
+                        if (t != null) {
                             dto.setTeamId(t.getId());
                             dto.setTeamName(t.getName());
                             dto.setClassId(t.getSchoolClass().getId());
                             dto.setClassName(t.getSchoolClass().getName() + (t.getSchoolClass().getSection() != null ? " " + t.getSchoolClass().getSection() : ""));
-                        });
-                        questionnaireRepository.findById(questionnaireId).ifPresent(q -> {
+                        }
+                        Questionnaire q = questionnaireMap.get(questionnaireId);
+                        if (q != null) {
                             dto.setQuestionnaireId(q.getId());
                             dto.setQuestionnaireName(q.getTitle());
-                        });
+                        }
                         
                         return dto;
                     }).collect(Collectors.toList());
