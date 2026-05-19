@@ -18,6 +18,9 @@ public interface StudentRepository extends JpaRepository<Student, Long> {
     List<Student> findByClassesTeacherId(@Param("teacherId") Long teacherId);
     // Find students created by a specific teacher
     List<Student> findByCreatedBy(Long teacherId);
+    // Find distinct students created by or associated with a specific teacher
+    @Query("SELECT DISTINCT s FROM Student s LEFT JOIN s.classes c WHERE s.createdBy = :teacherId OR c.teacher.id = :teacherId")
+    List<Student> findByCreatedByOrClassesTeacherId(@Param("teacherId") Long teacherId);
     // Check if student ID exists for a specific teacher
     boolean existsByStudentIdAndCreatedBy(String studentId, Long createdBy);
     Optional<Student> findByStudentId(String studentId);

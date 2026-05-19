@@ -24,6 +24,7 @@ import org.springframework.web.bind.annotation.*;
 
 import jakarta.servlet.http.HttpServletRequest;
 import java.util.*;
+import org.springframework.data.domain.PageRequest;
 import java.util.stream.Collectors;
 
 @Slf4j
@@ -444,8 +445,8 @@ public class TeacherReportController {
         try {
             Long teacherId = getTeacherId(request);
             
-            List<Evaluation> adviserTeamEvals = evaluationRepository.findRecentSubmittedByTeacherId(teacherId);
-            List<StudentEvaluation> studentEvals = studentEvaluationRepository.findRecentSubmittedByTeacherId(teacherId);
+            List<Evaluation> adviserTeamEvals = evaluationRepository.findRecentSubmittedByTeacherId(teacherId, PageRequest.of(0, 50));
+            List<StudentEvaluation> studentEvals = studentEvaluationRepository.findRecentSubmittedByTeacherId(teacherId, PageRequest.of(0, 50));
 
             List<Map<String, Object>> logs = new ArrayList<>();
 

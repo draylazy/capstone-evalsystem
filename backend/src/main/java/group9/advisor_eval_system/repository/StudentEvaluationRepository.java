@@ -4,6 +4,7 @@ import group9.advisor_eval_system.entity.StudentEvaluation;
 import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.query.Param;
+import org.springframework.data.domain.Pageable;
 import org.springframework.stereotype.Repository;
 
 import java.util.List;
@@ -140,7 +141,7 @@ public interface StudentEvaluationRepository extends JpaRepository<StudentEvalua
                 "WHERE q.createdByTeacher.id = :teacherId " +
                 "AND e.status = 'SUBMITTED' " +
                 "ORDER BY e.submittedAt DESC")
-        List<StudentEvaluation> findRecentSubmittedByTeacherId(@Param("teacherId") Long teacherId);
+        List<StudentEvaluation> findRecentSubmittedByTeacherId(@Param("teacherId") Long teacherId, Pageable pageable);
 
         @Query(value = 
                 "SELECT DISTINCT s.id as student_id, t.id as team_id, q.id as questionnaire_id " +

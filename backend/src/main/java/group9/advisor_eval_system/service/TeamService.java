@@ -32,6 +32,14 @@ public class TeamService {
     public List<Team> getAllTeams() {
         return teamRepository.findAll();
     }
+
+    public List<Team> getTeamsByTeacher(Long teacherId) {
+        return teamRepository.findBySchoolClassTeacherId(teacherId);
+    }
+
+    public List<Team> getTeamsByAdviser(Long adviserId) {
+        return teamRepository.findByAdvisersId(adviserId);
+    }
     
     public List<Team> getTeamsByClass(Long classId) {
         return teamRepository.findBySchoolClassId(classId);

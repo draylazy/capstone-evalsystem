@@ -2,6 +2,8 @@ package group9.advisor_eval_system.controller;
 
 import group9.advisor_eval_system.entity.SchoolClass;
 import group9.advisor_eval_system.service.SchoolClassService;
+import group9.advisor_eval_system.util.JwtTokenProvider;
+import jakarta.servlet.http.HttpServletRequest;
 import jakarta.validation.Valid;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.HttpStatus;
@@ -16,11 +18,37 @@ public class SchoolClassController {
     
     @Autowired
     private SchoolClassService schoolClassService;
+
+    @Autowired
+    private JwtTokenProvider jwtTokenProvider;
+
+    private Long getTeacherId(HttpServletRequest request) {
+        String auth = request.getHeader("Authorization");
+        if (auth != null && auth.startsWith("Bearer ")) {
+            return jwtTokenProvider.getUserIdFromToken(auth.substring(7));
+        }
+        return null;
+    }
+
+    private String getRole(HttpServletRequest request) {
+        String auth = request.getHeader("Authorization");
+        if (auth != null && auth.startsWith("Bearer ")) {
+            return jwtTokenProvider.getRoleFromToken(auth.substring(7));
+        }
+        return null;
+    }
     
     @GetMapping
-    public ResponseEntity<?> getAllClasses() {
+    public ResponseEntity<?> getAllClasses(HttpServletRequest request) {
         try {
-            List<SchoolClass> classes = schoolClassService.getAllClasses();
+            Long teacherId = getTeacherId(request);
+            String role = getRole(request);
+            List<SchoolClass> classes;
+            if (teacherId != null && "TEACHER".equals(role)) {
+                classes = schoolClassService.getClassesByTeacher(teacherId);
+            } else {
+                classes = schoolClassService.getAllClasses();
+            }
             System.out.println("Fetched " + classes.size() + " classes");
             return ResponseEntity.ok(classes);
         } catch (Exception e) {

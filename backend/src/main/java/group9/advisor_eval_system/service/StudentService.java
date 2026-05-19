@@ -35,6 +35,10 @@ public class StudentService {
     public List<Student> getStudentsByTeacher(Long teacherId) {
         return studentRepository.findByCreatedBy(teacherId);
     }
+
+    public List<Student> getStudentsByTeacherOrClasses(Long teacherId) {
+        return studentRepository.findByCreatedByOrClassesTeacherId(teacherId);
+    }
     
     public Student getStudentById(Long id) {
         return studentRepository.findById(id)

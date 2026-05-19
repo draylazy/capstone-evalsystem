@@ -33,9 +33,22 @@ public class StudentController {
         return null;
     }
 
+    private String getRole(HttpServletRequest request) {
+        String auth = request.getHeader("Authorization");
+        if (auth != null && auth.startsWith("Bearer ")) {
+            return jwtTokenProvider.getRoleFromToken(auth.substring(7));
+        }
+        return null;
+    }
+
     @GetMapping
     @Transactional(readOnly = true)
     public ResponseEntity<List<Student>> getAllStudents(HttpServletRequest request) {
+        Long teacherId = getTeacherId(request);
+        String role = getRole(request);
+        if (teacherId != null && "TEACHER".equals(role)) {
+            return ResponseEntity.ok(studentService.getStudentsByTeacherOrClasses(teacherId));
+        }
         return ResponseEntity.ok(studentService.getAllStudents());
     }
     

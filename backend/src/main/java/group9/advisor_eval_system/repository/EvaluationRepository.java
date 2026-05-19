@@ -6,6 +6,7 @@ import group9.advisor_eval_system.entity.User;
 import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.query.Param;
+import org.springframework.data.domain.Pageable;
 import org.springframework.stereotype.Repository;
 
 import java.util.List;
@@ -113,5 +114,5 @@ public interface EvaluationRepository extends JpaRepository<Evaluation, Long> {
                 "WHERE sc.teacher.id = :teacherId " +
                 "AND e.status = 'SUBMITTED' " +
                 "ORDER BY e.submittedAt DESC")
-        List<Evaluation> findRecentSubmittedByTeacherId(@Param("teacherId") Long teacherId);
+        List<Evaluation> findRecentSubmittedByTeacherId(@Param("teacherId") Long teacherId, Pageable pageable);
 }

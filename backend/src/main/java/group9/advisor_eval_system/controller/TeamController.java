@@ -2,6 +2,8 @@ package group9.advisor_eval_system.controller;
 
 import group9.advisor_eval_system.entity.Team;
 import group9.advisor_eval_system.service.TeamService;
+import group9.advisor_eval_system.util.JwtTokenProvider;
+import jakarta.servlet.http.HttpServletRequest;
 import jakarta.validation.Valid;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.HttpStatus;
@@ -17,12 +19,40 @@ public class TeamController {
     
     @Autowired
     private TeamService teamService;
+
+    @Autowired
+    private JwtTokenProvider jwtTokenProvider;
+
+    private Long getUserId(HttpServletRequest request) {
+        String auth = request.getHeader("Authorization");
+        if (auth != null && auth.startsWith("Bearer ")) {
+            return jwtTokenProvider.getUserIdFromToken(auth.substring(7));
+        }
+        return null;
+    }
+
+    private String getRole(HttpServletRequest request) {
+        String auth = request.getHeader("Authorization");
+        if (auth != null && auth.startsWith("Bearer ")) {
+            return jwtTokenProvider.getRoleFromToken(auth.substring(7));
+        }
+        return null;
+    }
     
     @GetMapping
     @Transactional(readOnly = true)
-    public ResponseEntity<?> getAllTeams() {
+    public ResponseEntity<?> getAllTeams(HttpServletRequest request) {
         try {
-            List<Team> teams = teamService.getAllTeams();
+            Long userId = getUserId(request);
+            String role = getRole(request);
+            List<Team> teams;
+            if (userId != null && "TEACHER".equals(role)) {
+                teams = teamService.getTeamsByTeacher(userId);
+            } else if (userId != null && "ADVISER".equals(role)) {
+                teams = teamService.getTeamsByAdviser(userId);
+            } else {
+                teams = teamService.getAllTeams();
+            }
             return ResponseEntity.ok(teams);
         } catch (Exception e) {
             return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)

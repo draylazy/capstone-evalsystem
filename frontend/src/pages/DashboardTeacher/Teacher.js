@@ -67,16 +67,18 @@ const Teacher = () => {
           (t) => teacherClassIds.has(t.classId)
         );
 
-        // Load questionnaires for all teacher's classes
+        // Load questionnaires for all teacher's classes in parallel
         const questionnairesMap = {};
-        for (const classItem of teacherClasses) {
-          try {
-            const classQuestionnaires = await questionnaireAPI.getQuestionnairesByClassForTeacher(classItem.id);
-            questionnairesMap[classItem.id] = classQuestionnaires;
-          } catch (err) {
-            questionnairesMap[classItem.id] = [];
-          }
-        }
+        await Promise.all(
+          teacherClasses.map(async (classItem) => {
+            try {
+              const classQuestionnaires = await questionnaireAPI.getQuestionnairesByClassForTeacher(classItem.id);
+              questionnairesMap[classItem.id] = classQuestionnaires;
+            } catch (err) {
+              questionnairesMap[classItem.id] = [];
+            }
+          })
+        );
 
         setClasses(teacherClasses);
         setStudents(teacherStudents);
