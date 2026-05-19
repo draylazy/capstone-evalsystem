@@ -25,6 +25,7 @@ const CreateQuestionnaire = () => {
   const navigate = useNavigate();
   const toast = useToast();
   const [googleLinked, setGoogleLinked] = useState(false);
+  const [submitting, setSubmitting] = useState(false);
 
   const [formData, setFormData] = useState({
     title: "",
@@ -129,6 +130,8 @@ const CreateQuestionnaire = () => {
       }
     }
 
+    setSubmitting(true);
+
     try {
       toast.info('Creating questionnaire...');
       const payload = {
@@ -140,6 +143,7 @@ const CreateQuestionnaire = () => {
       navigate('/teacher/questionnaires');
     } catch (err) {
       toast.error('Error creating questionnaire: ' + err.message);
+      setSubmitting(false);
     }
   };
 
@@ -494,10 +498,10 @@ const CreateQuestionnaire = () => {
                 <button
                   type="submit"
                   className="btn btn-primary"
-                  disabled={!googleLinked || totalQuestions === 0}
+                  disabled={!googleLinked || totalQuestions === 0 || submitting}
                   style={{ padding: '8px 12px', fontSize: '11px', marginTop: '24px' }}
                 >
-                  Create
+                  {submitting ? 'Creating...' : 'Create'}
                 </button>
               </div>
 

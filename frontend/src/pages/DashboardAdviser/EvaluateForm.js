@@ -31,6 +31,7 @@ const EvaluateForm = () => {
   const [submitting, setSubmitting] = useState(false);
   const [currentSectionIndex, setCurrentSectionIndex] = useState(0);
   const [currentQuestionIndex, setCurrentQuestionIndex] = useState(0);
+  const [currentItemInSectionIndex, setCurrentItemInSectionIndex] = useState(0);
   const [confirmSubmit, setConfirmSubmit] = useState(false);
 
   const toast = useToast();
@@ -54,11 +55,17 @@ const EvaluateForm = () => {
     if (evaluation.questionnaire.sections) {
       evaluation.questionnaire.sections.forEach(section => {
         if (section.items) {
-          items.push(...section.items.map(item => ({ ...item, sectionTitle: section.sectionTitle })));
+          items.push(...section.items.map(item => ({ ...item, sectionTitle: section.sectionTitle, sectionId: section.id, sectionIndex: evaluation.questionnaire.sections.indexOf(section) })));
         }
       });
     }
-    return items.sort((a, b) => (a.orderIndex || 0) - (b.orderIndex || 0));
+    // Sort by section first, then by item order within section
+    return items.sort((a, b) => {
+      if (a.sectionIndex !== b.sectionIndex) {
+        return (a.sectionIndex || 0) - (b.sectionIndex || 0);
+      }
+      return (a.orderIndex || 0) - (b.orderIndex || 0);
+    });
   }, [evaluation]);
 
   const isMixedQuestionnaire = sections.some(s => s.evaluateIndividuals);
@@ -71,6 +78,8 @@ const EvaluateForm = () => {
     console.log('Items:', currentSection.items);
     console.log('Team Members:', teamMembers);
   }
+
+  const currentItem = !isMixedQuestionnaire ? allItems[currentQuestionIndex] : null;
 
   useEffect(() => {
     const load = async () => {
@@ -121,7 +130,6 @@ const EvaluateForm = () => {
     load();
   }, [teamId, questionnaireId]);
 
-  const currentItem = !isMixedQuestionnaire ? allItems[0] : null;
   const isSubmitted = evaluation?.status === 'SUBMITTED' || evaluation?.status === 'REVIEWED';
 
   const handleChange = (itemId, value) => {
@@ -325,6 +333,7 @@ const EvaluateForm = () => {
                     answers={answers}
                     onAnswerChange={handleIndividualChange}
                     isSubmitted={isSubmitted}
+                    currentItemIndex={currentItemInSectionIndex}
                   />
                 ) : (
                   <div style={{ display: 'flex', flexDirection: 'column', gap: '20px' }}>
@@ -345,71 +354,73 @@ const EvaluateForm = () => {
                     </div>
 
                     <div style={{ display: 'flex', flexDirection: 'column', gap: '24px' }}>
-                      {currentSection.items.map((item) => {
-                        const currentValue = answers[item.id];
-                        const isRating = item.questionType === "RATING";
+                      {currentSection.items && currentSection.items.length > 0 && (() => {
+                        const currentItem = currentSection.items[currentItemInSectionIndex];
+                        const currentValue = answers[currentItem.id];
+                        const isRating = currentItem.questionType === "RATING";
                         const range = isRating 
-                          ? generateDecimalRatingRange(item.minScore, item.maxScore)
-                          : generateNumericRange(item.minScore, item.maxScore);
+                          ? generateDecimalRatingRange(currentItem.minScore, currentItem.maxScore)
+                          : generateNumericRange(currentItem.minScore, currentItem.maxScore);
 
                         return (
-                          <div key={item.id} style={{
-                            padding: '16px',
-                            background: 'rgba(255,255,255,0.02)',
-                            border: '1px solid rgba(255,255,255,0.08)',
-                            borderRadius: '8px'
-                          }}>
-                            <label style={{ fontSize: '1rem', fontWeight: '500', display: 'block', marginBottom: '12px' }}>
-                              {item.questionText}
-                              {item.required !== false && <span style={{ color: '#ff4d4f', marginLeft: '4px' }} title="Required">*</span>}
-                            </label>
+                          <div key={currentItem.id}>
+                            <div style={{
+                              padding: '16px',
+                              background: 'rgba(255,255,255,0.02)',
+                              border: '1px solid rgba(255,255,255,0.08)',
+                              borderRadius: '8px'
+                            }}>
+                              <label style={{ fontSize: '1rem', fontWeight: '500', display: 'block', marginBottom: '12px' }}>
+                                {currentItem.questionText}
+                                {currentItem.required !== false && <span style={{ color: '#ff4d4f', marginLeft: '4px' }} title="Required">*</span>}
+                              </label>
 
-                            {item.questionType === 'TEXT' ? (
-                              <textarea
-                                placeholder="Enter response..."
-                                value={currentValue || ""}
-                                onChange={(e) => handleChange(item.id, e.target.value)}
-                                disabled={isSubmitted}
-                                style={{
-                                  width: '100%',
-                                  minHeight: '80px',
-                                  padding: '10px',
-                                  borderRadius: '6px',
-                                  background: 'rgba(255,255,255,0.05)',
-                                  border: '1px solid rgba(255,255,255,0.1)',
-                                  color: '#fff',
-                                  fontFamily: 'inherit',
-                                  resize: 'vertical'
-                                }}
-                              />
-                            ) : item.questionType === 'MULTIPLE_CHOICE' ? (
-                              <div style={{ display: 'flex', flexWrap: 'wrap', gap: '10px' }}>
-                                {(item.choices || []).map((choice, idx) => {
-                                  const isSelected = String(currentValue) === String(choice);
-                                  return (
-                                    <button
-                                      key={idx}
-                                      onClick={() => handleChange(item.id, choice)}
-                                      disabled={isSubmitted}
-                                      style={{
-                                        padding: '8px 16px',
-                                        borderRadius: '20px',
-                                        border: `1px solid ${isSelected ? 'var(--dtm-gold)' : 'rgba(255,255,255,0.1)'}`,
-                                        background: isSelected ? 'rgba(242, 201, 76, 0.1)' : 'rgba(255,255,255,0.02)',
-                                        color: isSelected ? 'var(--dtm-gold)' : 'var(--dtm-muted)',
-                                        cursor: isSubmitted ? 'default' : 'pointer',
-                                        transition: 'all 0.2s ease',
-                                        fontSize: '0.9rem'
-                                      }}
-                                    >
-                                      {choice}
-                                    </button>
-                                  );
-                                })}
-                              </div>
-                            ) : (
-                              <div style={{ display: 'flex', justifyContent: 'flex-start', gap: '12px', flexWrap: 'wrap' }}>
-                                {range.map((num) => {
+                              {currentItem.questionType === 'TEXT' ? (
+                                <textarea
+                                  placeholder="Enter response..."
+                                  value={currentValue || ""}
+                                  onChange={(e) => handleChange(currentItem.id, e.target.value)}
+                                  disabled={isSubmitted}
+                                  style={{
+                                    width: '100%',
+                                    minHeight: '80px',
+                                    padding: '10px',
+                                    borderRadius: '6px',
+                                    background: 'rgba(255,255,255,0.05)',
+                                    border: '1px solid rgba(255,255,255,0.1)',
+                                    color: '#fff',
+                                    fontFamily: 'inherit',
+                                    resize: 'vertical'
+                                  }}
+                                />
+                              ) : currentItem.questionType === 'MULTIPLE_CHOICE' ? (
+                                <div style={{ display: 'flex', flexWrap: 'wrap', gap: '10px' }}>
+                                  {(currentItem.choices || []).map((choice, idx) => {
+                                    const isSelected = String(currentValue) === String(choice);
+                                    return (
+                                      <button
+                                        key={idx}
+                                        onClick={() => handleChange(currentItem.id, choice)}
+                                        disabled={isSubmitted}
+                                        style={{
+                                          padding: '8px 16px',
+                                          borderRadius: '20px',
+                                          border: `1px solid ${isSelected ? 'var(--dtm-gold)' : 'rgba(255,255,255,0.1)'}`,
+                                          background: isSelected ? 'rgba(242, 201, 76, 0.1)' : 'rgba(255,255,255,0.02)',
+                                          color: isSelected ? 'var(--dtm-gold)' : 'var(--dtm-muted)',
+                                          cursor: isSubmitted ? 'default' : 'pointer',
+                                          transition: 'all 0.2s ease',
+                                          fontSize: '0.9rem'
+                                        }}
+                                      >
+                                        {choice}
+                                      </button>
+                                    );
+                                  })}
+                                </div>
+                              ) : (
+                                <div style={{ display: 'flex', justifyContent: 'flex-start', gap: '12px', flexWrap: 'wrap' }}>
+                                  {range.map((num) => {
                                   const isSelected = String(currentValue) === String(num);
                                   return (
                                     <label key={num} style={{ 
@@ -433,10 +444,10 @@ const EvaluateForm = () => {
                                       }}>
                                         <input 
                                           type="radio" 
-                                          name={`item-${item.id}`} 
+                                          name={`item-${currentItem.id}`} 
                                           value={num}
                                           checked={isSelected}
-                                          onChange={() => handleChange(item.id, num)}
+                                          onChange={() => handleChange(currentItem.id, num)}
                                           disabled={isSubmitted}
                                           style={{ opacity: 0, position: 'absolute', inset: 0, cursor: 'inherit' }}
                                         />
@@ -448,9 +459,26 @@ const EvaluateForm = () => {
                                 })}
                               </div>
                             )}
+                            </div>
+
+                            {/* Progress within section */}
+                            <div style={{ marginTop: '30px' }}>
+                              <div style={{ color: 'var(--dtm-muted)', fontSize: '0.9rem', marginBottom: '8px' }}>
+                                Progress: {currentItemInSectionIndex + 1} / {currentSection.items.length}
+                              </div>
+                              <div style={{ width: '100%', height: '4px', background: 'rgba(255,255,255,0.1)', borderRadius: '2px' }}>
+                                <div style={{ 
+                                  width: `${((currentItemInSectionIndex + 1) / currentSection.items.length) * 100}%`, 
+                                  height: '100%', 
+                                  background: 'var(--dtm-gold)', 
+                                  borderRadius: '2px',
+                                  transition: 'width 0.3s ease'
+                                }} />
+                              </div>
+                            </div>
                           </div>
                         );
-                      })}
+                      })()}
                     </div>
                   </div>
                 )}
@@ -489,10 +517,22 @@ const EvaluateForm = () => {
             <div>
               <button 
                 className="btn-secondary" 
-                onClick={() => setCurrentSectionIndex(prev => Math.max(0, prev - 1))}
-                disabled={currentSectionIndex === 0}
+                onClick={() => {
+                  if (currentItemInSectionIndex === 0) {
+                    // If first item, go to previous section
+                    if (currentSectionIndex > 0) {
+                      const prevSectionItems = sections[currentSectionIndex - 1]?.items || [];
+                      setCurrentSectionIndex(prev => prev - 1);
+                      setCurrentItemInSectionIndex(Math.max(0, prevSectionItems.length - 1));
+                    }
+                  } else {
+                    // Go to previous item in same section
+                    setCurrentItemInSectionIndex(prev => Math.max(0, prev - 1));
+                  }
+                }}
+                disabled={currentSectionIndex === 0 && currentItemInSectionIndex === 0}
               >
-                Previous Section
+                {currentItemInSectionIndex === 0 ? 'Previous Section' : 'Previous'}
               </button>
               {!isSubmitted && (
                 <button 
@@ -507,12 +547,21 @@ const EvaluateForm = () => {
             </div>
 
             <div>
-              {currentSectionIndex < sections.length - 1 ? (
+              {currentSectionIndex < sections.length - 1 || currentItemInSectionIndex < (currentSection?.items?.length - 1 || 0) ? (
                 <button 
                   className="btn" 
-                  onClick={() => setCurrentSectionIndex(prev => Math.min(sections.length - 1, prev + 1))}
+                  onClick={() => {
+                    if (currentItemInSectionIndex < (currentSection?.items?.length - 1 || 0)) {
+                      // Go to next item in same section
+                      setCurrentItemInSectionIndex(prev => prev + 1);
+                    } else if (currentSectionIndex < sections.length - 1) {
+                      // Go to next section
+                      setCurrentSectionIndex(prev => prev + 1);
+                      setCurrentItemInSectionIndex(0);
+                    }
+                  }}
                 >
-                  Next Section
+                  Next
                 </button>
               ) : (
                 !isSubmitted ? (
