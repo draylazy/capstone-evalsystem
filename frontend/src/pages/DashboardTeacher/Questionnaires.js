@@ -175,6 +175,7 @@ const Questionnaires = () => {
   const handleDuplicateQuestionnaire = async (questionnaire) => {
     try {
       setDuplicatingId(questionnaire.id);
+      toast.info('Duplicating questionnaire...');
       await questionnaireAPI.duplicateQuestionnaire(questionnaire.id);
       toast.success('Questionnaire duplicated successfully!');
       await fetchQuestionnaires();
@@ -291,14 +292,7 @@ const Questionnaires = () => {
                           onClick={() => handleDuplicateQuestionnaire(q)}
                           disabled={duplicatingId === q.id}
                         >
-                          {duplicatingId === q.id ? (
-                            <>
-                              <span className="spinner-border spinner-border-sm me-2" role="status" aria-hidden="true" style={{display: 'inline-block'}}></span>
-                              Duplicating...
-                            </>
-                          ) : (
-                            'Duplicate'
-                          )}
+                          Duplicate
                         </button>
                         <button
                           type="button"

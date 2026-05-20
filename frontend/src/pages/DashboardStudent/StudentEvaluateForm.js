@@ -363,6 +363,9 @@ const StudentEvaluateForm = () => {
                   <article key={item.id} className="eval-question-card">
                     <h3 className="eval-question-title">
                       {itemIndex + 1}. {item.questionText}
+                      {item.required !== false && (
+                        <span className="eval-required-mark" title="Required">*</span>
+                      )}
                     </h3>
                     {item.questionDescription && (
                       <p className="eval-question-desc">{item.questionDescription}</p>
