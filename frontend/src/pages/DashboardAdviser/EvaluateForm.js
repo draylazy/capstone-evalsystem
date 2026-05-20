@@ -81,6 +81,33 @@ const EvaluateForm = () => {
 
   const currentItem = !isMixedQuestionnaire ? allItems[currentQuestionIndex] : null;
 
+  // Helper function to check if an answer is filled
+  const isAnswerFilled = (value) => value !== undefined && value !== null && value !== "";
+
+  // Check if current item is answered based on section type
+  const isCurrentItemAnswered = useMemo(() => {
+    if (isMixedQuestionnaire) {
+      // For mixed questionnaires
+      if (!currentSection || currentItemInSectionIndex >= currentSection.items.length) {
+        return true;
+      }
+      const currentItem = currentSection.items[currentItemInSectionIndex];
+      
+      if (currentSection.evaluateIndividuals) {
+        // Individual section: ALL team members must answer
+        return teamMembers.every(member => 
+          isAnswerFilled(answers[member.studentId]?.[currentItem.id])
+        );
+      } else {
+        // Team section: just check if team answered
+        return isAnswerFilled(answers[currentItem.id]);
+      }
+    } else {
+      // Regular questionnaire: check if current item answered
+      return !currentItem || isAnswerFilled(answers[currentItem.id]);
+    }
+  }, [isMixedQuestionnaire, currentSection, currentItemInSectionIndex, currentItem, answers, teamMembers]);
+
   useEffect(() => {
     const load = async () => {
       try {
@@ -318,6 +345,14 @@ const EvaluateForm = () => {
             <div>
               <h1 style={{ margin: 0, fontSize: '1.5rem', color: 'var(--dtm-gold)' }}>{evaluation.questionnaire.title}</h1>
               <p style={{ margin: '4px 0 0 0', color: 'var(--dtm-muted)', fontSize: '0.9rem' }}>Evaluating Team: {evaluation.teamName}</p>
+              {isSubmitted && evaluation.scoreInfo && (
+                <div style={{ marginTop: '12px', padding: '12px 16px', background: 'rgba(242, 201, 76, 0.1)', borderRadius: '6px', border: '1px solid rgba(242, 201, 76, 0.2)' }}>
+                  <p style={{ margin: '0 0 4px 0', fontSize: '0.8rem', color: 'var(--dtm-gold)', fontWeight: 600, textTransform: 'uppercase' }}>Team Score</p>
+                  <p style={{ margin: 0, fontSize: '1.2rem', color: 'var(--dtm-gold)', fontWeight: 600 }}>
+                    {evaluation.scoreInfo.scoreDisplay}
+                  </p>
+                </div>
+              )}
             </div>
             <button className="btn-secondary" onClick={goBackToTeamDetails}>Exit</button>
           </div>
@@ -357,10 +392,7 @@ const EvaluateForm = () => {
                       {currentSection.items && currentSection.items.length > 0 && (() => {
                         const currentItem = currentSection.items[currentItemInSectionIndex];
                         const currentValue = answers[currentItem.id];
-                        const isRating = currentItem.questionType === "RATING";
-                        const range = isRating 
-                          ? generateDecimalRatingRange(currentItem.minScore, currentItem.maxScore)
-                          : generateNumericRange(currentItem.minScore, currentItem.maxScore);
+                        const range = generateNumericRange(currentItem.minScore, currentItem.maxScore);
 
                         return (
                           <div key={currentItem.id}>
@@ -371,8 +403,7 @@ const EvaluateForm = () => {
                               borderRadius: '8px'
                             }}>
                               <label style={{ fontSize: '1rem', fontWeight: '500', display: 'block', marginBottom: '12px' }}>
-                                {currentItem.questionText}
-                                {currentItem.required !== false && <span style={{ color: '#ff4d4f', marginLeft: '4px' }} title="Required">*</span>}
+                                {currentItemInSectionIndex + 1}. {currentItem.questionText}
                               </label>
 
                               {currentItem.questionType === 'TEXT' ? (
@@ -551,6 +582,14 @@ const EvaluateForm = () => {
                 <button 
                   className="btn" 
                   onClick={() => {
+                    if (!isCurrentItemAnswered) {
+                      if (currentSection.evaluateIndividuals) {
+                        toast.warning("Please answer this question for all team members before proceeding.");
+                      } else {
+                        toast.warning("Please answer this question before proceeding.");
+                      }
+                      return;
+                    }
                     if (currentItemInSectionIndex < (currentSection?.items?.length - 1 || 0)) {
                       // Go to next item in same section
                       setCurrentItemInSectionIndex(prev => prev + 1);
@@ -600,10 +639,7 @@ const EvaluateForm = () => {
     </div>
   );
 
-  const isRating = currentItem.questionType === "RATING";
-  const range = isRating 
-    ? generateDecimalRatingRange(currentItem.minScore, currentItem.maxScore)
-    : generateNumericRange(currentItem.minScore, currentItem.maxScore);
+  const range = generateNumericRange(currentItem.minScore, currentItem.maxScore);
 
   return (
     <div className="teacher-container">
@@ -614,6 +650,14 @@ const EvaluateForm = () => {
           <div>
             <h1 style={{ margin: 0, fontSize: '1.5rem', color: 'var(--dtm-gold)' }}>{evaluation.questionnaire.title}</h1>
             <p style={{ margin: '4px 0 0 0', color: 'var(--dtm-muted)', fontSize: '0.9rem' }}>Evaluating Team: {evaluation.teamName}</p>
+            {isSubmitted && evaluation.scoreInfo && (
+              <div style={{ marginTop: '12px', padding: '12px 16px', background: 'rgba(242, 201, 76, 0.1)', borderRadius: '6px', border: '1px solid rgba(242, 201, 76, 0.2)' }}>
+                <p style={{ margin: '0 0 4px 0', fontSize: '0.8rem', color: 'var(--dtm-gold)', fontWeight: 600, textTransform: 'uppercase' }}>Team Score</p>
+                <p style={{ margin: 0, fontSize: '1.2rem', color: 'var(--dtm-gold)', fontWeight: 600 }}>
+                  {evaluation.scoreInfo.scoreDisplay}
+                </p>
+              </div>
+            )}
           </div>
           <button className="btn-secondary" onClick={goBackToTeamDetails}>Exit</button>
         </div>
@@ -630,8 +674,7 @@ const EvaluateForm = () => {
                 </div>
               )}
               <h2 style={{ fontSize: '1.4rem', marginBottom: '20px', lineHeight: '1.4' }}>
-                {currentItem.questionText}
-                {currentItem.required !== false && <span style={{ color: '#ff4d4f', marginLeft: '4px' }} title="Required">*</span>}
+                {currentQuestionIndex + 1}. {currentItem.questionText}
               </h2>
               <p style={{ color: 'var(--dtm-muted)', lineHeight: '1.6', fontSize: '1rem' }}>
                 {currentItem.questionDescription || "Please provide your evaluation for this criteria."}
@@ -805,7 +848,13 @@ const EvaluateForm = () => {
             {currentQuestionIndex < allItems.length - 1 ? (
               <button 
                 className="btn" 
-                onClick={() => setCurrentQuestionIndex(prev => Math.min(allItems.length - 1, prev + 1))}
+                onClick={() => {
+                  if (!isCurrentItemAnswered) {
+                    toast.warning("Please answer this question before proceeding.");
+                    return;
+                  }
+                  setCurrentQuestionIndex(prev => Math.min(allItems.length - 1, prev + 1));
+                }}
               >
                 Next Criteria
               </button>

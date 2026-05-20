@@ -5,6 +5,7 @@ import group9.advisor_eval_system.entity.SchoolClass;
 import group9.advisor_eval_system.entity.Team;
 import group9.advisor_eval_system.entity.Evaluation;
 import group9.advisor_eval_system.entity.Questionnaire;
+import group9.advisor_eval_system.entity.QuestionnaireItem;
 import group9.advisor_eval_system.entity.Report;
 import group9.advisor_eval_system.entity.Student;
 import group9.advisor_eval_system.entity.StudentEvaluation;
@@ -198,17 +199,32 @@ public class UserManagementService {
                         if (evaluation.getQuestionnaire() != null &&
                                 evaluation.getQuestionnaire().getId().equals(questionnaire.getId())) {
                             if (evaluation.getScores() != null && !evaluation.getScores().isEmpty()) {
+                                // Calculate survey score (sum of numeric responses / sum of max scales)
                                 double totalScore = 0;
-                                int numericScoreCount = 0;
+                                int totalMaxScore = 0;
+                                
                                 for (group9.advisor_eval_system.entity.EvaluationScore score : evaluation.getScores()) {
-                                    if (score.getNumericScore() != null) {
-                                        totalScore += score.getNumericScore();
-                                        numericScoreCount++;
+                                    if (score.getQuestionnaireItem() != null) {
+                                        group9.advisor_eval_system.entity.QuestionnaireItem item = score.getQuestionnaireItem();
+                                        group9.advisor_eval_system.entity.QuestionnaireItem.QuestionType type = item.getQuestionType();
+                                        
+                                        // Only include NUMERIC_SCALE and RATING questions
+                                        if (type == group9.advisor_eval_system.entity.QuestionnaireItem.QuestionType.NUMERIC_SCALE ||
+                                            type == group9.advisor_eval_system.entity.QuestionnaireItem.QuestionType.RATING) {
+                                            
+                                            if (score.getNumericScore() != null) {
+                                                totalScore += score.getNumericScore();
+                                            }
+                                            
+                                            if (item.getMaxScore() != null) {
+                                                totalMaxScore += item.getMaxScore();
+                                            }
+                                        }
                                     }
                                 }
-                                if (numericScoreCount > 0) {
-                                    double average = totalScore / numericScoreCount;
-                                    scoreValue = String.format("%.2f", average);
+                                
+                                if (totalMaxScore > 0) {
+                                    scoreValue = String.format("%.0f/%d", totalScore, totalMaxScore);
                                 } else {
                                     scoreValue = "Answered";
                                 }
@@ -472,17 +488,32 @@ public class UserManagementService {
                         
                         if (eval != null) {
                             if (eval.getScores() != null && !eval.getScores().isEmpty()) {
+                                // Calculate survey score (sum of numeric responses / sum of max scales)
                                 double totalScore = 0;
-                                int numericScoreCount = 0;
+                                int totalMaxScore = 0;
+                                
                                 for (StudentEvaluationScore score : eval.getScores()) {
-                                    if (score.getNumericScore() != null) {
-                                        totalScore += score.getNumericScore();
-                                        numericScoreCount++;
+                                    if (score.getQuestionnaireItem() != null) {
+                                        QuestionnaireItem item = score.getQuestionnaireItem();
+                                        QuestionnaireItem.QuestionType type = item.getQuestionType();
+                                        
+                                        // Only include NUMERIC_SCALE and RATING questions
+                                        if (type == QuestionnaireItem.QuestionType.NUMERIC_SCALE ||
+                                            type == QuestionnaireItem.QuestionType.RATING) {
+                                            
+                                            if (score.getNumericScore() != null) {
+                                                totalScore += score.getNumericScore();
+                                            }
+                                            
+                                            if (item.getMaxScore() != null) {
+                                                totalMaxScore += item.getMaxScore();
+                                            }
+                                        }
                                     }
                                 }
-                                if (numericScoreCount > 0) {
-                                    double average = totalScore / numericScoreCount;
-                                    scoreValue = String.format("%.2f", average);
+                                
+                                if (totalMaxScore > 0) {
+                                    scoreValue = String.format("%.0f/%d", totalScore, totalMaxScore);
                                 } else {
                                     scoreValue = "Answered";
                                 }

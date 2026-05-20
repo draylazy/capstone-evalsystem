@@ -22,7 +22,15 @@ const Adviser = () => {
         const allTeams = await teamAPI.getAllTeams();
         const assigned = allTeams.filter(
           t => Array.isArray(t.adviserIds) && t.adviserIds.includes(currentUser.id)
-        );
+        ).sort((a, b) => {
+          // Sort by class name first
+          const classA = a.className || "";
+          const classB = b.className || "";
+          const classCompare = classA.localeCompare(classB);
+          if (classCompare !== 0) return classCompare;
+          // Then sort by team name
+          return (a.name || "").localeCompare(b.name || "");
+        });
         setTeams(assigned);
       } catch (e) {
         console.error(e);
@@ -86,24 +94,18 @@ const Adviser = () => {
             <table className="class-table">
               <thead>
                 <tr>
-                  <th>#</th>
+                  <th>Class</th>
                   <th>Team</th>
                   <th>Members</th>
-                  <th>Status</th>
                   <th>Actions</th>
                 </tr>
               </thead>
               <tbody>
                 {paginatedData.map((team, index) => (
                   <tr key={team.id}>
-                    <td>{(currentPage - 1) * 10 + index + 1}</td>
-                    <td><strong>{team.name}</strong></td>
+                    <td>{team.className || "-"}</td>
+                    <td>{team.name}</td>
                     <td>{team.memberIds?.length || 0}</td>
-                    <td>
-                      <span className={`status-badge ${team.isActive ? "status-active" : "status-inactive"}`}>
-                        {team.isActive ? "Active" : "Inactive"}
-                      </span>
-                    </td>
                     <td>
                       <div style={{ display: "flex", gap: "8px", justifyContent: "center" }}>
                         <button
