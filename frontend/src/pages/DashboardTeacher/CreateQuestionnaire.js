@@ -57,7 +57,8 @@ const CreateQuestionnaire = () => {
     questionType: "NUMERIC_SCALE",
     minScore: 1,
     maxScore: 5,
-    choices: []
+    choices: [],
+    required: true
   });
 
   const [activeSectionIndex, setActiveSectionIndex] = useState(0);
@@ -176,7 +177,8 @@ const CreateQuestionnaire = () => {
       questionType: formData.target === 'STUDENT' ? "RATING" : "NUMERIC_SCALE",
       minScore: 1,
       maxScore: formData.target === 'STUDENT' ? 10 : 5,
-      choices: []
+      choices: [],
+      required: true
     });
 
     toast.success(editingQuestionIndex !== null ? 'Question updated!' : 'Question added!');
@@ -569,6 +571,21 @@ const CreateQuestionnaire = () => {
                               ]}
                               style={{ width: '135px', flexShrink: 0 }}
                             />
+
+                            <CustomSelect
+                              value={newQuestion.required !== false ? 'required' : 'optional'}
+                              onChange={(val) => {
+                                setNewQuestion({
+                                  ...newQuestion,
+                                  required: val === 'required'
+                                });
+                              }}
+                              options={[
+                                { value: 'required', label: 'Required' },
+                                { value: 'optional', label: 'Optional' }
+                              ]}
+                              style={{ width: '110px', flexShrink: 0 }}
+                            />
                         </div>
 
                         <div style={{ display: 'flex', gap: '8px', alignItems: 'center' }}>
@@ -609,7 +626,8 @@ const CreateQuestionnaire = () => {
                                   questionType: formData.target === 'STUDENT' ? "RATING" : "NUMERIC_SCALE",
                                   minScore: 1,
                                   maxScore: formData.target === 'STUDENT' ? 10 : 5,
-                                  choices: []
+                                  choices: [],
+                                  required: true
                                 });
                               }}
                               className="btn btn-sm btn-secondary"
