@@ -128,6 +128,7 @@ const IndividualEvaluationGrid = ({
           }}>
             <h4 style={{ margin: '0 0 12px 0', fontSize: '1.1rem', fontWeight: '500' }}>
               {currentItemIndex + 1}. {currentItem.questionText}
+              {currentItem.required !== false && <span style={{ color: '#ff4d4f', marginLeft: '4px' }} title="Required">*</span>}
             </h4>
           </div>
 
