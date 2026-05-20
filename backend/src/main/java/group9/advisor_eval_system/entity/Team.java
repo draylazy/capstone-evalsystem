@@ -62,6 +62,13 @@ public class Team {
         }
     }
     
+    // Expose class name without exposing full class object
+    @Transient
+    @JsonProperty("className")
+    public String getClassName() {
+        return schoolClass != null ? schoolClass.getName() : null;
+    }
+    
     // Expose member IDs without exposing full member objects  
     @Transient
     @JsonProperty("memberIds")
