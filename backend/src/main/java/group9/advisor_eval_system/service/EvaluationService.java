@@ -361,6 +361,63 @@ public class EvaluationService {
                 .sum();
     }
 
+    /**
+     * Calculate survey-style score: sum of numeric responses / sum of max scales
+     * Only counts NUMERIC_SCALE and RATING questions
+     */
+    public EvaluationScoreSummary calculateSurveyScore(Long evaluationId) {
+        Evaluation evaluation = evaluationRepository.findById(evaluationId)
+                .orElseThrow(() -> new RuntimeException("Evaluation not found"));
+
+        double totalScore = 0;
+        int totalMaxScore = 0;
+
+        if (evaluation.getScores() != null) {
+            for (EvaluationScore score : evaluation.getScores()) {
+                if (score.getQuestionnaireItem() != null) {
+                    QuestionnaireItem item = score.getQuestionnaireItem();
+                    QuestionnaireItem.QuestionType type = item.getQuestionType();
+
+                    // Only include NUMERIC_SCALE and RATING questions
+                    if (type == QuestionnaireItem.QuestionType.NUMERIC_SCALE ||
+                        type == QuestionnaireItem.QuestionType.RATING) {
+                        
+                        if (score.getNumericScore() != null) {
+                            totalScore += score.getNumericScore();
+                        }
+                        
+                        if (item.getMaxScore() != null) {
+                            totalMaxScore += item.getMaxScore();
+                        }
+                    }
+                }
+            }
+        }
+
+        return new EvaluationScoreSummary(totalScore, totalMaxScore);
+    }
+
+    /**
+     * Data class for survey scoring results
+     */
+    public static class EvaluationScoreSummary {
+        public double totalScore;
+        public int totalMaxScore;
+
+        public EvaluationScoreSummary(double totalScore, int totalMaxScore) {
+            this.totalScore = totalScore;
+            this.totalMaxScore = totalMaxScore;
+        }
+
+        public String getScoreString() {
+            return String.format("%.0f/%d", totalScore, totalMaxScore);
+        }
+
+        public double getPercentage() {
+            return totalMaxScore > 0 ? (totalScore / totalMaxScore) * 100 : 0;
+        }
+    }
+
     // ─────────────────────────────────────────────────────────────
     // New adviser-to-student individual evaluation methods
     // ─────────────────────────────────────────────────────────────

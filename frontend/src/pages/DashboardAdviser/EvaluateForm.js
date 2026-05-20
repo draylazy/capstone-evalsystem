@@ -318,6 +318,14 @@ const EvaluateForm = () => {
             <div>
               <h1 style={{ margin: 0, fontSize: '1.5rem', color: 'var(--dtm-gold)' }}>{evaluation.questionnaire.title}</h1>
               <p style={{ margin: '4px 0 0 0', color: 'var(--dtm-muted)', fontSize: '0.9rem' }}>Evaluating Team: {evaluation.teamName}</p>
+              {isSubmitted && evaluation.scoreInfo && (
+                <div style={{ marginTop: '12px', padding: '12px 16px', background: 'rgba(242, 201, 76, 0.1)', borderRadius: '6px', border: '1px solid rgba(242, 201, 76, 0.2)' }}>
+                  <p style={{ margin: '0 0 4px 0', fontSize: '0.8rem', color: 'var(--dtm-gold)', fontWeight: 600, textTransform: 'uppercase' }}>Team Score</p>
+                  <p style={{ margin: 0, fontSize: '1.2rem', color: 'var(--dtm-gold)', fontWeight: 600 }}>
+                    {evaluation.scoreInfo.scoreDisplay}
+                  </p>
+                </div>
+              )}
             </div>
             <button className="btn-secondary" onClick={goBackToTeamDetails}>Exit</button>
           </div>
@@ -614,6 +622,14 @@ const EvaluateForm = () => {
           <div>
             <h1 style={{ margin: 0, fontSize: '1.5rem', color: 'var(--dtm-gold)' }}>{evaluation.questionnaire.title}</h1>
             <p style={{ margin: '4px 0 0 0', color: 'var(--dtm-muted)', fontSize: '0.9rem' }}>Evaluating Team: {evaluation.teamName}</p>
+            {isSubmitted && evaluation.scoreInfo && (
+              <div style={{ marginTop: '12px', padding: '12px 16px', background: 'rgba(242, 201, 76, 0.1)', borderRadius: '6px', border: '1px solid rgba(242, 201, 76, 0.2)' }}>
+                <p style={{ margin: '0 0 4px 0', fontSize: '0.8rem', color: 'var(--dtm-gold)', fontWeight: 600, textTransform: 'uppercase' }}>Team Score</p>
+                <p style={{ margin: 0, fontSize: '1.2rem', color: 'var(--dtm-gold)', fontWeight: 600 }}>
+                  {evaluation.scoreInfo.scoreDisplay}
+                </p>
+              </div>
+            )}
           </div>
           <button className="btn-secondary" onClick={goBackToTeamDetails}>Exit</button>
         </div>

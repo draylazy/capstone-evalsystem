@@ -241,6 +241,65 @@ public class StudentEvaluationService {
     }
 
 
+    /**
+     * Calculate survey-style score: sum of numeric responses / sum of max scales
+     * Only counts NUMERIC_SCALE and RATING questions
+     */
+    public StudentEvaluationScoreSummary calculateSurveyScore(Long evaluationId) {
+        StudentEvaluation evaluation = studentEvaluationRepository.findById(evaluationId)
+                .orElseThrow(() -> new RuntimeException("Student evaluation not found"));
+
+        double totalScore = 0;
+        int totalMaxScore = 0;
+
+        List<StudentEvaluationScore> scores = studentEvaluationScoreRepository.findByStudentEvaluationId(evaluationId);
+        
+        if (scores != null) {
+            for (StudentEvaluationScore score : scores) {
+                if (score.getQuestionnaireItem() != null) {
+                    QuestionnaireItem item = score.getQuestionnaireItem();
+                    QuestionnaireItem.QuestionType type = item.getQuestionType();
+
+                    // Only include NUMERIC_SCALE and RATING questions
+                    if (type == QuestionnaireItem.QuestionType.NUMERIC_SCALE ||
+                        type == QuestionnaireItem.QuestionType.RATING) {
+                        
+                        if (score.getNumericScore() != null) {
+                            totalScore += score.getNumericScore();
+                        }
+                        
+                        if (item.getMaxScore() != null) {
+                            totalMaxScore += item.getMaxScore();
+                        }
+                    }
+                }
+            }
+        }
+
+        return new StudentEvaluationScoreSummary(totalScore, totalMaxScore);
+    }
+
+    /**
+     * Data class for student evaluation survey scoring results
+     */
+    public static class StudentEvaluationScoreSummary {
+        public double totalScore;
+        public int totalMaxScore;
+
+        public StudentEvaluationScoreSummary(double totalScore, int totalMaxScore) {
+            this.totalScore = totalScore;
+            this.totalMaxScore = totalMaxScore;
+        }
+
+        public String getScoreString() {
+            return String.format("%.0f/%d", totalScore, totalMaxScore);
+        }
+
+        public double getPercentage() {
+            return totalMaxScore > 0 ? (totalScore / totalMaxScore) * 100 : 0;
+        }
+    }
+
     public group9.advisor_eval_system.dto.StudentReportSummaryDto getStudentReportSummary(Long studentId) {
         Student student = studentRepository.findById(studentId)
                 .orElseThrow(() -> new RuntimeException("Student not found"));
