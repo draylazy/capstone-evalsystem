@@ -57,10 +57,7 @@ const CreateQuestionnaire = () => {
     questionType: "NUMERIC_SCALE",
     minScore: 1,
     maxScore: 5,
-    choices: [],
-    correctAnswer: "",
-    pointsValue: 1,
-    required: true,
+    choices: []
   });
 
   const [activeSectionIndex, setActiveSectionIndex] = useState(0);
@@ -179,10 +176,7 @@ const CreateQuestionnaire = () => {
       questionType: formData.target === 'STUDENT' ? "RATING" : "NUMERIC_SCALE",
       minScore: 1,
       maxScore: formData.target === 'STUDENT' ? 10 : 5,
-      choices: [],
-      correctAnswer: "",
-      pointsValue: 1,
-      required: true,
+      choices: []
     });
 
     toast.success(editingQuestionIndex !== null ? 'Question updated!' : 'Question added!');
@@ -387,10 +381,7 @@ const CreateQuestionnaire = () => {
                               questionType: formData.target === 'STUDENT' ? "RATING" : "NUMERIC_SCALE",
                               minScore: 1,
                               maxScore: formData.target === 'STUDENT' ? 10 : 5,
-                              choices: [],
-                              correctAnswer: "",
-                              pointsValue: 1,
-                              required: true,
+                              choices: []
                             });
                           }
                         }}
@@ -618,10 +609,7 @@ const CreateQuestionnaire = () => {
                                   questionType: formData.target === 'STUDENT' ? "RATING" : "NUMERIC_SCALE",
                                   minScore: 1,
                                   maxScore: formData.target === 'STUDENT' ? 10 : 5,
-                                  choices: [],
-                                  correctAnswer: "",
-                                  pointsValue: 1,
-                                  required: true,
+                                  choices: []
                                 });
                               }}
                               className="btn btn-sm btn-secondary"
@@ -758,48 +746,7 @@ const CreateQuestionnaire = () => {
                       </div>
                     )}
 
-                    <div style={{ marginTop: '8px', borderTop: '1px solid rgba(255, 255, 255, 0.1)', paddingTop: '8px' }}>
-                      <div className="form-group" style={{ margin: 0 }}>
-                        <label>Requirement</label>
-                        <CustomSelect
-                          value={newQuestion.required ? 'REQUIRED' : 'OPTIONAL'}
-                          onChange={(val) => setNewQuestion({ ...newQuestion, required: val === 'REQUIRED' })}
-                          options={[
-                            { value: 'REQUIRED', label: 'Required' },
-                            { value: 'OPTIONAL', label: 'Optional' }
-                          ]}
-                        />
-                      </div>
-                      {formData.target !== 'STUDENT' && (
-                        <>
-                          <div style={{ display: 'flex', gap: '8px', alignItems: 'flex-start', marginBottom: '4px' }}>
-                            <div className="form-group" style={{ flex: 1, margin: 0 }}>
-                              <label style={{ marginBottom: '3px' }}>Correct Answer (Optional)</label>
-                              <input
-                                type="text"
-                                placeholder="Leave blank for non-graded"
-                                value={newQuestion.correctAnswer}
-                                onChange={(e) => setNewQuestion({ ...newQuestion, correctAnswer: e.target.value })}
-                                style={{ width: '100%' }}
-                              />
-                            </div>
-                            <div className="form-group" style={{ minWidth: '80px', margin: 0 }}>
-                              <label style={{ marginBottom: '3px' }}>Points</label>
-                              <input
-                                type="number"
-                                min="1"
-                                value={newQuestion.pointsValue}
-                                onChange={(e) => setNewQuestion({ ...newQuestion, pointsValue: parseInt(e.target.value) || 1 })}
-                                style={{ width: '100%' }}
-                              />
-                            </div>
-                          </div>
-                          <small style={{ display: 'block', fontSize: '10px', color: 'var(--dtm-muted)' }}>
-                            For MULTIPLE CHOICE: choice letter or text.
-                          </small>
-                        </>
-                      )}
-                    </div>
+
                   </div>
                 )}
 
