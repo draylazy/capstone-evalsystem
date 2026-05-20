@@ -177,9 +177,9 @@ public class EvaluationResponse {
                         group9.advisor_eval_system.entity.QuestionnaireItem item = score.getQuestionnaireItem();
                         group9.advisor_eval_system.entity.QuestionnaireItem.QuestionType type = item.getQuestionType();
 
-                        // Only include NUMERIC_SCALE and RATING questions
-                        if (type == group9.advisor_eval_system.entity.QuestionnaireItem.QuestionType.NUMERIC_SCALE ||
-                            type == group9.advisor_eval_system.entity.QuestionnaireItem.QuestionType.RATING) {
+                        // Only include NUMERIC_SCALE and RATING questions that are required
+                        if ((type == group9.advisor_eval_system.entity.QuestionnaireItem.QuestionType.NUMERIC_SCALE ||
+                            type == group9.advisor_eval_system.entity.QuestionnaireItem.QuestionType.RATING) && item.getRequired() != false) {
                             
                             if (score.getNumericScore() != null) {
                                 totalScore += score.getNumericScore();

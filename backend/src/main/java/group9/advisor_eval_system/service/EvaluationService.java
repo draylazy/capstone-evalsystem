@@ -378,9 +378,9 @@ public class EvaluationService {
                     QuestionnaireItem item = score.getQuestionnaireItem();
                     QuestionnaireItem.QuestionType type = item.getQuestionType();
 
-                    // Only include NUMERIC_SCALE and RATING questions
-                    if (type == QuestionnaireItem.QuestionType.NUMERIC_SCALE ||
-                        type == QuestionnaireItem.QuestionType.RATING) {
+                    // Only include NUMERIC_SCALE and RATING questions that are required
+                    if ((type == QuestionnaireItem.QuestionType.NUMERIC_SCALE ||
+                        type == QuestionnaireItem.QuestionType.RATING) && item.getRequired() != false) {
                         
                         if (score.getNumericScore() != null) {
                             totalScore += score.getNumericScore();
