@@ -365,10 +365,7 @@ const EvaluateForm = () => {
                       {currentSection.items && currentSection.items.length > 0 && (() => {
                         const currentItem = currentSection.items[currentItemInSectionIndex];
                         const currentValue = answers[currentItem.id];
-                        const isRating = currentItem.questionType === "RATING";
-                        const range = isRating 
-                          ? generateDecimalRatingRange(currentItem.minScore, currentItem.maxScore)
-                          : generateNumericRange(currentItem.minScore, currentItem.maxScore);
+                        const range = generateNumericRange(currentItem.minScore, currentItem.maxScore);
 
                         return (
                           <div key={currentItem.id}>
@@ -608,10 +605,7 @@ const EvaluateForm = () => {
     </div>
   );
 
-  const isRating = currentItem.questionType === "RATING";
-  const range = isRating 
-    ? generateDecimalRatingRange(currentItem.minScore, currentItem.maxScore)
-    : generateNumericRange(currentItem.minScore, currentItem.maxScore);
+  const range = generateNumericRange(currentItem.minScore, currentItem.maxScore);
 
   return (
     <div className="teacher-container">
