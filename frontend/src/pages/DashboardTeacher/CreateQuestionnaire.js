@@ -3,6 +3,7 @@ import { useNavigate } from "react-router-dom";
 import TeacherSidebar from "../../components/Sidebar/TeacherSidebar";
 import { questionnaireAPI } from "../../services/api";
 import { useToast } from "../../contexts/ToastContext";
+import { useConfirm } from "../../contexts/ConfirmContext";
 import "./Teacher.css";
 import "./QuestionnaireTwoColumn.css";
 import CustomSelect from "../../components/CustomSelect/CustomSelect";
@@ -24,6 +25,7 @@ const fetchWithLocalFallback = async (path, options = {}) => {
 const CreateQuestionnaire = () => {
   const navigate = useNavigate();
   const toast = useToast();
+  const { confirm } = useConfirm();
   const [googleLinked, setGoogleLinked] = useState(false);
   const [submitting, setSubmitting] = useState(false);
 
@@ -64,6 +66,278 @@ const CreateQuestionnaire = () => {
   const [activeSectionIndex, setActiveSectionIndex] = useState(0);
   const [editingQuestionIndex, setEditingQuestionIndex] = useState(null);
   const [usesSections, setUsesSections] = useState(true);
+  const [selectedTemplate, setSelectedTemplate] = useState("none");
+  const [customTemplates, setCustomTemplates] = useState([]);
+
+  useEffect(() => {
+    const stored = localStorage.getItem('custom_templates');
+    if (stored) {
+      setCustomTemplates(JSON.parse(stored));
+    }
+  }, []);
+
+  const handleDeleteTemplate = async (key) => {
+    const custom = customTemplates.find(t => t.key === key);
+    if (!custom) return;
+    const ok = await confirm({
+      title: "Delete Custom Template?",
+      message: `Are you sure you want to delete the template "${custom.label}"? This action cannot be undone.`,
+      confirmText: "Delete",
+      cancelText: "Cancel",
+      isDanger: true,
+    });
+    if (ok) {
+      const updated = customTemplates.filter(t => t.key !== key);
+      setCustomTemplates(updated);
+      localStorage.setItem('custom_templates', JSON.stringify(updated));
+      if (selectedTemplate === key) {
+        setSelectedTemplate("none");
+      }
+      toast.success("Template deleted successfully!");
+    }
+  };
+
+  const handleApplyTemplate = async (templateKey) => {
+    if (templateKey === 'none') {
+      setSelectedTemplate("none");
+      return;
+    }
+
+    const totalQCount = formData.sections.reduce((sum, sec) => sum + sec.items.length, 0);
+    if (totalQCount > 0 || formData.title.trim() || formData.description.trim()) {
+      const ok = await confirm({
+        title: "Apply Template?",
+        message: "Applying a template will overwrite your current title, description, and all questions. Do you want to proceed?",
+        confirmText: "Yes, Apply",
+        cancelText: "Cancel",
+        isDanger: false,
+      });
+      if (!ok) return;
+    }
+
+    setSelectedTemplate(templateKey);
+
+    if (templateKey === 'student_standard') {
+      setFormData({
+        ...formData,
+        title: "Peer Performance Evaluation",
+        description: "Standard peer-to-peer evaluation questionnaire assessing contribution, teamwork, and reliability.",
+        target: "STUDENT",
+        sections: [
+          {
+            sectionTitle: "Technical Contributions",
+            sectionDescription: "Assess this member's technical contributions, code quality, and workload distribution.",
+            orderIndex: 0,
+            evaluateIndividuals: false,
+            items: [
+              {
+                questionText: "Quality of Work",
+                questionDescription: "Rate the quality, completeness, and accuracy of this member's deliverables.",
+                questionType: "RATING",
+                minScore: 1,
+                maxScore: 10,
+                choices: [],
+                required: true
+              },
+              {
+                questionText: "Quantity of Work",
+                questionDescription: "Rate the volume of work this member completed relative to expectations.",
+                questionType: "RATING",
+                minScore: 1,
+                maxScore: 10,
+                choices: [],
+                required: true
+              }
+            ]
+          },
+          {
+            sectionTitle: "Cooperation & Reliability",
+            sectionDescription: "Assess this member's communication, meeting attendance, and timeliness.",
+            orderIndex: 1,
+            evaluateIndividuals: false,
+            items: [
+              {
+                questionText: "Communication & Collaboration",
+                questionDescription: "Rate how effectively this member shared information, responded to updates, and collaborated with peers.",
+                questionType: "RATING",
+                minScore: 1,
+                maxScore: 10,
+                choices: [],
+                required: true
+              },
+              {
+                questionText: "Reliability & Attendance",
+                questionDescription: "Rate their promptness in attending scheduled meetings and finishing tasks on time.",
+                questionType: "RATING",
+                minScore: 1,
+                maxScore: 10,
+                choices: [],
+                required: true
+              }
+            ]
+          },
+          {
+            sectionTitle: "Qualitative Feedback",
+            sectionDescription: "Provide descriptive feedback for this member's development.",
+            orderIndex: 2,
+            evaluateIndividuals: false,
+            items: [
+              {
+                questionText: "Primary Strengths",
+                questionDescription: "What did this member do particularly well during this project cycle?",
+                questionType: "TEXT",
+                choices: [],
+                required: false
+              },
+              {
+                questionText: "Areas for Improvement",
+                questionDescription: "What can this member improve to work more effectively in the next cycle?",
+                questionType: "TEXT",
+                choices: [],
+                required: false
+              }
+            ]
+          }
+        ]
+      });
+      setActiveSectionIndex(0);
+      setNewQuestion({
+        questionText: "",
+        questionDescription: "",
+        questionType: "RATING",
+        minScore: 1,
+        maxScore: 10,
+        choices: [],
+        required: true
+      });
+      toast.success("Standard Peer-to-Peer Template loaded!");
+    } else if (templateKey === 'adviser_standard') {
+      setFormData({
+        ...formData,
+        title: "Team Performance Evaluation",
+        description: "Standard adviser evaluation questionnaire assessing team progress, documentation, presentation, and collaboration.",
+        target: "ADVISER",
+        sections: [
+          {
+            sectionTitle: "Project Execution",
+            sectionDescription: "Evaluate the team's technical implementation, project progress, and goals achievement.",
+            orderIndex: 0,
+            evaluateIndividuals: false,
+            items: [
+              {
+                questionText: "Project Progress",
+                questionDescription: "Rate the completion of project milestones relative to the planned schedule.",
+                questionType: "NUMERIC_SCALE",
+                minScore: 1,
+                maxScore: 5,
+                choices: [],
+                required: true
+              },
+              {
+                questionText: "Technical Quality & Integrity",
+                questionDescription: "Rate the architecture, code quality, and robustness of the system components.",
+                questionType: "NUMERIC_SCALE",
+                minScore: 1,
+                maxScore: 5,
+                choices: [],
+                required: true
+              }
+            ]
+          },
+          {
+            sectionTitle: "Communication & Documentation",
+            sectionDescription: "Evaluate the team's presentation quality and technical documentation.",
+            orderIndex: 1,
+            evaluateIndividuals: false,
+            items: [
+              {
+                questionText: "Presentation Quality",
+                questionDescription: "Rate the presentation style, clarity of explanation, and responsiveness to Q&A.",
+                questionType: "NUMERIC_SCALE",
+                minScore: 1,
+                maxScore: 5,
+                choices: [],
+                required: true
+              },
+              {
+                questionText: "Documentation & Reports",
+                questionDescription: "Rate the completeness, correctness, and presentation of written reports.",
+                questionType: "NUMERIC_SCALE",
+                minScore: 1,
+                maxScore: 5,
+                choices: [],
+                required: true
+              }
+            ]
+          },
+          {
+            sectionTitle: "Adviser Remarks",
+            sectionDescription: "Provide qualitative feedback and recommendations for the team.",
+            orderIndex: 2,
+            evaluateIndividuals: false,
+            items: [
+              {
+                questionText: "General Feedback & Action Points",
+                questionDescription: "Write down critical feedback, highlights, or required corrections for the milestone.",
+                questionType: "TEXT",
+                choices: [],
+                required: false
+              }
+            ]
+          }
+        ]
+      });
+      setActiveSectionIndex(0);
+      setNewQuestion({
+        questionText: "",
+        questionDescription: "",
+        questionType: "NUMERIC_SCALE",
+        minScore: 1,
+        maxScore: 5,
+        choices: [],
+        required: true
+      });
+      toast.success("Standard Team Evaluation Template loaded!");
+    } else {
+      const custom = customTemplates.find(t => t.key === templateKey);
+      if (custom) {
+        setFormData({
+          ...formData,
+          title: custom.data.title || "",
+          description: custom.data.description || "",
+          target: custom.data.target || "ADVISER",
+          sections: (custom.data.sections || []).map((sec, sIdx) => ({
+            sectionTitle: sec.sectionTitle || `Section ${sIdx + 1}`,
+            sectionDescription: sec.sectionDescription || "",
+            orderIndex: sec.orderIndex ?? sIdx,
+            evaluateIndividuals: sec.evaluateIndividuals || false,
+            items: (sec.items || []).map(item => ({
+              questionText: item.questionText,
+              questionDescription: item.questionDescription || "",
+              questionType: item.questionType,
+              minScore: item.minScore || 1,
+              maxScore: item.maxScore || 5,
+              choices: item.choices || [],
+              correctAnswer: item.correctAnswer || "",
+              pointsValue: item.pointsValue || 1,
+              required: item.required !== false
+            }))
+          }))
+        });
+        setActiveSectionIndex(0);
+        setNewQuestion({
+          questionText: "",
+          questionDescription: "",
+          questionType: custom.data.target === 'STUDENT' ? "RATING" : "NUMERIC_SCALE",
+          minScore: 1,
+          maxScore: custom.data.target === 'STUDENT' ? 10 : 5,
+          choices: [],
+          required: true
+        });
+        toast.success(`Template "${custom.label}" loaded!`);
+      }
+    }
+  };
 
   useEffect(() => {
     checkGoogleLink();
@@ -268,18 +542,134 @@ const CreateQuestionnaire = () => {
 
   const totalQuestions = formData.sections.reduce((sum, sec) => sum + sec.items.length, 0);
 
+  const hasUnsavedWork = () =>
+    !submitting && (totalQuestions > 0 || formData.title.trim() || formData.description.trim());
+
+  const beforeNavigate = async () => {
+    if (!hasUnsavedWork()) return true;
+    return confirm({
+      title: "Leave Page?",
+      message: "You have unsaved questions. If you leave now, all your work will be lost.",
+      confirmText: "Yes, Leave",
+      cancelText: "Stay",
+      isDanger: true,
+    });
+  };
+
+  useEffect(() => {
+    const handleBeforeUnload = (e) => {
+      if (submitting) return;
+      if (totalQuestions > 0 || formData.title.trim() || formData.description.trim()) {
+        const message = "You have unsaved changes. Are you sure you want to leave?";
+        e.preventDefault();
+        e.returnValue = message;
+        return message;
+      }
+    };
+    window.addEventListener("beforeunload", handleBeforeUnload);
+    return () => {
+      window.removeEventListener("beforeunload", handleBeforeUnload);
+    };
+  }, [formData, totalQuestions, submitting]);
+
+  useEffect(() => {
+    const handlePopState = async () => {
+      if (!hasUnsavedWork()) return;
+      const ok = await confirm({
+        title: "Leave Page?",
+        message: "You have unsaved questions. If you leave now, all your work will be lost.",
+        confirmText: "Yes, Leave",
+        cancelText: "Stay",
+        isDanger: true,
+      });
+      if (!ok) {
+        window.history.pushState(null, "", window.location.pathname);
+      }
+    };
+    window.history.pushState(null, "", window.location.pathname);
+    window.addEventListener("popstate", handlePopState);
+    return () => {
+      window.removeEventListener("popstate", handlePopState);
+    };
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [formData, totalQuestions, submitting]);
+
   return (
     <div className="teacher-container">
-      <TeacherSidebar />
+      <TeacherSidebar beforeNavigate={beforeNavigate} />
       <div className="teacher-content">
-        <div style={{ marginBottom: '20px', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+        <div style={{ marginBottom: '12px', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
           <h1 style={{ margin: '0' }}>Create New Questionnaire</h1>
           <button
             className="btn btn-secondary"
-            onClick={() => navigate('/teacher/questionnaires')}
+            onClick={async () => {
+              const ok = await beforeNavigate();
+              if (ok) navigate('/teacher/questionnaires');
+            }}
           >
             ← Back to Questionnaires
           </button>
+        </div>
+
+        <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '16px', flexWrap: 'wrap' }}>
+          <span style={{ fontSize: '11px', color: 'var(--dtm-muted)', fontWeight: '500', flexShrink: 0 }}>Quick Template:</span>
+          {[
+            { key: 'student_standard', label: 'Peer-to-Peer', isCustom: false },
+            { key: 'adviser_standard', label: 'Team Eval', isCustom: false },
+            ...customTemplates.map(t => ({ key: t.key, label: t.label, isCustom: true }))
+          ].map(({ key, label, isCustom }) => (
+            <div key={key} style={{ position: 'relative', display: 'inline-flex', alignItems: 'center' }}>
+              <button
+                type="button"
+                onClick={() => handleApplyTemplate(key)}
+                style={{
+                  padding: '5px 12px',
+                  fontSize: '11px',
+                  fontWeight: '600',
+                  borderRadius: '8px',
+                  cursor: 'pointer',
+                  transition: 'all 0.2s ease',
+                  border: selectedTemplate === key ? '1px solid var(--dtm-gold)' : '1px solid rgba(255,255,255,0.12)',
+                  background: selectedTemplate === key ? 'linear-gradient(135deg, rgba(242,201,76,0.2), rgba(242,201,76,0.08))' : 'rgba(255,255,255,0.05)',
+                  color: selectedTemplate === key ? 'var(--dtm-gold)' : 'rgba(255,255,255,0.55)',
+                  boxShadow: selectedTemplate === key ? '0 0 10px rgba(242,201,76,0.15)' : 'none',
+                  paddingRight: isCustom ? '24px' : '12px'
+                }}
+              >
+                {label}
+              </button>
+              {isCustom && (
+                <button
+                  type="button"
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    handleDeleteTemplate(key);
+                  }}
+                  style={{
+                    position: 'absolute',
+                    right: '6px',
+                    top: '50%',
+                    transform: 'translateY(-50%)',
+                    background: 'transparent',
+                    border: 'none',
+                    color: 'rgba(255, 255, 255, 0.4)',
+                    fontSize: '12px',
+                    cursor: 'pointer',
+                    display: 'flex',
+                    alignItems: 'center',
+                    justifyContent: 'center',
+                    padding: '2px',
+                    borderRadius: '50%'
+                  }}
+                  onMouseEnter={(e) => e.target.style.color = '#ff4d4f'}
+                  onMouseLeave={(e) => e.target.style.color = 'rgba(255, 255, 255, 0.4)'}
+                  title="Delete Template"
+                >
+                  &times;
+                </button>
+              )}
+            </div>
+          ))}
         </div>
 
         {!googleLinked && (
@@ -459,27 +849,33 @@ const CreateQuestionnaire = () => {
           {/* RIGHT COLUMN - CREATION FORM */}
           <div className="questionnaire-creation-panel">
             <form onSubmit={handleCreateQuestionnaire} className="creation-form">
-              <div style={{ display: 'flex', gap: '10px', alignItems: 'flex-start', marginBottom: '0px', position: 'relative' }}>
-                <div className="form-group" style={{ flex: 1 }}>
+              <div style={{ display: 'flex', gap: '10px', alignItems: 'flex-start', marginBottom: '0px', position: 'relative', flexWrap: 'wrap' }}>
+                <div className="form-group" style={{ flex: 2, minWidth: '250px' }}>
                   <label>Title *</label>
                   <input
                     type="text"
                     value={formData.title}
-                    onChange={(e) => setFormData({ ...formData, title: e.target.value })}
+                    onChange={(e) => {
+                      setFormData({ ...formData, title: e.target.value });
+                      setSelectedTemplate("none");
+                    }}
                     required
                     placeholder={formData.target === 'STUDENT' ? "e.g., Peer Performance Evaluation" : "e.g., Team Performance Evaluation"}
                     style={{ fontSize: '11px' }}
                   />
                 </div>
 
-                <div className="form-group" style={{ minWidth: '200px' }}>
+                <div className="form-group" style={{ flex: 1, minWidth: '150px' }}>
                   <label>Questionnaire For</label>
                   <CustomSelect
                     value={formData.target}
                     onChange={(newTarget) => {
                       setFormData({ ...formData, target: newTarget });
+                      setSelectedTemplate("none");
                       if (newTarget === 'STUDENT' && !['RATING', 'TEXT'].includes(newQuestion.questionType)) {
                         setNewQuestion({ ...newQuestion, questionType: 'RATING', maxScore: 10 });
+                      } else if (newTarget === 'ADVISER' && !['NUMERIC_SCALE', 'RATING', 'TEXT', 'MULTIPLE_CHOICE'].includes(newQuestion.questionType)) {
+                        setNewQuestion({ ...newQuestion, questionType: 'NUMERIC_SCALE', minScore: 1, maxScore: 5 });
                       }
                     }}
                     options={[
@@ -488,11 +884,12 @@ const CreateQuestionnaire = () => {
                     ]}
                   />
                 </div>
+
                 <button
                   type="submit"
                   className="btn btn-primary"
                   disabled={!googleLinked || totalQuestions === 0 || submitting}
-                  style={{ padding: '8px 12px', fontSize: '11px', marginTop: '24px' }}
+                  style={{ padding: '8px 12px', fontSize: '11px', marginTop: '24px', height: '36px' }}
                 >
                   {submitting ? 'Creating...' : 'Create'}
                 </button>
@@ -507,7 +904,10 @@ const CreateQuestionnaire = () => {
                 </div>
                 <textarea
                   value={formData.description}
-                  onChange={(e) => setFormData({ ...formData, description: e.target.value })}
+                  onChange={(e) => {
+                    setFormData({ ...formData, description: e.target.value });
+                    setSelectedTemplate("none");
+                  }}
                   rows="2"
                   maxLength={250}
                   placeholder="What is this questionnaire about?"

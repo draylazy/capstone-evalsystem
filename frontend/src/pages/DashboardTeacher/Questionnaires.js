@@ -290,9 +290,10 @@ const Questionnaires = () => {
                           type="button"
                           className="btn btn-sm"
                           onClick={() => handleDuplicateQuestionnaire(q)}
-                          disabled={duplicatingId === q.id}
+                          disabled={duplicatingId !== null}
+                          style={{ opacity: duplicatingId !== null ? 0.5 : 1, cursor: duplicatingId !== null ? 'not-allowed' : 'pointer' }}
                         >
-                          Duplicate
+                          {duplicatingId === q.id ? 'Duplicating...' : 'Duplicate'}
                         </button>
                         <button
                           type="button"

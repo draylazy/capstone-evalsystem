@@ -81,6 +81,25 @@ const StudentEvaluateForm = () => {
     return () => window.removeEventListener('beforeunload', handleBeforeUnload);
   }, [isDirty, isSubmitted]);
 
+  // Intercept browser back button
+  useEffect(() => {
+    if (isSubmitted) return;
+    window.history.pushState(null, '', window.location.pathname);
+    const handlePopState = () => {
+      if (isDirty) {
+        // Push state again so the page doesn't actually go back
+        window.history.pushState(null, '', window.location.pathname);
+        setPendingPath('/student/dashboard');
+        setShowExitModal(true);
+      } else {
+        navigate('/student/dashboard');
+      }
+    };
+    window.addEventListener('popstate', handlePopState);
+    return () => window.removeEventListener('popstate', handlePopState);
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [isDirty, isSubmitted]);
+
   // Group items by sections for sequential navigation
   const pages = useMemo(() => {
     if (!questionnaire) return [];

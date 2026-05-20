@@ -11,8 +11,6 @@ import "./Teacher.css";
 
 const Teacher = () => {
   const navigate = useNavigate();
-  const [loading, setLoading] = useState(true);
-  const [loadingStatus, setLoadingStatus] = useState("");
   const [error, setError] = useState(null);
   const [classes, setClasses] = useState([]);
   const [students, setStudents] = useState([]);
@@ -26,9 +24,10 @@ const Teacher = () => {
   const [adviserPending, setAdviserPending] = useState([]);
   const [studentPending, setStudentPending] = useState([]);
   const [pendingCount, setPendingCount] = useState(0);
+  const [pendingLoading, setPendingLoading] = useState(true);
   const [showPendingModal, setShowPendingModal] = useState(false);
   const [activityLogs, setActivityLogs] = useState([]);
-  const [logsLoading, setLogsLoading] = useState(false);
+  const [logsLoading, setLogsLoading] = useState(true);
   const [logSearch, setLogSearch] = useState("");
 
   const currentUser = useMemo(() => {
@@ -38,22 +37,19 @@ const Teacher = () => {
 
   useEffect(() => {
     const load = async () => {
-      try {
-        setLoading(true);
-        setError(null);
+      if (!currentUser?.id) {
+        setError("User not logged in");
+        return;
+      }
 
-        if (!currentUser?.id) {
-          setError("User not logged in");
-          return;
-        }
+      setError(null);
 
-        setLoadingStatus("Fetching classes, students, and teams...");
-        const [allClasses, allStudents, allTeams] = await Promise.all([
-          classAPI.getAllClasses(),
-          studentAPI.getAllStudents(),
-          teamAPI.getAllTeams(),
-        ]);
-
+      // Load classes, students, and teams in background without blocking rendering
+      Promise.all([
+        classAPI.getAllClasses(),
+        studentAPI.getAllStudents(),
+        teamAPI.getAllTeams(),
+      ]).then(([allClasses, allStudents, allTeams]) => {
         const teacherClasses = (allClasses || []).filter(
           (c) => String(c.teacherId) === String(currentUser.id)
         );
@@ -69,10 +65,13 @@ const Teacher = () => {
           (t) => teacherClassIds.has(t.classId)
         );
 
+        setClasses(teacherClasses);
+        setStudents(teacherStudents);
+        setTeams(teacherTeams);
+
         // Load questionnaires for all teacher's classes in parallel
-        setLoadingStatus("Fetching questionnaires for classes...");
         const questionnairesMap = {};
-        await Promise.all(
+        Promise.all(
           teacherClasses.map(async (classItem) => {
             try {
               const classQuestionnaires = await questionnaireAPI.getQuestionnairesByClassForTeacher(classItem.id);
@@ -81,43 +80,43 @@ const Teacher = () => {
               questionnairesMap[classItem.id] = [];
             }
           })
-        );
+        ).then(() => {
+          setQuestionnaires(questionnairesMap);
+        });
+      }).catch(err => {
+        console.error("Error fetching background classes/students/teams:", err);
+      });
 
-        setClasses(teacherClasses);
-        setStudents(teacherStudents);
-        setTeams(teacherTeams);
-        setQuestionnaires(questionnairesMap);
-
-        // Load pending evaluations
-        setLoadingStatus("Loading pending evaluations...");
-        try {
-          const pendingData = await teacherReportAPI.getPendingEvaluations();
+      // Load pending evaluations in background
+      setPendingLoading(true);
+      teacherReportAPI.getPendingEvaluations()
+        .then((pendingData) => {
           setAdviserPending(pendingData.adviserPending || []);
           setStudentPending(pendingData.studentPending || []);
           setPendingCount(pendingData.total || 0);
-        } catch (err) {
+        })
+        .catch((err) => {
           console.error("Error fetching pending evaluations:", err);
           setPendingCount(0);
           setAdviserPending([]);
           setStudentPending([]);
-        }
+        })
+        .finally(() => {
+          setPendingLoading(false);
+        });
 
-        // Load Activity Logs
-        setLoadingStatus("Fetching recent activity logs...");
-        try {
-          setLogsLoading(true);
-          const logs = await teacherReportAPI.getActivityLogs();
+      // Load Activity Logs in background
+      setLogsLoading(true);
+      teacherReportAPI.getActivityLogs()
+        .then((logs) => {
           setActivityLogs(logs || []);
-        } catch (err) {
+        })
+        .catch((err) => {
           console.error("Error fetching activity logs:", err);
-        } finally {
+        })
+        .finally(() => {
           setLogsLoading(false);
-        }
-      } catch (e) {
-        setError(e?.message || "Failed to load dashboard data");
-      } finally {
-        setLoading(false);
-      }
+        });
     };
 
     load();
@@ -198,18 +197,6 @@ const Teacher = () => {
 
   const teacherName = [currentUser?.firstName, currentUser?.lastName].filter(Boolean).join(" ") || "Teacher";
 
-  if (loading) {
-    return (
-      <div className="teacher-container">
-        <TeacherSidebar />
-        <div className="teacher-content" style={{ display: 'flex', flexDirection: 'column', justifyContent: 'center', alignItems: 'center', height: '100vh' }}>
-          <div className="spinner" style={{ marginBottom: '16px' }}></div>
-          <p style={{ color: 'rgba(255,255,255,0.7)', fontSize: '1.1rem' }}>{loadingStatus || "Loading dashboard data..."}</p>
-        </div>
-      </div>
-    );
-  }
-
   return (
     <div className="teacher-container">
       <TeacherSidebar />
@@ -230,9 +217,10 @@ const Teacher = () => {
               className="pending-badge-btn" 
               onClick={() => setShowPendingModal(true)}
               title="View Pending Evaluations"
+              disabled={pendingLoading}
             >
-              <Bell size={18} />
-              <span>{pendingCount} Pending Evaluations</span>
+              <Bell size={18} className={pendingLoading ? "perf-spin" : ""} />
+              <span>{pendingLoading ? "Loading pending..." : `${pendingCount > 99 ? "99+" : pendingCount} Pending Evaluations`}</span>
             </button>
           </div>
         </section>

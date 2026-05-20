@@ -5,7 +5,7 @@ import { LayoutDashboard, GraduationCap, UserCheck, ClipboardList, BarChart2, Tr
 import "./Sidebar.css";
 import logo from '../Logo/LOGO test.png';
 
-const TeacherSidebar = () => {
+const TeacherSidebar = ({ beforeNavigate }) => {
   const navigate = useNavigate();
   const location = useLocation();
   const [showProfileMenu, setShowProfileMenu] = useState(false);
@@ -30,12 +30,18 @@ const TeacherSidebar = () => {
     return () => document.removeEventListener('mousedown', handleClickOutside);
   }, []);
 
-  const handleLogout = () => {
+  const handleLogout = async () => {
+    if (beforeNavigate && !(await beforeNavigate('/login'))) {
+      return;
+    }
     authAPI.logout();
     navigate('/login');
   };
 
-  const handleNavigate = (path) => {
+  const handleNavigate = async (path) => {
+    if (beforeNavigate && !(await beforeNavigate(path))) {
+      return;
+    }
     setIsOpen(false);
     setShowProfileMenu(false);
     navigate(path);

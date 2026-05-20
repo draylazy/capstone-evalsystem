@@ -3,6 +3,7 @@ import { BrowserRouter as Router, Routes, Route, Navigate } from 'react-router-d
 import Login from './pages/Login/Login';
 import ProtectedRoute from './components/ProtectedRoute';
 import { ToastProvider } from './contexts/ToastContext';
+import { ConfirmProvider } from './contexts/ConfirmContext';
 
 // Teacher Pages
 import Teacher from './pages/DashboardTeacher/Teacher';
@@ -40,6 +41,7 @@ import InactivityTimeout from './components/InactivityTimeout';
 function App() {
   return (
     <ToastProvider>
+      <ConfirmProvider>
       <Router>
         <InactivityTimeout timeout={3600000} /> {/* 1 hour timeout */}
         <Routes>
@@ -187,6 +189,7 @@ function App() {
         <Route path="*" element={<Navigate to="/login" />} />
       </Routes>
       </Router>
+      </ConfirmProvider>
     </ToastProvider>
   );
 }

@@ -36,6 +36,8 @@ const QuestionnaireDetailModal = ({ isOpen, onClose, questionnaireId, onUpdate }
 
   const [initialFormData, setInitialFormData] = useState(null);
   const [showConfirmClose, setShowConfirmClose] = useState(false);
+  const [showSaveTemplateModal, setShowSaveTemplateModal] = useState(false);
+  const [templateNameInput, setTemplateNameInput] = useState("");
 
   useEffect(() => {
     if (isOpen && questionnaireId) {
@@ -253,6 +255,63 @@ const QuestionnaireDetailModal = ({ isOpen, onClose, questionnaireId, onUpdate }
     return false;
   };
 
+  const handleOpenSaveTemplateModal = () => {
+    setTemplateNameInput(`${questionnaire?.title || "Custom"} Template`);
+    setShowSaveTemplateModal(true);
+  };
+
+  const handleConfirmSaveTemplate = () => {
+    if (!templateNameInput || !templateNameInput.trim()) {
+      toast.error("Please enter a template name");
+      return;
+    }
+    const templateName = templateNameInput.trim();
+    try {
+      const stored = localStorage.getItem('custom_templates');
+      const templates = stored ? JSON.parse(stored) : [];
+
+      if (templates.some(t => t.label.toLowerCase() === templateName.toLowerCase())) {
+        toast.error("A template with this name already exists.");
+        return;
+      }
+
+      const newTemplate = {
+        key: `custom_${Date.now()}`,
+        label: templateName,
+        target: questionnaire.target,
+        data: {
+          title: questionnaire.title,
+          description: questionnaire.description || "",
+          target: questionnaire.target,
+          sections: formData.sections.map((sec, sIdx) => ({
+            sectionTitle: sec.sectionTitle || `Section ${sIdx + 1}`,
+            sectionDescription: sec.sectionDescription || "",
+            orderIndex: sec.orderIndex ?? sIdx,
+            evaluateIndividuals: sec.evaluateIndividuals || false,
+            items: (sec.items || []).map(item => ({
+              questionText: item.questionText,
+              questionDescription: item.questionDescription || "",
+              questionType: item.questionType,
+              minScore: item.minScore || 1,
+              maxScore: item.maxScore || 5,
+              choices: item.choices || [],
+              correctAnswer: item.correctAnswer || "",
+              pointsValue: item.pointsValue || 1,
+              required: item.required !== false
+            }))
+          }))
+        }
+      };
+
+      templates.push(newTemplate);
+      localStorage.setItem('custom_templates', JSON.stringify(templates));
+      toast.success(`Saved "${templateName}" as a custom template!`);
+      setShowSaveTemplateModal(false);
+    } catch (err) {
+      toast.error("Failed to save template: " + err.message);
+    }
+  };
+
   const handleRequestClose = () => {
     if (checkIsDirty()) {
       setShowConfirmClose(true);
@@ -385,6 +444,18 @@ const QuestionnaireDetailModal = ({ isOpen, onClose, questionnaireId, onUpdate }
                     title={questionnaire.target === "STUDENT" && questionnaire.isActive ? "Deactivate to edit" : ""}
                   >
                     Edit details
+                  </button>
+                  <button
+                    type="button"
+                    className="btn btn-secondary animate-pulse"
+                    onClick={handleOpenSaveTemplateModal}
+                    style={{
+                      border: '1px solid var(--dtm-gold)',
+                      color: 'var(--dtm-gold)',
+                      background: 'rgba(242, 201, 76, 0.05)',
+                    }}
+                  >
+                    Add as Template
                   </button>
                   <button type="button" className="btn btn-primary" onClick={() => window.open(questionnaire.googleFormUrl, "_blank")}>
                     View form
@@ -914,6 +985,56 @@ const QuestionnaireDetailModal = ({ isOpen, onClose, questionnaireId, onUpdate }
         cancelText="Stay and Edit"
         isDanger={true}
       />
+      {showSaveTemplateModal && (
+        <div className="confirm-modal-overlay" onClick={() => setShowSaveTemplateModal(false)}>
+          <div className="confirm-modal-content" onClick={(e) => e.stopPropagation()} style={{ maxWidth: '400px' }}>
+            <h3 className="confirm-modal-title">Save as Custom Template</h3>
+            <p className="confirm-modal-message">Enter a name for this template:</p>
+            <input
+              type="text"
+              value={templateNameInput}
+              onChange={(e) => setTemplateNameInput(e.target.value)}
+              placeholder="Template Name"
+              style={{
+                width: '100%',
+                padding: '10px 12px',
+                borderRadius: '8px',
+                border: '1px solid rgba(255,255,255,0.15)',
+                background: 'rgba(255,255,255,0.05)',
+                color: 'white',
+                fontSize: '14px',
+                marginBottom: '20px',
+                boxSizing: 'border-box',
+                outline: 'none',
+              }}
+              onFocus={(e) => e.target.style.borderColor = 'var(--dtm-gold)'}
+              onBlur={(e) => e.target.style.borderColor = 'rgba(255,255,255,0.15)'}
+              onKeyDown={(e) => {
+                if (e.key === 'Enter') {
+                  handleConfirmSaveTemplate();
+                } else if (e.key === 'Escape') {
+                  setShowSaveTemplateModal(false);
+                }
+              }}
+              autoFocus
+            />
+            <div className="confirm-modal-actions">
+              <button 
+                className="confirm-modal-btn confirm-modal-btn-primary"
+                onClick={handleConfirmSaveTemplate}
+              >
+                Save
+              </button>
+              <button 
+                className="confirm-modal-btn confirm-modal-btn-secondary"
+                onClick={() => setShowSaveTemplateModal(false)}
+              >
+                Cancel
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
     </>,
     document.body
