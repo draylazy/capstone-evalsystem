@@ -104,9 +104,8 @@ const Completed = () => {
               <table className="class-table">
                 <thead>
                   <tr>
-                    <th>#</th>
-                    <th>Team</th>
                     <th>Class</th>
+                    <th>Team</th>
                     <th>Questionnaire</th>
                     <th>Status</th>
                     <th>Date Submitted</th>
@@ -115,9 +114,8 @@ const Completed = () => {
                 <tbody>
                   {pagTeam.map((e, index) => (
                     <tr key={e.id}>
-                      <td>{(curPageTeam - 1) * 10 + index + 1}</td>
-                      <td><strong>{e.teamName || e.team?.name || `Team #${e.teamId || "N/A"}`}</strong></td>
                       <td>{e.className || "N/A"}</td>
+                      <td>{e.teamName || e.team?.name || `Team #${e.teamId || "N/A"}`}</td>
                       <td>{e.questionnaire?.title || "N/A"}</td>
                       <td>
                         <span className="status-badge status-active">Submitted</span>

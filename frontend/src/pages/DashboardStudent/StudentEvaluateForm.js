@@ -348,7 +348,7 @@ const StudentEvaluateForm = () => {
           {/* Right Pane - Members Rating */}
           <div className="eval-right-pane">
             <div className="eval-questions-stack">
-              {currentPage.items.map((item) => {
+              {currentPage.items.map((item, itemIndex) => {
                 const isRating = item.questionType === "RATING";
                 const isScale =
                   item.questionType !== "TEXT" && item.questionType !== "MULTIPLE_CHOICE";
@@ -362,7 +362,7 @@ const StudentEvaluateForm = () => {
                 return (
                   <article key={item.id} className="eval-question-card">
                     <h3 className="eval-question-title">
-                      {item.questionText}
+                      {itemIndex + 1}. {item.questionText}
                       {item.required !== false && (
                         <span className="eval-required-mark" title="Required">*</span>
                       )}

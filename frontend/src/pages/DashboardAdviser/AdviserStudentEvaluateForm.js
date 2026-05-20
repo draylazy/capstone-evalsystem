@@ -87,6 +87,15 @@ const AdviserStudentEvaluateForm = () => {
     ? `${evaluation.evaluateeFirstName} ${evaluation.evaluateeLastName}`
     : "Student";
 
+  // Helper function to check if an answer is filled
+  const isAnswerFilled = (value) => value !== undefined && value !== null && value !== "";
+
+  // Check if current question is answered
+  const isCurrentQuestionAnswered = useMemo(() => {
+    if (!currentItem) return true;
+    return isAnswerFilled(answers[currentItem.id]);
+  }, [currentItem, answers]);
+
   const handleChange = (itemId, value) => {
     if (isSubmitted) return;
     setAnswers(prev => ({ ...prev, [itemId]: value }));
@@ -244,7 +253,7 @@ const AdviserStudentEvaluateForm = () => {
                 </div>
               )}
               <h2 style={{ fontSize: '1.4rem', marginBottom: '20px', lineHeight: '1.4' }}>
-                {currentItem.questionText}
+                {currentQuestionIndex + 1}. {currentItem.questionText}
                 {currentItem.required !== false && <span style={{ color: '#ff4d4f', marginLeft: '4px' }} title="Required">*</span>}
               </h2>
               <p style={{ color: "var(--dtm-muted)", lineHeight: "1.6", fontSize: "1rem" }}>
@@ -494,11 +503,15 @@ const AdviserStudentEvaluateForm = () => {
             {currentQuestionIndex < allItems.length - 1 ? (
               <button
                 className="btn"
-                onClick={() =>
+                onClick={() => {
+                  if (!isCurrentQuestionAnswered) {
+                    toast.warning("Please answer this question before proceeding.");
+                    return;
+                  }
                   setCurrentQuestionIndex(prev =>
                     Math.min(allItems.length - 1, prev + 1)
-                  )
-                }
+                  );
+                }}
               >
                 Next Criteria
               </button>

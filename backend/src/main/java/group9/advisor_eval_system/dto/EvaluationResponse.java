@@ -1,6 +1,7 @@
 package group9.advisor_eval_system.dto;
 
 import group9.advisor_eval_system.entity.Evaluation;
+import group9.advisor_eval_system.entity.EvaluationScore;
 import group9.advisor_eval_system.entity.Team;
 import lombok.AllArgsConstructor;
 import lombok.Data;
@@ -32,6 +33,17 @@ public class EvaluationResponse {
     private LocalDateTime updatedAt;
     private TeamInfo team; // Include full team with students for mixed questionnaires
     private List<IndividualStudentScores> individualStudentScores; // Per-student scores for individual sections
+    private EvaluationScoreInfo scoreInfo; // Survey-style score information
+
+    @Data
+    @NoArgsConstructor
+    @AllArgsConstructor
+    public static class EvaluationScoreInfo {
+        private double totalScore;
+        private int totalMaxScore;
+        private String scoreDisplay; // e.g., "7/10"
+        private double percentage;
+    }
 
     @Data
     @NoArgsConstructor
@@ -153,6 +165,45 @@ public class EvaluationResponse {
         dto.setSubmittedAt(evaluation.getSubmittedAt());
         dto.setCreatedAt(evaluation.getCreatedAt());
         dto.setUpdatedAt(evaluation.getUpdatedAt());
+
+        // Calculate survey score info
+        try {
+            double totalScore = 0;
+            int totalMaxScore = 0;
+
+            if (evaluation.getScores() != null) {
+                for (EvaluationScore score : evaluation.getScores()) {
+                    if (score.getQuestionnaireItem() != null) {
+                        group9.advisor_eval_system.entity.QuestionnaireItem item = score.getQuestionnaireItem();
+                        group9.advisor_eval_system.entity.QuestionnaireItem.QuestionType type = item.getQuestionType();
+
+                        // Only include NUMERIC_SCALE and RATING questions that are required
+                        if ((type == group9.advisor_eval_system.entity.QuestionnaireItem.QuestionType.NUMERIC_SCALE ||
+                            type == group9.advisor_eval_system.entity.QuestionnaireItem.QuestionType.RATING) && item.getRequired() != false) {
+                            
+                            if (score.getNumericScore() != null) {
+                                totalScore += score.getNumericScore();
+                            }
+                            
+                            if (item.getMaxScore() != null) {
+                                totalMaxScore += item.getMaxScore();
+                            }
+                        }
+                    }
+                }
+            }
+
+            if (totalMaxScore > 0) {
+                EvaluationScoreInfo scoreInfo = new EvaluationScoreInfo();
+                scoreInfo.setTotalScore(totalScore);
+                scoreInfo.setTotalMaxScore(totalMaxScore);
+                scoreInfo.setScoreDisplay(String.format("%.0f/%d", totalScore, totalMaxScore));
+                scoreInfo.setPercentage((totalScore / totalMaxScore) * 100);
+                dto.setScoreInfo(scoreInfo);
+            }
+        } catch (Exception e) {
+            // Score info not available
+        }
 
         return dto;
     }

@@ -771,9 +771,6 @@ public class QuestionnaireService {
                                 dto.setQuestionType(item.getQuestionType().name());
                                 dto.setMaxScore(item.getMaxScore());
                                 dto.setMinScore(item.getMinScore());
-                                dto.setCorrectAnswer(item.getCorrectAnswer());
-                                dto.setPointsValue(item.getPointsValue());
-                                dto.setRequired(item.getRequired() == null || item.getRequired());
                                 if (item.getChoices() != null && !item.getChoices().isBlank()) {
                                     try {
                                         String[] parsed = new com.fasterxml.jackson.databind.ObjectMapper()
@@ -790,6 +787,7 @@ public class QuestionnaireService {
                     dto.setSectionTitle(section.getSectionTitle());
                     dto.setSectionDescription(section.getSectionDescription());
                     dto.setOrderIndex(section.getOrderIndex());
+                    dto.setEvaluateIndividuals(section.getEvaluateIndividuals());
                     dto.setItems(items);
                     return dto;
                 })
@@ -816,9 +814,6 @@ public class QuestionnaireService {
         item.setMaxScore(source.getMaxScore());
         item.setMinScore(source.getMinScore());
         item.setChoices(source.getChoices());
-        item.setCorrectAnswer(source.getCorrectAnswer());
-        item.setPointsValue(source.getPointsValue());
-        item.setRequired(source.getRequired() == null || source.getRequired());
         item.setOrderIndex(source.getOrderIndex());
         return item;
     }

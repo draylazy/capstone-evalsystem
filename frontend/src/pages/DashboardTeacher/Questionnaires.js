@@ -42,6 +42,7 @@ const Questionnaires = () => {
   const [googleLinked, setGoogleLinked] = useState(false);
   const [showDetailsModal, setShowDetailsModal] = useState(false);
   const [selectedQuestionnaireId, setSelectedQuestionnaireId] = useState(null);
+  const [duplicatingId, setDuplicatingId] = useState(null);
 
   const { currentPage, totalPages, paginatedData, goToPage } = usePagination(questionnaires, 10);
 
@@ -173,11 +174,15 @@ const Questionnaires = () => {
 
   const handleDuplicateQuestionnaire = async (questionnaire) => {
     try {
+      setDuplicatingId(questionnaire.id);
+      toast.info('Duplicating questionnaire...');
       await questionnaireAPI.duplicateQuestionnaire(questionnaire.id);
       toast.success('Questionnaire duplicated successfully!');
       await fetchQuestionnaires();
     } catch (err) {
       toast.error('Error duplicating questionnaire: ' + err.message);
+    } finally {
+      setDuplicatingId(null);
     }
   };
 
@@ -285,6 +290,7 @@ const Questionnaires = () => {
                           type="button"
                           className="btn btn-sm"
                           onClick={() => handleDuplicateQuestionnaire(q)}
+                          disabled={duplicatingId === q.id}
                         >
                           Duplicate
                         </button>
