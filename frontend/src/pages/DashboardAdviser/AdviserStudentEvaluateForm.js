@@ -87,6 +87,15 @@ const AdviserStudentEvaluateForm = () => {
     ? `${evaluation.evaluateeFirstName} ${evaluation.evaluateeLastName}`
     : "Student";
 
+  // Helper function to check if an answer is filled
+  const isAnswerFilled = (value) => value !== undefined && value !== null && value !== "";
+
+  // Check if current question is answered
+  const isCurrentQuestionAnswered = useMemo(() => {
+    if (!currentItem) return true;
+    return isAnswerFilled(answers[currentItem.id]);
+  }, [currentItem, answers]);
+
   const handleChange = (itemId, value) => {
     if (isSubmitted) return;
     setAnswers(prev => ({ ...prev, [itemId]: value }));
@@ -493,11 +502,15 @@ const AdviserStudentEvaluateForm = () => {
             {currentQuestionIndex < allItems.length - 1 ? (
               <button
                 className="btn"
-                onClick={() =>
+                onClick={() => {
+                  if (!isCurrentQuestionAnswered) {
+                    toast.warning("Please answer this question before proceeding.");
+                    return;
+                  }
                   setCurrentQuestionIndex(prev =>
                     Math.min(allItems.length - 1, prev + 1)
-                  )
-                }
+                  );
+                }}
               >
                 Next Criteria
               </button>

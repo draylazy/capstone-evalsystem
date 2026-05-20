@@ -81,6 +81,33 @@ const EvaluateForm = () => {
 
   const currentItem = !isMixedQuestionnaire ? allItems[currentQuestionIndex] : null;
 
+  // Helper function to check if an answer is filled
+  const isAnswerFilled = (value) => value !== undefined && value !== null && value !== "";
+
+  // Check if current item is answered based on section type
+  const isCurrentItemAnswered = useMemo(() => {
+    if (isMixedQuestionnaire) {
+      // For mixed questionnaires
+      if (!currentSection || currentItemInSectionIndex >= currentSection.items.length) {
+        return true;
+      }
+      const currentItem = currentSection.items[currentItemInSectionIndex];
+      
+      if (currentSection.evaluateIndividuals) {
+        // Individual section: ALL team members must answer
+        return teamMembers.every(member => 
+          isAnswerFilled(answers[member.studentId]?.[currentItem.id])
+        );
+      } else {
+        // Team section: just check if team answered
+        return isAnswerFilled(answers[currentItem.id]);
+      }
+    } else {
+      // Regular questionnaire: check if current item answered
+      return !currentItem || isAnswerFilled(answers[currentItem.id]);
+    }
+  }, [isMixedQuestionnaire, currentSection, currentItemInSectionIndex, currentItem, answers, teamMembers]);
+
   useEffect(() => {
     const load = async () => {
       try {
@@ -555,6 +582,14 @@ const EvaluateForm = () => {
                 <button 
                   className="btn" 
                   onClick={() => {
+                    if (!isCurrentItemAnswered) {
+                      if (currentSection.evaluateIndividuals) {
+                        toast.warning("Please answer this question for all team members before proceeding.");
+                      } else {
+                        toast.warning("Please answer this question before proceeding.");
+                      }
+                      return;
+                    }
                     if (currentItemInSectionIndex < (currentSection?.items?.length - 1 || 0)) {
                       // Go to next item in same section
                       setCurrentItemInSectionIndex(prev => prev + 1);
@@ -813,7 +848,13 @@ const EvaluateForm = () => {
             {currentQuestionIndex < allItems.length - 1 ? (
               <button 
                 className="btn" 
-                onClick={() => setCurrentQuestionIndex(prev => Math.min(allItems.length - 1, prev + 1))}
+                onClick={() => {
+                  if (!isCurrentItemAnswered) {
+                    toast.warning("Please answer this question before proceeding.");
+                    return;
+                  }
+                  setCurrentQuestionIndex(prev => Math.min(allItems.length - 1, prev + 1));
+                }}
               >
                 Next Criteria
               </button>
