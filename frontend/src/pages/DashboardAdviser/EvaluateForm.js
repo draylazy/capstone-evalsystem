@@ -376,8 +376,7 @@ const EvaluateForm = () => {
                               borderRadius: '8px'
                             }}>
                               <label style={{ fontSize: '1rem', fontWeight: '500', display: 'block', marginBottom: '12px' }}>
-                                {currentItem.questionText}
-                                {currentItem.required !== false && <span style={{ color: '#ff4d4f', marginLeft: '4px' }} title="Required">*</span>}
+                                {currentItemInSectionIndex + 1}. {currentItem.questionText}
                               </label>
 
                               {currentItem.questionType === 'TEXT' ? (
@@ -640,8 +639,7 @@ const EvaluateForm = () => {
                 </div>
               )}
               <h2 style={{ fontSize: '1.4rem', marginBottom: '20px', lineHeight: '1.4' }}>
-                {currentItem.questionText}
-                {currentItem.required !== false && <span style={{ color: '#ff4d4f', marginLeft: '4px' }} title="Required">*</span>}
+                {currentQuestionIndex + 1}. {currentItem.questionText}
               </h2>
               <p style={{ color: 'var(--dtm-muted)', lineHeight: '1.6', fontSize: '1rem' }}>
                 {currentItem.questionDescription || "Please provide your evaluation for this criteria."}

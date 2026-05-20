@@ -244,8 +244,7 @@ const AdviserStudentEvaluateForm = () => {
                 </div>
               )}
               <h2 style={{ fontSize: '1.4rem', marginBottom: '20px', lineHeight: '1.4' }}>
-                {currentItem.questionText}
-                {currentItem.required !== false && <span style={{ color: '#ff4d4f', marginLeft: '4px' }} title="Required">*</span>}
+                {currentQuestionIndex + 1}. {currentItem.questionText}
               </h2>
               <p style={{ color: "var(--dtm-muted)", lineHeight: "1.6", fontSize: "1rem" }}>
                 {currentItem.questionDescription ||
