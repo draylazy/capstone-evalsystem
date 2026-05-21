@@ -1,6 +1,7 @@
 import React, { useCallback, useEffect, useRef, useState } from 'react';
 import { useNavigate, useSearchParams, Link } from 'react-router-dom';
 import { useToast } from '../../contexts/ToastContext';
+import { authAPI } from '../../services/api';
 import Aurora from '../../components/Aurora/Aurora';
 import BlurText from '../../components/BlurText/BlurText';
 import '../../components/Aurora/Aurora.css';
@@ -19,6 +20,13 @@ function Login() {
   const [loading, setLoading] = useState(false);
 
   useEffect(() => {
+    // If user is already logged in, redirect them directly to their dashboard
+    const currentUser = authAPI.getCurrentUser();
+    if (currentUser && authAPI.isAuthenticated()) {
+      redirectByRole(currentUser.role);
+      return;
+    }
+
     // Check if we have a code in URL (from mobile redirect fallback)
     const code = searchParams.get('code');
     if (code && !oauthHandledRef.current) {

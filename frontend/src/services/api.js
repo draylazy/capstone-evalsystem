@@ -95,6 +95,7 @@ export const authAPI = {
   
   logout: () => {
     localStorage.removeItem('user');
+    localStorage.removeItem('lastActivity');
   },
   
   getCurrentUser: () => {
