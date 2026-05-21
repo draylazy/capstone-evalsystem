@@ -5994,3 +5994,43 @@ body:has(.qdetail-modal-overlay) .mobile-menu-btn {
     max-height: min(90dvh, calc(100dvh - 72px)) !important;
   }
 }
+
+/* Interactive Student Performance Cards */
+.perf-student-card-interactive {
+  cursor: pointer;
+  transition: all 0.25s cubic-bezier(0.4, 0, 0.2, 1) !important;
+}
+
+.perf-student-card-interactive:hover {
+  background: rgba(255, 255, 255, 0.07) !important;
+  border-color: rgba(242, 201, 76, 0.35) !important;
+  transform: translateY(-2px);
+  box-shadow: 0 12px 30px rgba(0, 0, 0, 0.45), inset 0 0 0 1px rgba(255, 255, 255, 0.05) !important;
+}
+
+.perf-see-more-btn {
+  padding: 6px 12px;
+  border-radius: 8px;
+  background: rgba(255, 255, 255, 0.05);
+  border: 1px solid rgba(255, 255, 255, 0.15);
+  font-size: 12px;
+  font-weight: 600;
+  color: var(--dtm-text);
+  cursor: pointer;
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+  outline: none;
+}
+
+.perf-see-more-btn:hover {
+  background: rgba(255, 255, 255, 0.12);
+  border-color: rgba(255, 255, 255, 0.3);
+  transform: translateY(-1px);
+}
+
+.perf-see-more-btn:active {
+  transform: translateY(0);
+}
+

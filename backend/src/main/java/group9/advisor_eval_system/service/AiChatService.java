@@ -86,7 +86,7 @@ public class AiChatService {
                 String modeInstruction = buildModeInstruction(intent);
 
                 String systemInstruction = String.join("\n",
-                                "You are an AI assistant inside a capstone Adviser Evaluation System used by teachers.",
+                                "You are an AI assistant inside a capstone SAES - Student and Adviser Evaluation System used by teachers.",
                                 "Default behavior: respond like a normal, helpful conversational assistant.",
                                 "IMPORTANT SCOPE LIMITATION:",
                                 "- You can ONLY help with topics related to this Evaluation System (questionnaires, evaluations, feedback, reports, assessments).",
@@ -230,7 +230,7 @@ public class AiChatService {
                 // Check if message contains out-of-scope keywords
                 for (String keyword : OUT_OF_SCOPE_KEYWORDS) {
                         if (normalized.contains(keyword)) {
-                                return "I can only help with topics related to the Adviser Evaluation System, such as questionnaires, "
+                                return "I can only help with topics related to the SAES - Student and Adviser Evaluation System, such as questionnaires, "
                                                 +
                                                 "evaluations, respondent feedback, reports, and performance analysis. "
                                                 +
@@ -259,7 +259,7 @@ public class AiChatService {
 
                 // Allow if it has system keywords or is very short (greeting, etc.)
                 if (!hasSystemKeyword && message.length() > 10) {
-                        return "I'm here to help with the Adviser Evaluation System. " +
+                        return "I'm here to help with the SAES - Student and Adviser Evaluation System. " +
                                         "Please ask about questionnaires, evaluations, reports, adviser feedback, or assessment-related topics.";
                 }
 

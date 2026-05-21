@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect, useRef, useMemo } from "react";
 import { createPortal } from "react-dom";
 import { questionnaireAPI } from "../../services/api";
 import { useToast } from "../../contexts/ToastContext";
@@ -7,8 +7,107 @@ import "./QuestionnaireTwoColumn.css";
 import CustomSelect from "../../components/CustomSelect/CustomSelect";
 import ConfirmModal from "../../components/ConfirmModal/ConfirmModal";
 
+const API_BASE_URL = (process.env.REACT_APP_API_BASE_URL || 'http://localhost:8080/api').replace(/\/api\/?$/, '');
+
 const QuestionnaireDetailModal = ({ isOpen, onClose, questionnaireId, onUpdate }) => {
   const toast = useToast();
+  const token = useMemo(() => {
+    try {
+      const user = JSON.parse(localStorage.getItem('user'));
+      return user?.token || null;
+    } catch {
+      return null;
+    }
+  }, []);
+
+  const [aiMessages, setAiMessages] = useState([
+    { role: 'assistant', text: "Hi! I'm your AI Assistant. I can help you edit this questionnaire, suggest new questions, refine wording, or explain how to target peer evaluations. Ask me for suggestions or advice on questionnaire creation!" },
+  ]);
+  const [aiInput, setAiInput] = useState('');
+  const [aiLoading, setAiLoading] = useState(false);
+  const [isAiOpen, setIsAiOpen] = useState(false);
+  const aiMessagesEndRef = useRef(null);
+
+  useEffect(() => {
+    if (isAiOpen) {
+      aiMessagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
+    }
+  }, [aiMessages, aiLoading, isAiOpen]);
+
+  const sendAiMessage = async () => {
+    const trimmed = aiInput.trim();
+    if (!trimmed) return;
+
+    if (trimmed.length > 2000) {
+      toast.error('Message is too long (max 2000 characters).');
+      return;
+    }
+
+    if (!token) {
+      toast.error('You are not authenticated. Please log in again.');
+      return;
+    }
+
+    const history = aiMessages.slice(-12);
+
+    const questionnaireDraftContext = (() => {
+      const qCount = formData.sections.reduce((sum, sec) => sum + (sec.items?.length || 0), 0);
+      const sectionsInfo = formData.sections.map((sec, sIdx) => {
+        const itemsInfo = (sec.items || []).map((item, qIdx) => `- Q${qIdx + 1}: ${item.questionText} (${item.questionType}, required=${item.required !== false})`).join('\n');
+        return `Section ${sIdx + 1}: "${sec.sectionTitle}" (${(sec.items || []).length} questions)\n${itemsInfo}`;
+      }).join('\n\n');
+
+      return [
+        `User is currently viewing/editing an existing questionnaire in a details modal.`,
+        `Questionnaire ID: ${questionnaireId}`,
+        `Current Title: ${formData.title || '(No title yet)'}`,
+        `Current Target: ${formData.target} (${formData.target === 'STUDENT' ? 'Peer-to-Peer' : 'Team Evaluation'})`,
+        `Current Description: ${formData.description || '(No description yet)'}`,
+        `Total sections: ${formData.sections.length}`,
+        `Total questions: ${qCount}`,
+        `Current Sections & Questions:\n${sectionsInfo}`
+      ].join('\n');
+    })();
+
+    setAiMessages((prev) => [...prev, { role: 'user', text: trimmed }]);
+    setAiInput('');
+    setAiLoading(true);
+
+    try {
+      const res = await fetch(`${API_BASE_URL}/api/ai/chat`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          Authorization: `Bearer ${token}`,
+        },
+        body: JSON.stringify({
+          message: trimmed,
+          history,
+          context: questionnaireDraftContext,
+          contextType: 'questionnaire-design',
+        }),
+      });
+
+      const data = await res.json().catch(() => null);
+      if (!res.ok) {
+        throw new Error(data?.message || `AI request failed (HTTP ${res.status})`);
+      }
+
+      setAiMessages((prev) => [...prev, { role: 'assistant', text: data.reply }]);
+    } catch (e) {
+      toast.error(e.message || 'AI request failed');
+      setAiMessages((prev) => [...prev, { role: 'assistant', text: 'Sorry—something went wrong calling the AI.' }]);
+    } finally {
+      setAiLoading(false);
+    }
+  };
+
+  const onAiKeyDown = (e) => {
+    if (e.key === 'Enter' && !e.shiftKey) {
+      e.preventDefault();
+      if (!aiLoading) sendAiMessage();
+    }
+  };
   const [loading, setLoading] = useState(true);
   const [isEditing, setIsEditing] = useState(false);
   const [questionnaire, setQuestionnaire] = useState(null);
@@ -1036,6 +1135,77 @@ const QuestionnaireDetailModal = ({ isOpen, onClose, questionnaireId, onUpdate }
         </div>
       )}
     </div>
+
+    {/* AI Chat FAB and Panel */}
+    <button
+      className="ai-fab"
+      onClick={() => setIsAiOpen((prev) => !prev)}
+      aria-label="Open AI assistant"
+      title="AI Assistant"
+      style={{ zIndex: 1450, visibility: 'visible', pointerEvents: 'auto' }}
+    >
+      AI
+    </button>
+
+    {isAiOpen && (
+      <div className="ai-fab-panel" role="dialog" aria-label="AI assistant chat" style={{ zIndex: 1451 }}>
+        <div className="ai-fab-header">
+          <div>
+            <strong>AI Assistant</strong>
+            <p>Ask for suggestions, templates, and general help.</p>
+          </div>
+          <button className="btn-secondary" onClick={() => setIsAiOpen(false)}>
+            Close
+          </button>
+        </div>
+
+        <div className="ai-chat ai-chat-fab">
+          <div className="ai-chat-messages">
+            {aiMessages.map((m, idx) => (
+              <div
+                key={idx}
+                className={`ai-chat-row ${m.role === 'user' ? 'is-user' : 'is-assistant'}`}
+              >
+                <div className="ai-chat-bubble">
+                  <div className="ai-chat-meta">{m.role === 'user' ? 'You' : 'AI'}</div>
+                  <div className="ai-chat-text">{m.text}</div>
+                </div>
+              </div>
+            ))}
+
+            {aiLoading && (
+              <div className="ai-chat-row is-assistant ai-chat-typing">
+                <div className="ai-chat-bubble">
+                  <div className="ai-chat-meta">AI</div>
+                  <div className="ai-typing-dots" aria-label="AI is typing" role="status">
+                    <span></span>
+                    <span></span>
+                    <span></span>
+                  </div>
+                </div>
+              </div>
+            )}
+
+            <div ref={aiMessagesEndRef}></div>
+          </div>
+
+          <div className="ai-chat-composer">
+            <textarea
+              className="form-input ai-chat-input"
+              rows={2}
+              placeholder="Ask for suggestions, question drafting, etc..."
+              value={aiInput}
+              onChange={(e) => setAiInput(e.target.value)}
+              onKeyDown={onAiKeyDown}
+              disabled={aiLoading}
+            />
+            <button className="btn btn-primary ai-chat-send" onClick={sendAiMessage} disabled={aiLoading || !aiInput.trim()}>
+              {aiLoading ? 'Sending...' : 'Send'}
+            </button>
+          </div>
+        </div>
+      </div>
+    )}
     </>,
     document.body
   );

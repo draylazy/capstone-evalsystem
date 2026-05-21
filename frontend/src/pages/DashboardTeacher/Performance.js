@@ -27,12 +27,6 @@ const Performance = () => {
     load();
   }, []);
 
-  const getPerformanceBadge = (count) => {
-    if (count >= 3) return { label: "High Activity", cls: "perf-badge--high" };
-    if (count >= 1) return { label: "Active", cls: "perf-badge--mid" };
-    return { label: "Minimal", cls: "perf-badge--low" };
-  };
-
   return (
     <div className="teacher-container">
       <TeacherSidebar />
@@ -70,7 +64,6 @@ const Performance = () => {
           {!loadingTeams && !teamsError && teams.length > 0 && (
             <div className="perf-team-grid">
               {teams.map((team) => {
-                const badge = getPerformanceBadge(team.completedEvalCount);
                 return (
                   <button
                     key={team.id}
@@ -80,9 +73,6 @@ const Performance = () => {
                   >
                     <div className="perf-team-card-top">
                       <span className="perf-team-name">{team.name}</span>
-                      <span className={`perf-badge ${badge.cls}`}>
-                        {badge.label}
-                      </span>
                     </div>
                     <span className="perf-team-class">{team.className}</span>
                     <div className="perf-team-meta">

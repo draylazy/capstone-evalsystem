@@ -542,6 +542,8 @@ public class PerformanceController {
 
                 for (StudentEvaluation eval : evals) {
                     if (eval.getQuestionnaire() == null) continue;
+                    // Keep only adviser evaluations
+                    if (eval.getAdviser() == null) continue;
 
                     // Collect item IDs that belong to evaluateIndividuals=true sections
                     Set<Long> individualItemIds = new HashSet<>();
@@ -606,6 +608,118 @@ public class PerformanceController {
             return ResponseEntity.ok(result);
         } catch (Exception e) {
             log.error("Error fetching team individual scores teamId={}", teamId, e);
+            return ResponseEntity.status(HttpStatus.BAD_REQUEST).body(Map.of("error", e.getMessage()));
+        }
+    }
+
+    /**
+     * GET /api/teacher/performance/teams/{teamId}/peer-scores
+     * Returns each student's aggregated scores from peer-to-peer evaluations (excluding self-evaluations).
+     * Used by the Team Performance page.
+     */
+    @GetMapping("/teams/{teamId}/peer-scores")
+    public ResponseEntity<?> getTeamPeerScores(@PathVariable Long teamId, HttpServletRequest request) {
+        try {
+            Long teacherId = getTeacherId(request);
+            if (!isTeacherRole(teacherId)) {
+                return ResponseEntity.status(HttpStatus.FORBIDDEN)
+                        .body(Map.of("error", "Only teachers can access performance data"));
+            }
+
+            Team team = teamRepository.findById(teamId)
+                    .orElseThrow(() -> new RuntimeException("Team not found"));
+
+            if (team.getSchoolClass() == null || !teacherId.equals(team.getSchoolClass().getTeacherId())) {
+                return ResponseEntity.status(HttpStatus.FORBIDDEN)
+                        .body(Map.of("error", "You can only view teams from your own classes"));
+            }
+
+            List<TeamStudent> teamStudents = teamStudentRepository.findByTeamId(teamId);
+            List<Map<String, Object>> result = new ArrayList<>();
+
+            for (TeamStudent ts : teamStudents) {
+                Student student = ts.getStudent();
+                List<StudentEvaluation> evals = studentEvaluationRepository
+                        .findByEvaluateeIdAndStatusWithDetails(student.getId(),
+                                StudentEvaluation.EvaluationStatus.SUBMITTED);
+
+                double totalScore = 0;
+                double totalMax = 0;
+                int totalNumericScores = 0;
+                int peerEvalCount = 0;
+                
+                // Group by questionnaire to summarize scores per questionnaire
+                Map<Long, List<Double>> qScores = new HashMap<>();
+                Map<Long, List<Double>> qMaxScores = new HashMap<>();
+                Map<Long, String> qTitles = new HashMap<>();
+
+                for (StudentEvaluation eval : evals) {
+                    if (eval.getQuestionnaire() == null) continue;
+                    // Keep only peer evaluations (student evaluator, not adviser, and not self)
+                    if (eval.getStudent() == null || eval.getStudent().getId().equals(student.getId())) continue;
+
+                    double evalTotal = 0;
+                    double evalMax = 0;
+                    int evalNumeric = 0;
+                    if (eval.getScores() != null) {
+                        for (StudentEvaluationScore score : eval.getScores()) {
+                            if (score.getNumericScore() != null) {
+                                evalTotal += score.getNumericScore();
+                                evalNumeric++;
+                                if (score.getQuestionnaireItem() != null && score.getQuestionnaireItem().getMaxScore() != null) {
+                                    evalMax += score.getQuestionnaireItem().getMaxScore();
+                                }
+                            }
+                        }
+                    }
+
+                    if (evalNumeric == 0) continue;
+
+                    peerEvalCount++;
+                    totalScore += evalTotal;
+                    totalMax += evalMax;
+                    totalNumericScores += evalNumeric;
+
+                    Long qId = eval.getQuestionnaire().getId();
+                    qTitles.put(qId, eval.getQuestionnaire().getTitle());
+                    qScores.computeIfAbsent(qId, k -> new ArrayList<>()).add(evalTotal);
+                    qMaxScores.computeIfAbsent(qId, k -> new ArrayList<>()).add(evalMax);
+                }
+
+                List<Map<String, Object>> questionnaireSummaries = new ArrayList<>();
+                for (Long qId : qScores.keySet()) {
+                    List<Double> scores = qScores.get(qId);
+                    List<Double> maxs = qMaxScores.get(qId);
+                    double avgScore = scores.stream().mapToDouble(d -> d).average().orElse(0.0);
+                    double avgMax = maxs.stream().mapToDouble(d -> d).average().orElse(0.0);
+
+                    Map<String, Object> qSummary = new HashMap<>();
+                    qSummary.put("questionnaireId", qId);
+                    qSummary.put("title", qTitles.get(qId));
+                    qSummary.put("score", Math.round(avgScore * 100.0) / 100.0);
+                    qSummary.put("maxScore", avgMax > 0 ? Math.round(avgMax * 100.0) / 100.0 : null);
+                    qSummary.put("percentage", avgMax > 0
+                            ? Math.round((avgScore / avgMax) * 10000.0) / 100.0 : null);
+                    questionnaireSummaries.add(qSummary);
+                }
+
+                Map<String, Object> studentMap = new HashMap<>();
+                studentMap.put("studentId", student.getId());
+                studentMap.put("studentName", student.getFirstName() + " " + student.getLastName());
+                studentMap.put("evalCount", peerEvalCount);
+                studentMap.put("totalScore",
+                        totalNumericScores > 0 ? Math.round(totalScore * 100.0) / 100.0 : null);
+                studentMap.put("maxPossible",
+                        totalMax > 0 ? Math.round(totalMax * 100.0) / 100.0 : null);
+                studentMap.put("percentage", (totalNumericScores > 0 && totalMax > 0)
+                        ? Math.round((totalScore / totalMax) * 10000.0) / 100.0 : null);
+                studentMap.put("questionnaires", questionnaireSummaries);
+                result.add(studentMap);
+            }
+
+            return ResponseEntity.ok(result);
+        } catch (Exception e) {
+            log.error("Error fetching team peer scores teamId={}", teamId, e);
             return ResponseEntity.status(HttpStatus.BAD_REQUEST).body(Map.of("error", e.getMessage()));
         }
     }

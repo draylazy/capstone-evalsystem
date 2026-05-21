@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect, useMemo, useRef } from "react";
 import { useNavigate } from "react-router-dom";
 import TeacherSidebar from "../../components/Sidebar/TeacherSidebar";
 import { questionnaireAPI, classAPI } from "../../services/api";
@@ -27,6 +27,97 @@ const Questionnaires = () => {
   const toast = useToast();
   const navigate = useNavigate();
   const [questionnaires, setQuestionnaires] = useState([]);
+
+  const token = useMemo(() => {
+    try {
+      const user = JSON.parse(localStorage.getItem('user'));
+      return user?.token || null;
+    } catch {
+      return null;
+    }
+  }, []);
+
+  const [aiMessages, setAiMessages] = useState([
+    { role: 'assistant', text: "Hi! I'm your AI Assistant. I can help you design your questionnaires, suggest questions, refine wording, or explain how to target peer evaluations. How can I help you today?" },
+  ]);
+  const [aiInput, setAiInput] = useState('');
+  const [aiLoading, setAiLoading] = useState(false);
+  const [isAiOpen, setIsAiOpen] = useState(false);
+  const aiMessagesEndRef = useRef(null);
+
+  useEffect(() => {
+    if (isAiOpen) {
+      aiMessagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
+    }
+  }, [aiMessages, aiLoading, isAiOpen]);
+
+  const sendAiMessage = async () => {
+    const trimmed = aiInput.trim();
+    if (!trimmed) return;
+
+    if (trimmed.length > 2000) {
+      toast.error('Message is too long (max 2000 characters).');
+      return;
+    }
+
+    if (!token) {
+      toast.error('You are not authenticated. Please log in again.');
+      return;
+    }
+
+    const history = aiMessages.slice(-12);
+
+    const questionnaireContext = (() => {
+      const titles = questionnaires.slice(0, 20).map((q) => `${q.title} (${q.target})`).join(', ');
+      return [
+        `Teacher questionnaires list`,
+        `Total questionnaires: ${questionnaires.length}`,
+        titles ? `Existing questionnaire titles (up to 20): ${titles}` : '',
+        `User is browsing their list of questionnaires.`,
+      ]
+        .filter(Boolean)
+        .join('\n');
+    })();
+
+    setAiMessages((prev) => [...prev, { role: 'user', text: trimmed }]);
+    setAiInput('');
+    setAiLoading(true);
+
+    try {
+      const res = await fetch(`${API_BASE_URL}/api/ai/chat`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          Authorization: `Bearer ${token}`,
+        },
+        body: JSON.stringify({
+          message: trimmed,
+          history,
+          context: questionnaireContext,
+          contextType: 'questionnaire-list',
+        }),
+      });
+
+      const data = await res.json().catch(() => null);
+      if (!res.ok) {
+        throw new Error(data?.message || `AI request failed (HTTP ${res.status})`);
+      }
+
+      setAiMessages((prev) => [...prev, { role: 'assistant', text: data.reply }]);
+    } catch (e) {
+      toast.error(e.message || 'AI request failed');
+      setAiMessages((prev) => [...prev, { role: 'assistant', text: 'Sorry—something went wrong calling the AI.' }]);
+    } finally {
+      setAiLoading(false);
+    }
+  };
+
+  const onAiKeyDown = (e) => {
+    if (e.key === 'Enter' && !e.shiftKey) {
+      e.preventDefault();
+      if (!aiLoading) sendAiMessage();
+    }
+  };
   const [classes, setClasses] = useState([]);
   const [showAssignModal, setShowAssignModal] = useState(false);
   const [selectedQuestionnaire, setSelectedQuestionnaire] = useState(null);
@@ -400,6 +491,75 @@ const Questionnaires = () => {
           questionnaireId={selectedQuestionnaireId}
           onUpdate={fetchQuestionnaires}
         />
+
+        <button
+          className="ai-fab"
+          onClick={() => setIsAiOpen((prev) => !prev)}
+          aria-label="Open AI assistant"
+          title="AI Assistant"
+        >
+          AI
+        </button>
+
+        {isAiOpen && (
+          <div className="ai-fab-panel" role="dialog" aria-label="AI assistant chat">
+            <div className="ai-fab-header">
+              <div>
+                <strong>AI Assistant</strong>
+                <p>Ask for suggestions, templates, and general help.</p>
+              </div>
+              <button className="btn-secondary" onClick={() => setIsAiOpen(false)}>
+                Close
+              </button>
+            </div>
+
+            <div className="ai-chat ai-chat-fab">
+              <div className="ai-chat-messages">
+                {aiMessages.map((m, idx) => (
+                  <div
+                    key={idx}
+                    className={`ai-chat-row ${m.role === 'user' ? 'is-user' : 'is-assistant'}`}
+                  >
+                    <div className="ai-chat-bubble">
+                      <div className="ai-chat-meta">{m.role === 'user' ? 'You' : 'AI'}</div>
+                      <div className="ai-chat-text">{m.text}</div>
+                    </div>
+                  </div>
+                ))}
+
+                {aiLoading && (
+                  <div className="ai-chat-row is-assistant ai-chat-typing">
+                    <div className="ai-chat-bubble">
+                      <div className="ai-chat-meta">AI</div>
+                      <div className="ai-typing-dots" aria-label="AI is typing" role="status">
+                        <span></span>
+                        <span></span>
+                        <span></span>
+                      </div>
+                    </div>
+                  </div>
+                )}
+
+                <div ref={aiMessagesEndRef}></div>
+              </div>
+
+              <div className="ai-chat-composer">
+                <textarea
+                  className="form-input ai-chat-input"
+                  rows={2}
+                  placeholder="Ask for suggestions, question drafting, etc..."
+                  value={aiInput}
+                  onChange={(e) => setAiInput(e.target.value)}
+                  onKeyDown={onAiKeyDown}
+                  disabled={aiLoading}
+                />
+                <button className="btn btn-primary ai-chat-send" onClick={sendAiMessage} disabled={aiLoading || !aiInput.trim()}>
+                  {aiLoading ? 'Sending...' : 'Send'}
+                </button>
+              </div>
+            </div>
+          </div>
+        )}
       </div>
 
 
