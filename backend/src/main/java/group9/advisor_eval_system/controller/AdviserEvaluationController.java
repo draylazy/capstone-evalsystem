@@ -337,6 +337,7 @@ public class AdviserEvaluationController {
                         .body(Map.of("error", "No section data provided"));
             }
 
+            Map<Long, Object> allTeamAnswers = new HashMap<>();
             long teamSectionCount = 0;
             long individualSectionCount = 0;
             long teamStudentCount = team.getTeamStudents().size();
@@ -370,10 +371,9 @@ public class AdviserEvaluationController {
                 }
 
                 if (!evaluateIndividuals) {
-                    // TEAM-LEVEL: Save to Evaluation table (once per team)
-                    evaluationService.saveEvaluation(adviserId, evaluationId, answers, generalComments);
+                    allTeamAnswers.putAll(answers);
                     teamSectionCount++;
-                    log.info("Saved team-level answers for evaluation {} section with {} answers", evaluationId, answers.size());
+                    log.info("Aggregated team-level answers for evaluation {} section with {} answers", evaluationId, answers.size());
                 } else {
                     // INDIVIDUAL: Create StudentEvaluation for each student
                     // Convert studentIds from JSON (which are Integers) to Longs
@@ -416,6 +416,9 @@ public class AdviserEvaluationController {
                             evaluationId, studentIds.size());
                 }
             }
+
+            // Save all aggregated team-level answers at once (prevents deleting scores from previous sections in the loop)
+            evaluationService.saveEvaluation(adviserId, evaluationId, allTeamAnswers, generalComments);
 
             // If this is a submit request, mark the team-level evaluation as SUBMITTED
             Boolean isSubmit = Boolean.TRUE.equals(payload.get("submit"));
