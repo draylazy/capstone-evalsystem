@@ -294,7 +294,7 @@ const TeamPerformancePage = () => {
                             style={{
                               fontSize: 11,
                               fontWeight: 700,
-                              color: "var(--dtm-gold)",
+                              color: "#8eceff",
                               textTransform: "uppercase",
                               letterSpacing: "0.05em",
                               marginBottom: 2,
@@ -308,7 +308,7 @@ const TeamPerformancePage = () => {
                                 style={{
                                   fontSize: 20,
                                   fontWeight: 800,
-                                  color: "var(--dtm-gold)",
+                                  color: "#8eceff",
                                   lineHeight: 1.1,
                                 }}
                               >
@@ -334,7 +334,7 @@ const TeamPerformancePage = () => {
                             style={{
                               fontSize: 11,
                               fontWeight: 700,
-                              color: "#8eceff",
+                              color: "var(--dtm-gold)",
                               textTransform: "uppercase",
                               letterSpacing: "0.05em",
                               marginBottom: 2,
@@ -348,7 +348,7 @@ const TeamPerformancePage = () => {
                                 style={{
                                   fontSize: 20,
                                   fontWeight: 800,
-                                  color: "#8eceff",
+                                  color: "var(--dtm-gold)",
                                   lineHeight: 1.1,
                                 }}
                               >
@@ -379,10 +379,10 @@ const TeamPerformancePage = () => {
                             score: q.score,
                             maxScore: q.maxScore,
                             percentage: q.percentage,
-                            color: "var(--dtm-gold)",
-                            dotColor: "var(--dtm-gold)",
-                            background: "rgba(242, 201, 76, 0.04)",
-                            border: "1px solid rgba(242, 201, 76, 0.15)",
+                            color: "#8eceff",
+                            dotColor: "#8eceff",
+                            background: "rgba(142, 206, 255, 0.04)",
+                            border: "1px solid rgba(142, 206, 255, 0.18)",
                           }))
                         : [];
 
@@ -393,10 +393,10 @@ const TeamPerformancePage = () => {
                             score: q.score,
                             maxScore: q.maxScore,
                             percentage: q.percentage,
-                            color: "#8eceff",
-                            dotColor: "#8eceff",
-                            background: "rgba(142, 206, 255, 0.04)",
-                            border: "1px solid rgba(142, 206, 255, 0.18)",
+                            color: "var(--dtm-gold)",
+                            dotColor: "var(--dtm-gold)",
+                            background: "rgba(242, 201, 76, 0.04)",
+                            border: "1px solid rgba(242, 201, 76, 0.15)",
                           }))
                         : [];
 
