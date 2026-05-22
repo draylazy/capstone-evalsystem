@@ -1,77 +1,97 @@
-# capstone-merged-evaluation-system
+# SAES - Student and Adviser Evaluation System
 An integrated academic evaluation system combining adviser assessments and peer evaluations to provide structured, rubric-based grading for student teams.
 
-# 📊 Adviser Evaluation System
-The Adviser Evaluation System is a web-based platform that helps teachers manage classes, 
-create teams, and collect adviser evaluations more easily. Instead of using paper or spreadsheets, 
-the system centralizes everything and provides organized summaries and reports.
+## 📖 About
+The Student and Adviser Evaluation System (SAES) supports two distinct evaluation workflows:
+- **Adviser-Led Team Evaluation** — Academic advisers assess the performance of their assigned student teams through structured rubric-based questionnaires.
+- **Peer-to-Peer Evaluation** — Students evaluate their fellow team members based on the same rubric criteria.
+
+The platform centralizes evaluation management, automates report generation, and integrates an AI-powered feedback summarization module to generate concise summaries, highlight strengths and areas for improvement, and detect scoring inconsistencies across evaluators.
 
 ---
 
 ## 🛠 Tech Stack
-- **Backend:** Spring Boot (Java)
-- **Frontend:** React.js
-- **Database:** MySQL
-- **AI Tools:** Google Gemini API, OpenAI (optional), Hugging Face (optional)
-- **Integrations:** Google Forms API, Google OAuth 2.0 (for user-authorized form creation)
-- **Hosting:** Google Cloud or AWS
+- **Frontend:** React.js + Vite — deployed on Vercel
+- **Backend:** Spring Boot (Java) — deployed on Render
+- **Database:** MySQL — hosted on Aiven
+- **AI Integration:** Groq API (AI-powered feedback summarization)
+- **Authentication:** Google OAuth 2.0
+- **Integrations:** Google Sheets API, CSV Export
+- **Deployment:** Vercel, Render, Aiven
 
 ---
 
 ## 🚀 Setup & Run Instructions
 
 **Backend (Spring Boot)**  
-Create the database: Use MySQL Workbench
+Create the database using MySQL Workbench:
 ```bash
-CREATE DATABASE adviser_evaluation_db CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci;
+CREATE DATABASE saes_db CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci;
 ```
 
-Clone the repo and navigate to backend:  
+Clone the repository and navigate to the backend:
 ```bash
-git clone https://github.com/your-username/AdviserEvaluationSystem.git
-cd AdviserEvaluationSystem/backend
+git clone https://github.com/draylazy/capstone-merged-evaluation-system.git
+cd capstone-merged-evaluation-system/backend
 ```
 
-Run the backend:  
+Create a `.env` file in the backend root directory and configure the following environment variables:
+```env
+DB_URL=jdbc:mysql://localhost:3306/saes_db
+DB_USERNAME=your_mysql_username
+DB_PASSWORD=your_mysql_password
+GROQ_API_KEY=your_groq_api_key
+GOOGLE_CLIENT_ID=your_google_client_id
+GOOGLE_CLIENT_SECRET=your_google_client_secret
+JWT_SECRET=your_jwt_secret
+```
+
+Run the backend:
 ```bash
 ./mvnw spring-boot:run
 ```
-Change password at application.properties to match your own.
+
+> Never commit your `.env` file to version control. Make sure `.env` is listed in your `.gitignore`.
 
 Backend will run at: **http://localhost:8080/**
 
 **Frontend (React.js)**  
-Navigate to frontend folder:  
+Navigate to the frontend folder:
 ```bash
 cd frontend
 ```
 
-Install dependencies:  
+Install dependencies:
 ```bash
 npm install
 ```
 
-Run the frontend:  
+Run the frontend:
 ```bash
-npm start
-```  
- 
+npm run dev
+```
+
 Frontend will run at: **http://localhost:3000/**
 
 ---
 
 ## 👨‍💻 Team Members
-- Pael, Neilross Ulysses  
 - Rivera, Nico
-- Cortes, Ken Daniel  
-- Abdiano, Kent Dominic  
-- Ricablanca, Claudine Margaret   
+- Cortes, Ken Daniel E.
+- Pael, Neilross Ulysses P.
+- Abadiano, Kent Dominic
+- Ricablanca, Claudine Margaret
+- Bajamunde, Louie V.
+- Queddeng, James Adriane S.
+- Magpatoc, Mark Andrew G.
+- Rigodon, Keith Yancy A.
+- Tabungar, Steven Jan M.
 
-**Adviser:** Cheryl B. Pantaleon  
+**Adviser:** Cheryl B. Pantaleon
 
 ---
 
 ## 🌐 Deployed Link
 ```bash
-_No deployed link available at this time._
+https://capstone-evalsystem.vercel.app/login
 ```
