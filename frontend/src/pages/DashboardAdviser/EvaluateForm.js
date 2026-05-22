@@ -1,4 +1,4 @@
-import React, { useEffect, useState, useMemo } from "react";
+import React, { useEffect, useState, useMemo, useRef } from "react";
 import { useParams, useNavigate } from "react-router-dom";
 import AdviserSidebar from "../../components/Sidebar/AdviserSidebar";
 import { adviserAPI } from "../../services/api";
@@ -35,6 +35,14 @@ const EvaluateForm = () => {
   const [confirmSubmit, setConfirmSubmit] = useState(false);
 
   const toast = useToast();
+  const rightPaneRef = useRef(null);
+
+  useEffect(() => {
+    if (rightPaneRef.current) {
+      rightPaneRef.current.scrollTo({ top: 0, behavior: "smooth" });
+    }
+    window.scrollTo({ top: 0, behavior: "smooth" });
+  }, [currentSectionIndex, currentItemInSectionIndex, currentQuestionIndex]);
 
   // Organize sections with proper structure
   const sections = useMemo(() => {
@@ -358,7 +366,7 @@ const EvaluateForm = () => {
           </div>
 
           {/* Main Content */}
-          <div style={{ flex: 1, padding: '40px', overflowY: 'auto', display: 'flex', flexDirection: 'column' }}>
+          <div ref={rightPaneRef} style={{ flex: 1, padding: '40px', overflowY: 'auto', display: 'flex', flexDirection: 'column' }}>
             {currentSection && (
               <>
                 {currentSection.evaluateIndividuals ? (
@@ -700,7 +708,7 @@ const EvaluateForm = () => {
           </div>
 
           {/* Right Pane - Team Rating */}
-          <div style={{ flex: 1, padding: '40px', overflowY: 'auto' }}>
+          <div ref={rightPaneRef} style={{ flex: 1, padding: '40px', overflowY: 'auto' }}>
             <div style={{ maxWidth: '800px' }}>
                 <div style={{ 
                   display: 'flex', 

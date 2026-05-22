@@ -1,4 +1,4 @@
-import React, { useEffect, useState, useMemo } from "react";
+import React, { useEffect, useState, useMemo, useRef } from "react";
 import { useParams, useNavigate } from "react-router-dom";
 import { useToast } from "../../contexts/ToastContext";
 import { generateDecimalRatingRange, generateNumericRange } from "../../utils/ratingUtils";
@@ -30,6 +30,14 @@ const StudentEvaluateForm = () => {
   const [currentPageIndex, setCurrentPageIndex] = useState(0);
   const [showConfirmModal, setShowConfirmModal] = useState(false);
   const [showExitModal, setShowExitModal] = useState(false);
+  const rightPaneRef = useRef(null);
+
+  useEffect(() => {
+    if (rightPaneRef.current) {
+      rightPaneRef.current.scrollTo({ top: 0, behavior: "smooth" });
+    }
+    window.scrollTo({ top: 0, behavior: "smooth" });
+  }, [currentPageIndex]);
   const [isDirty, setIsDirty] = useState(false);
   const [pendingPath, setPendingPath] = useState(null);
 
@@ -365,7 +373,7 @@ const StudentEvaluateForm = () => {
           </aside>
 
           {/* Right Pane - Members Rating */}
-          <div className="eval-right-pane">
+          <div ref={rightPaneRef} className="eval-right-pane">
             <div className="eval-questions-stack">
               {currentPage.items.map((item, itemIndex) => {
                 const isRating = item.questionType === "RATING";
