@@ -6,6 +6,7 @@ import group9.advisor_eval_system.entity.Team;
 import group9.advisor_eval_system.entity.Evaluation;
 import group9.advisor_eval_system.entity.Questionnaire;
 import group9.advisor_eval_system.entity.QuestionnaireItem;
+import group9.advisor_eval_system.entity.QuestionnaireSection;
 import group9.advisor_eval_system.entity.Report;
 import group9.advisor_eval_system.entity.Student;
 import group9.advisor_eval_system.entity.StudentEvaluation;
@@ -409,7 +410,19 @@ public class UserManagementService {
             // Get all questionnaires for this class
             List<Questionnaire> classQuestionnaires = questionnaireRepository.findByAssignedClassesContaining(schoolClass);
             for (Questionnaire q : classQuestionnaires) {
-                questionnaireMap.put(q.getId(), q);
+                // Only include questionnaires that have at least one section with evaluateIndividuals=true
+                boolean hasIndividualSections = false;
+                if (q.getSections() != null) {
+                    for (QuestionnaireSection section : q.getSections()) {
+                        if (Boolean.TRUE.equals(section.getEvaluateIndividuals())) {
+                            hasIndividualSections = true;
+                            break;
+                        }
+                    }
+                }
+                if (hasIndividualSections) {
+                    questionnaireMap.put(q.getId(), q);
+                }
             }
             
             // Get all teams in this class
@@ -440,60 +453,88 @@ public class UserManagementService {
                 }
             }
             
-            // Create rows for all adviser-student pairs in this class
-            for (User adviser : adviserMap.values()) {
-                for (Student student : studentMap.values()) {
-                    String key = adviser.getId() + "-" + student.getId();
-                    java.util.List<StudentEvaluation> evals = evalLookup.getOrDefault(key, new ArrayList<>());
-                    
-                    Map<String, String> row = new LinkedHashMap<>();
-                    
-                    // Get team for this student and find member position
-                    Team studentTeam = null;
-                    String memberNumber = "";
-                    for (Team team : classTeams) {
-                        if (team.getTeamStudents() != null) {
-                            for (TeamStudent ts : team.getTeamStudents()) {
-                                if (ts.getStudent() != null && ts.getStudent().getId().equals(student.getId())) {
-                                    studentTeam = team;
-                                    memberNumber = ts.getPosition() == null ? "" : String.valueOf(ts.getPosition());
-                                    break;
-                                }
+            // Create rows for each student (one row per student with their team's adviser)
+            for (Student student : studentMap.values()) {
+                Map<String, String> row = new LinkedHashMap<>();
+                
+                // Get team for this student and find member position
+                Team studentTeam = null;
+                String memberNumber = "";
+                for (Team team : classTeams) {
+                    if (team.getTeamStudents() != null) {
+                        for (TeamStudent ts : team.getTeamStudents()) {
+                            if (ts.getStudent() != null && ts.getStudent().getId().equals(student.getId())) {
+                                studentTeam = team;
+                                memberNumber = ts.getPosition() == null ? "" : String.valueOf(ts.getPosition());
+                                break;
                             }
                         }
-                        if (studentTeam != null) break;
                     }
+                    if (studentTeam != null) break;
+                }
+                
+                row.put("CLASS", schoolClass.getName());
+                row.put("TEAMCODE", studentTeam != null && studentTeam.getName() != null ? studentTeam.getName() : "");
+                row.put("MEMBER#", memberNumber);
+                row.put("STUDENTID", student.getStudentId() == null ? "" : student.getStudentId());
+                row.put("LASTNAME", student.getLastName() == null ? "" : student.getLastName());
+                row.put("FIRSTNAME", student.getFirstName() == null ? "" : student.getFirstName());
+                row.put("EMAIL", student.getEmail() == null ? "" : student.getEmail());
+                
+                // Get adviser email from student's team (teams have only 1 adviser)
+                String adviserEmail = "";
+                User teamAdviser = null;
+                if (studentTeam != null && studentTeam.getAdvisers() != null && !studentTeam.getAdvisers().isEmpty()) {
+                    teamAdviser = studentTeam.getAdvisers().iterator().next();
+                    adviserEmail = teamAdviser.getEmail() == null ? "" : teamAdviser.getEmail();
+                }
+                row.put("ADVISOREMAIL", adviserEmail);
+                
+                // Get evaluations for this student from their team's adviser
+                java.util.List<StudentEvaluation> studentEvals = new ArrayList<>();
+                if (teamAdviser != null) {
+                    String key = teamAdviser.getId() + "-" + student.getId();
+                    studentEvals = evalLookup.getOrDefault(key, new ArrayList<>());
+                }
+                
+                // Create map of questionnaire scores
+                java.util.Map<Long, StudentEvaluation> questionnaireEvals = new java.util.HashMap<>();
+                for (StudentEvaluation eval : studentEvals) {
+                    if (eval.getQuestionnaire() != null) {
+                        questionnaireEvals.put(eval.getQuestionnaire().getId(), eval);
+                    }
+                }
+                
+                // Add score columns for each questionnaire
+                for (Questionnaire questionnaire : questionnaireMap.values()) {
+                    String scoreValue = "";
+                    StudentEvaluation eval = questionnaireEvals.get(questionnaire.getId());
                     
-                    row.put("CLASS", schoolClass.getName());
-                    row.put("TEAMCODE", studentTeam != null && studentTeam.getName() != null ? studentTeam.getName() : "");
-                    row.put("MEMBER#", memberNumber);
-                    row.put("STUDENTID", student.getStudentId() == null ? "" : student.getStudentId());
-                    row.put("LASTNAME", student.getLastName() == null ? "" : student.getLastName());
-                    row.put("FIRSTNAME", student.getFirstName() == null ? "" : student.getFirstName());
-                    row.put("EMAIL", student.getEmail() == null ? "" : student.getEmail());
-                    row.put("ADVISOREMAIL", adviser.getEmail() == null ? "" : adviser.getEmail());
-                    
-                    // Create map of questionnaire scores for this adviser-student pair
-                    java.util.Map<Long, StudentEvaluation> questionnaireEvals = new java.util.HashMap<>();
-                    for (StudentEvaluation eval : evals) {
-                        if (eval.getQuestionnaire() != null) {
-                            questionnaireEvals.put(eval.getQuestionnaire().getId(), eval);
+                    if (eval != null) {
+                        // Collect item IDs that belong to evaluateIndividuals=true sections
+                        java.util.Set<Long> individualItemIds = new java.util.HashSet<>();
+                        if (eval.getQuestionnaire().getSections() != null) {
+                            eval.getQuestionnaire().getSections().forEach(section -> {
+                                if (Boolean.TRUE.equals(section.getEvaluateIndividuals())
+                                        && section.getItems() != null) {
+                                    section.getItems().forEach(item -> individualItemIds.add(item.getId()));
+                                }
+                            });
                         }
-                    }
-                    
-                    // Add score columns for each questionnaire
-                    for (Questionnaire questionnaire : questionnaireMap.values()) {
-                        String scoreValue = "";
-                        StudentEvaluation eval = questionnaireEvals.get(questionnaire.getId());
                         
-                        if (eval != null) {
+                        // Only include evaluations with individual sections
+                        if (!individualItemIds.isEmpty()) {
                             if (eval.getScores() != null && !eval.getScores().isEmpty()) {
-                                // Calculate survey score (sum of numeric responses / sum of max scales)
                                 double totalScore = 0;
                                 int totalMaxScore = 0;
                                 
                                 for (StudentEvaluationScore score : eval.getScores()) {
                                     if (score.getQuestionnaireItem() != null) {
+                                        // Only count items from individual sections
+                                        if (!individualItemIds.contains(score.getQuestionnaireItem().getId())) {
+                                            continue;
+                                        }
+                                        
                                         QuestionnaireItem item = score.getQuestionnaireItem();
                                         QuestionnaireItem.QuestionType type = item.getQuestionType();
                                         
@@ -523,11 +564,11 @@ public class UserManagementService {
                                 scoreValue = "In Progress";
                             }
                         }
-                        row.put(questionnaire.getTitle(), scoreValue);
                     }
-                    
-                    rows.add(row);
+                    row.put(questionnaire.getTitle(), scoreValue);
                 }
+                
+                rows.add(row);
             }
         }
 
